@@ -337,6 +337,23 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn search_stations_whitespace_only_query_returns_empty() {
+        let client = real_client();
+        for query in ["   ", "\t", "\n", " \t \n "] {
+            let results = client
+                .search_stations(query)
+                .await
+                .expect("whitespace query should not error");
+            assert!(
+                results.is_empty(),
+                "whitespace-only query {query:?} must return empty Vec \
+                 (spec: `query.trim().is_empty()` short-circuits); got {} results",
+                results.len()
+            );
+        }
+    }
+
+    #[tokio::test]
     async fn search_stations_limits_to_20() {
         // Use the real fixture — 'underground' appears in nearly all 1682 station names.
         let client = real_client();

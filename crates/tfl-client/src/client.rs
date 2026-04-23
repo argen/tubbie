@@ -114,7 +114,8 @@ impl<H: TflHttp> TflClient<H> {
     /// - `TflError::ParseAt` — fixture file is invalid JSON (offline only).
     /// - `TflError::Transport` — network failure (live client only).
     pub async fn search_stations(&self, query: &str) -> Result<Vec<Station>, TflError> {
-        if query.is_empty() {
+        let trimmed = query.trim();
+        if trimmed.is_empty() {
             return Ok(vec![]);
         }
 
@@ -126,7 +127,7 @@ impl<H: TflHttp> TflClient<H> {
 
         let stations: Vec<Station> = serde_json::from_value(stop_points_value)?;
 
-        let q = query.to_lowercase();
+        let q = trimmed.to_lowercase();
 
         // Filter to tube-mode stations that contain the query substring.
         let mut matches: Vec<Station> = stations
