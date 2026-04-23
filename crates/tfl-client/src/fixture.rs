@@ -42,7 +42,10 @@ impl TflHttp for FixtureTflHttp {
                 TflError::Io(e)
             }
         })?;
-        let value: Value = serde_json::from_str(&contents)?;
+        let value: Value = serde_json::from_str(&contents).map_err(|e| TflError::ParseAt {
+            path: path.clone(),
+            source: e,
+        })?;
         Ok(value)
     }
 }
