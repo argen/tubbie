@@ -568,31 +568,34 @@ async fn stream_cancellation_drops_in_flight() {
         poll_seconds: 60, // long interval so only one tick fires
     };
 
-    let mut stream = Box::pin(svc.stream(cfg));
+    let stream = Box::pin(svc.stream(cfg));
 
-    // Poll the stream once — this starts the unfold closure, which calls the interval tick
-    // (fires immediately at t=0) and then calls refresh → fetch.
-    // The fetch sends the "started" signal, then sleeps for 30s.
-    // Since time is paused, the sleep doesn't complete yet.
-    // We use `tokio::select!` with a timeout of 0 to get the fetch going without waiting.
-    tokio::select! {
-        _ = stream.next() => {
-            panic!("stream should not have yielded — fetch takes 30s and time is paused");
-        }
-        _ = tokio::time::sleep(std::time::Duration::from_millis(1)) => {
-            // Expected: the fetch started but hasn't completed.
-        }
+    // Spawn the stream's first poll as a separate task so we can drive the
+    // runtime freely. The task will start the unfold closure: tick fires at
+    // t=0, refresh is called, fetch sends the "started" signal, then sleeps
+    // 30s (paused — so the sleep never resolves without an explicit advance).
+    let stream_task = tokio::spawn(async move {
+        let mut stream = stream;
+        stream.next().await
+    });
+
+    // Yield a few times to let the spawned task progress through the tick and
+    // into the fetch sleep.
+    for _ in 0..10 {
+        tokio::task::yield_now().await;
     }
 
-    // The fetch should have sent the "started" signal.
+    // The fetch should have sent the "started" signal by now.
     let start_signal = signal_rx.try_recv();
     assert!(
         start_signal.is_ok(),
         "fetch should have started (sent start signal)"
     );
 
-    // Now drop the stream — this cancels the in-flight future.
-    drop(stream);
+    // Abort the task — this cancels the spawned task at its next await point,
+    // dropping the stream and the in-flight fetch future.
+    // (Dropping the JoinHandle only detaches the task; abort() actually cancels it.)
+    stream_task.abort();
 
     // Yield to let the async runtime process the cancellation.
     tokio::task::yield_now().await;
@@ -725,4 +728,105 @@ async fn stream_stale_transition_atomic() {
         board5.stale_since, stale_at,
         "stale_since should equal clock time at each new failure"
     );
+}
+
+// ---------------------------------------------------------------------------
+// Test 10a: stream_terminates_after_fatal_error_no_last_ok
+// ---------------------------------------------------------------------------
+
+/// A `TflHttp` mock that always returns an error.
+#[derive(Clone, Debug)]
+struct AlwaysErrorHttp;
+
+impl TflHttp for AlwaysErrorHttp {
+    async fn fetch(&self, _endpoint: &str, _id: &str) -> Result<serde_json::Value, TflError> {
+        Err(TflError::NotFound("always-error mock".to_string()))
+    }
+}
+
+/// Verify FIX 1 (blocking, async-safety): when the very first fetch fails (no
+/// `last_ok` to fall back on), the stream must:
+/// 1. emit `Some(Err(_))` on the first poll, AND
+/// 2. emit `None` on the next poll (stream terminates — NOT another `Err` forever).
+#[tokio::test(start_paused = true)]
+async fn stream_terminates_after_fatal_error_no_last_ok() {
+    let http = AlwaysErrorHttp;
+    let client = TflClient::new(http);
+    let clock = FakeClock::from_rfc3339("2026-04-23T12:00:00Z").unwrap();
+    let svc = BoardService::new(client, clock);
+
+    let cfg = BoardConfig {
+        station_id: "940GZZLUBZP".to_string(),
+        line_ids: vec![],
+        directions: vec![],
+        poll_seconds: 2,
+    };
+
+    let mut stream = Box::pin(svc.stream(cfg));
+
+    // First poll — first tick fires immediately at t=0, fetch fails, no last_ok.
+    // Should emit Some(Err(_)).
+    let first = stream.next().await;
+    assert!(
+        matches!(first, Some(Err(_))),
+        "first item should be Some(Err(..)) when initial fetch fails, got: {first:?}"
+    );
+
+    // Second poll — stream should terminate (None), NOT emit another error.
+    // Advance time past the interval to ensure the second tick would fire if
+    // the stream were still alive.
+    tokio::time::advance(std::time::Duration::from_secs(3)).await;
+    let second = stream.next().await;
+    assert!(
+        second.is_none(),
+        "stream must terminate (None) after fatal error with no last_ok, got: {second:?}"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Test 10b: stream_continues_with_stale_fallback_when_last_ok_exists
+// ---------------------------------------------------------------------------
+
+/// Verify the OTHER path of FIX 1: when a prior fetch succeeded, subsequent
+/// failures yield `Ok(stale_board)` indefinitely — the stream does NOT terminate.
+#[tokio::test(start_paused = true)]
+async fn stream_continues_with_stale_fallback_when_last_ok_exists() {
+    // Succeed once, then always fail.
+    let http = FailAfterNHttp::new(fixtures_dir(), 1);
+    let client = TflClient::new(http);
+    let clock = FakeClock::from_rfc3339("2026-04-23T12:00:00Z").unwrap();
+    let svc = BoardService::new(client, clock);
+
+    let cfg = BoardConfig {
+        station_id: "940GZZLUBZP".to_string(),
+        line_ids: vec![],
+        directions: vec![],
+        poll_seconds: 2,
+    };
+
+    let mut stream = Box::pin(svc.stream(cfg));
+
+    // First item: successful fetch.
+    let first = stream.next().await;
+    assert!(
+        matches!(first, Some(Ok(_))),
+        "first item should be Ok (successful fetch)"
+    );
+
+    // Subsequent items should all be Ok (stale board), not Err or None.
+    for i in 1..=3 {
+        tokio::time::advance(std::time::Duration::from_secs(2)).await;
+        let item = stream.next().await;
+        match &item {
+            Some(Ok(board)) => {
+                assert!(
+                    board.stale_since.is_some(),
+                    "item {i} should be a stale board (stale_since set)"
+                );
+            }
+            other => panic!(
+                "item {i} should be Some(Ok(stale_board)), stream must not terminate; got: {other:?}"
+            ),
+        }
+    }
 }

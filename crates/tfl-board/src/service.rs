@@ -82,7 +82,12 @@ impl<H: TflHttp + 'static, C: Clock + 'static> BoardService<H, C> {
         let poll_dur = Duration::from_secs(u64::from(cfg.poll_seconds).max(1));
 
         stream::unfold(
-            // State: (service, config, interval, last_ok_board)
+            // State: (service, config, interval, last_ok_board, exhausted)
+            //
+            // `exhausted` is set to `true` after a fatal error (no `last_ok` to
+            // fall back on) is emitted. On the next poll, returning `None` terminates
+            // the stream. Without this flag the closure would emit another `Err`
+            // forever because `unfold` re-polls a closure that returns `Some`.
             (
                 self,
                 cfg,
@@ -92,8 +97,14 @@ impl<H: TflHttp + 'static, C: Clock + 'static> BoardService<H, C> {
                     ivl
                 },
                 None::<Board>,
+                false, // exhausted
             ),
-            |(svc, cfg, mut ivl, last_ok)| async move {
+            |(svc, cfg, mut ivl, last_ok, exhausted)| async move {
+                // Stream was already terminated on the previous poll.
+                if exhausted {
+                    return None;
+                }
+
                 // Wait for the next tick (first tick fires immediately).
                 ivl.tick().await;
 
@@ -102,7 +113,7 @@ impl<H: TflHttp + 'static, C: Clock + 'static> BoardService<H, C> {
                         // Success: clear stale_since, record as last_ok.
                         board.stale_since = None;
                         let emit = board.clone();
-                        Some((Ok(emit), (svc, cfg, ivl, Some(board))))
+                        Some((Ok(emit), (svc, cfg, ivl, Some(board), false)))
                     }
                     Err(e) => {
                         if let Some(mut stale) = last_ok {
@@ -112,11 +123,11 @@ impl<H: TflHttp + 'static, C: Clock + 'static> BoardService<H, C> {
                                 stale.stale_since = Some(svc.clock.now());
                             }
                             let emit = stale.clone();
-                            Some((Ok(emit), (svc, cfg, ivl, Some(stale))))
+                            Some((Ok(emit), (svc, cfg, ivl, Some(stale), false)))
                         } else {
-                            // No previous good board — propagate as a stream error.
-                            // Stream terminates after this item.
-                            Some((Err(e), (svc, cfg, ivl, None)))
+                            // No previous good board — emit error then terminate.
+                            // Setting exhausted=true causes the next poll to return None.
+                            Some((Err(e), (svc, cfg, ivl, None, true)))
                         }
                     }
                 }
