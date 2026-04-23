@@ -70,3 +70,41 @@ fixtures alongside the code changes.
 
 See [`docs/README.md`](docs/README.md) for conceptual documentation and
 [`docs/ADR/README.md`](docs/ADR/README.md) for architectural decisions.
+
+## Running the desktop app
+
+### Prerequisites
+
+- Rust (stable, via `rustup`) — see `rust-toolchain.toml`
+- Node 24 — see `web/.nvmrc`
+- `just` 1.x — `cargo install just`
+- Tauri CLI v2 — `cargo install tauri-cli@^2`
+
+### Development mode
+
+```sh
+cd web && npm install  # first time only
+just dev               # starts Vite at :5173 + tauri dev concurrently
+```
+
+`tauri dev` reads `src-tauri/tauri.conf.json`, loads the Vite dev server as
+the webview, and hot-reloads Rust when you change backend code.
+
+### Running tests (no display required)
+
+```sh
+just verify-rust       # fmt + clippy + cargo test --workspace
+```
+
+All Tauri command tests run headlessly via fixture files — no network, no
+display server, no Tauri runtime required.
+
+### Optional: TfL API key
+
+Anonymous access is the default (50 requests/min, comfortable for personal
+use). To use your own key:
+
+1. Register at https://api-portal.tfl.gov.uk
+2. Set `TFL_APP_KEY=<your-key>` in your environment, **or** enter it in the
+   app's Settings screen (persisted via `tauri-plugin-store`; takes effect
+   after a restart).

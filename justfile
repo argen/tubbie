@@ -11,9 +11,18 @@ verify-rust: fmt clippy test
 verify-web:
     cd web && npm run verify
 
-# Development server (wired in M5/M6)
+# Development server: runs Tauri dev (which starts Vite internally via devUrl).
+# Tauri v2 reads devUrl from tauri.conf.json and expects Vite to be running
+# at http://localhost:5173. This recipe starts both concurrently.
+#
+# Requirements: `npm install` inside web/ and `cargo install tauri-cli@2`
+# (or use `cargo tauri` from the tauri-cli crate).
 dev:
-    @echo "dev server not yet wired — lands in M5/M6"
+    cd web && npm run dev & cargo tauri dev --config src-tauri/tauri.conf.json
+
+# Tauri dev only (when Vite is already running separately)
+tauri-dev:
+    cargo tauri dev --config src-tauri/tauri.conf.json
 
 # Format all code
 fmt:
