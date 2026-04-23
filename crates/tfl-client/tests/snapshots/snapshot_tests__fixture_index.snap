@@ -1,0 +1,11 @@
+---
+source: crates/tfl-client/tests/snapshot_tests.rs
+assertion_line: 65
+expression: rendered
+---
+arrivals/940GZZLUBNK
+arrivals/940GZZLUBZP
+arrivals/940GZZLUKSX
+arrivals/940GZZLUOXC
+line-status/tube
+stop-points/tube
