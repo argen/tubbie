@@ -8,3 +8,8 @@ description = "Pure domain types for tubbie — zero I/O, minimal deps."
 [dependencies]
 serde = { workspace = true }
 serde_json = { workspace = true }
+chrono = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+insta = { workspace = true }

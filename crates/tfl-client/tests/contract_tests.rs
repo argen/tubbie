@@ -1,14 +1,15 @@
 //! Contract tests over the recorded TfL fixtures.
 //!
-//! These tests assert structural invariants on each fixture — verifying the
-//! JSON shape TfL documents — without deserialising into typed structs.
-//!
-//! TODO(M1): replace shape assertions with typed `serde_json::from_str::<Arrival>` calls
-//! once the `Arrival` struct lands in `tfl-domain`.
+//! Each test deserializes a fixture into typed domain structs, asserting that
+//! the JSON shape TfL documents is stable and our types can parse it.
+//! A deserialization failure here means either:
+//!   (a) TfL changed their API schema — refresh fixtures + update types, or
+//!   (b) A domain type is wrong — fix the type.
 
 use std::path::PathBuf;
 use tfl_client::fixture::FixtureTflHttp;
 use tfl_client::http::TflHttp;
+use tfl_domain::types::{Arrival, Station, TflLine};
 
 fn fixtures_dir() -> PathBuf {
     let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -20,79 +21,67 @@ fn make_client() -> FixtureTflHttp {
 }
 
 // ---------------------------------------------------------------------------
-// Arrivals contract: top-level must be a non-empty array; each element must
-// contain the documented TfL fields.
+// Arrivals contract: deserialize into typed Vec<Arrival>
 // ---------------------------------------------------------------------------
 
-/// Fields that TfL guarantees on every arrival object.
-/// Note: `direction` and `destinationName` are documented but OPTIONAL —
-/// TfL omits them on some DLR and interchange services.
-/// TODO(M1): replace with typed `Arrival` deserialization once the struct lands.
-const ARRIVALS_REQUIRED_FIELDS: &[&str] = &[
-    "$type",
-    "id",
-    "stationName",
-    "platformName",
-    "timeToStation",
-    "lineId",
-];
-
-async fn assert_arrivals_contract(id: &str) {
+async fn assert_arrivals_typed(id: &str) {
     let client = make_client();
     let value = client
         .fetch("arrivals", id)
         .await
         .unwrap_or_else(|e| panic!("fetch failed for arrivals/{id}: {e}"));
 
-    let arr = value
-        .as_array()
-        .unwrap_or_else(|| panic!("arrivals/{id}: expected top-level JSON array"));
+    let json_str = serde_json::to_string(&value).expect("re-serialise fixture to string");
+    let arrivals: Vec<Arrival> = serde_json::from_str(&json_str)
+        .unwrap_or_else(|e| panic!("arrivals/{id}: typed deserialization failed: {e}"));
 
-    // An empty array is technically valid (quiet station / off-peak) but we
-    // log a warning.  Fixture recorder was instructed to abort on error responses,
-    // so an empty array here means TfL returned [] legitimately.
-    if arr.is_empty() {
-        eprintln!("WARN: arrivals/{id} fixture is an empty array — contract shape checks skipped");
+    // An empty array is technically valid (quiet station / off-peak) but log a warning.
+    if arrivals.is_empty() {
+        eprintln!("WARN: arrivals/{id} fixture is an empty array");
         return;
     }
 
-    for (i, element) in arr.iter().enumerate() {
-        let obj = element
-            .as_object()
-            .unwrap_or_else(|| panic!("arrivals/{id}[{i}] should be a JSON object"));
-        for field in ARRIVALS_REQUIRED_FIELDS {
-            assert!(
-                obj.contains_key(*field),
-                "arrivals/{id}[{i}] missing required field `{field}`"
-            );
-        }
-        // TODO(M1): replace with `serde_json::from_str::<Arrival>` deserialization
+    // Sanity: every arrival must have a non-empty id and non-negative time_to_station
+    // is not guaranteed (some platforms show trains that have just left), so we
+    // only assert the id field as the minimum contract.
+    for (i, arrival) in arrivals.iter().enumerate() {
+        assert!(
+            !arrival.id.is_empty(),
+            "arrivals/{id}[{i}]: id must be non-empty"
+        );
+        assert!(
+            !arrival.line_id.is_empty(),
+            "arrivals/{id}[{i}]: lineId must be non-empty"
+        );
+        assert!(
+            !arrival.platform_name.is_empty(),
+            "arrivals/{id}[{i}]: platformName must be non-empty"
+        );
     }
 }
 
 #[tokio::test]
 async fn contract_arrivals_belsize_park() {
-    assert_arrivals_contract("940GZZLUBZP").await;
+    assert_arrivals_typed("940GZZLUBZP").await;
 }
 
 #[tokio::test]
 async fn contract_arrivals_kings_cross() {
-    assert_arrivals_contract("940GZZLUKSX").await;
+    assert_arrivals_typed("940GZZLUKSX").await;
 }
 
 #[tokio::test]
 async fn contract_arrivals_bank() {
-    assert_arrivals_contract("940GZZLUBNK").await;
+    assert_arrivals_typed("940GZZLUBNK").await;
 }
 
 #[tokio::test]
 async fn contract_arrivals_oxford_circus() {
-    assert_arrivals_contract("940GZZLUOXC").await;
+    assert_arrivals_typed("940GZZLUOXC").await;
 }
 
 // ---------------------------------------------------------------------------
-// Line-status contract: top-level is a non-empty array; each element has
-// `$type`, `id`, `name`, `lineStatuses`.
+// Line-status contract: deserialize into typed Vec<TflLine>
 // ---------------------------------------------------------------------------
 
 #[tokio::test]
@@ -103,27 +92,34 @@ async fn contract_line_status_tube() {
         .await
         .expect("line-status/tube fixture should exist");
 
-    let arr = value
-        .as_array()
-        .expect("line-status/tube: expected top-level JSON array");
-    assert!(!arr.is_empty(), "line-status/tube: array must not be empty");
+    let json_str = serde_json::to_string(&value).expect("re-serialise");
+    let lines: Vec<TflLine> = serde_json::from_str(&json_str)
+        .expect("line-status/tube: typed TflLine deserialization failed");
 
-    for (i, element) in arr.iter().enumerate() {
-        let obj = element
-            .as_object()
-            .unwrap_or_else(|| panic!("line-status/tube[{i}] should be a JSON object"));
-        for field in &["$type", "id", "name", "lineStatuses"] {
-            assert!(
-                obj.contains_key(*field),
-                "line-status/tube[{i}] missing required field `{field}`"
-            );
-        }
-        // TODO(M1): replace with typed LineStatus deserialization
+    assert!(
+        !lines.is_empty(),
+        "line-status/tube: must contain at least one line"
+    );
+
+    for (i, line) in lines.iter().enumerate() {
+        assert!(
+            !line.id.is_empty(),
+            "line-status/tube[{i}]: id must be non-empty"
+        );
+        assert!(
+            !line.name.is_empty(),
+            "line-status/tube[{i}]: name must be non-empty"
+        );
+        assert!(
+            !line.line_statuses.is_empty(),
+            "line-status/tube[{i}] ({:?}): lineStatuses must not be empty",
+            line.name
+        );
     }
 }
 
 // ---------------------------------------------------------------------------
-// Stop-points contract: top-level must be an object with a `stopPoints` array.
+// Stop-points contract: deserialize each stopPoint into typed Station
 // ---------------------------------------------------------------------------
 
 #[tokio::test]
@@ -139,16 +135,27 @@ async fn contract_stop_points_tube() {
     let obj = value
         .as_object()
         .expect("stop-points/tube: expected top-level JSON object");
+    let stop_points_value = obj
+        .get("stopPoints")
+        .expect("stop-points/tube: missing `stopPoints` key");
+
+    let json_str = serde_json::to_string(stop_points_value).expect("re-serialise");
+    let stations: Vec<Station> = serde_json::from_str(&json_str)
+        .expect("stop-points/tube: typed Station deserialization failed");
+
     assert!(
-        obj.contains_key("stopPoints"),
-        "stop-points/tube: missing `stopPoints` key"
+        !stations.is_empty(),
+        "stop-points/tube: stopPoints must not be empty"
     );
-    let stop_points = obj["stopPoints"]
-        .as_array()
-        .expect("stop-points/tube: `stopPoints` should be a JSON array");
-    assert!(
-        !stop_points.is_empty(),
-        "stop-points/tube: `stopPoints` must not be empty"
-    );
-    // TODO(M1): replace with typed Station deserialization
+
+    for (i, station) in stations.iter().enumerate() {
+        assert!(
+            !station.id.is_empty(),
+            "stop-points/tube[{i}]: id must be non-empty"
+        );
+        assert!(
+            !station.common_name.is_empty(),
+            "stop-points/tube[{i}]: commonName must be non-empty"
+        );
+    }
 }
