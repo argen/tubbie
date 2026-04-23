@@ -1,7 +1,11 @@
+use serde::{Deserialize, Serialize};
 use tfl_domain::Direction;
 
 /// Configuration for a single arrivals board.
-#[derive(Debug, Clone)]
+///
+/// Derives `Serialize + Deserialize` so Tauri IPC and `tauri-plugin-store`
+/// can round-trip the config through JSON without a conversion layer.
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BoardConfig {
     /// NaPTAN stop-point ID of the station to display, e.g. `"940GZZLUBZP"`.
     pub station_id: String,
