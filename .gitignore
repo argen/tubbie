@@ -1,0 +1,52 @@
+# Node
+node_modules/
+npm-debug.log*
+.npm/
+
+# Build output
+dist/
+build/
+.svelte-kit/
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Tauri / Rust
+target/
+src-tauri/target/
+crates/*/target/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.history/
+
+# Tauri build artifacts
+src-tauri/gen/
+*.app
+*.dmg
+*.pkg
+
+# Logs
+*.log
+
+# TypeScript incremental builds
+*.tsbuildinfo
