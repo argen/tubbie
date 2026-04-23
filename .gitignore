@@ -50,3 +50,6 @@ src-tauri/gen/
 
 # TypeScript incremental builds
 *.tsbuildinfo
+
+# Claude Code session state (should never be committed)
+.claude/
