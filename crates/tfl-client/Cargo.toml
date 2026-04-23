@@ -1,0 +1,20 @@
+[package]
+name = "tfl-client"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "TfL HTTP trait seam, fixture replay impl, and Clock abstraction."
+
+[dependencies]
+tfl-domain = { path = "../tfl-domain" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+reqwest = { workspace = true }
+thiserror = { workspace = true }
+chrono = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }
+insta = { workspace = true }
+tempfile = "3"

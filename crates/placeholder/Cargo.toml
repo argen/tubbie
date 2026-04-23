@@ -1,6 +1,0 @@
-[package]
-name = "placeholder"
-version = "0.0.1"
-edition = "2021"
-publish = false
-description = "Placeholder crate — keeps the workspace non-empty so cargo fmt/clippy/test have a target during M-1. Removed when real crates land in M0."
