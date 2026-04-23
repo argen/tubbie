@@ -32,8 +32,58 @@ impl FixtureTflHttp {
     }
 }
 
+/// Maximum length (in bytes) allowed for a path component (endpoint or id).
+///
+/// Callers in `commands.rs` already cap identifiers at 32 chars; this 64-char
+/// limit is defence-in-depth to bound the filesystem path length regardless of
+/// call site.
+const MAX_PATH_COMPONENT_LEN: usize = 64;
+
+/// Validate a single path component (endpoint or id) to prevent path traversal.
+///
+/// Allowed characters: ASCII alphanumeric, `-`, `_`.
+/// Rejected: empty strings, components longer than 64 chars, `..`, `/`, `\`,
+/// null bytes, absolute-path prefixes, and any character outside the allowed set.
+///
+/// # Errors
+/// Returns `TflError::InvalidRequest` if the component is invalid.
+fn validate_path_component(component: &str, field: &str) -> Result<(), TflError> {
+    if component.is_empty() {
+        return Err(TflError::InvalidRequest {
+            reason: format!("{field} must not be empty"),
+        });
+    }
+
+    if component.len() > MAX_PATH_COMPONENT_LEN {
+        return Err(TflError::InvalidRequest {
+            reason: format!("path component too long (max {MAX_PATH_COMPONENT_LEN} chars)"),
+        });
+    }
+
+    // Reject any character that is not ASCII alphanumeric, `-`, or `_`.
+    // This implicitly rejects `.`, `/`, `\`, null bytes, spaces, and everything else.
+    let all_safe = component
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_');
+
+    if !all_safe {
+        return Err(TflError::InvalidRequest {
+            reason: format!(
+                "{field} contains disallowed characters (only ASCII alphanumeric, '-', '_' are permitted): {component:?}"
+            ),
+        });
+    }
+
+    Ok(())
+}
+
 impl TflHttp for FixtureTflHttp {
     async fn fetch(&self, endpoint: &str, id: &str) -> Result<Value, TflError> {
+        // SECURITY: validate both components before touching the filesystem.
+        // This prevents path-traversal attacks such as `..`, `../../etc/passwd`, etc.
+        validate_path_component(endpoint, "endpoint")?;
+        validate_path_component(id, "id")?;
+
         let path = self.fixture_path(endpoint, id);
         let contents = std::fs::read_to_string(&path).map_err(|e| {
             if e.kind() == std::io::ErrorKind::NotFound {
@@ -120,6 +170,166 @@ mod tests {
         assert!(
             matches!(err, TflError::NotFound(_)),
             "expected NotFound, got: {err:?}"
+        );
+    }
+
+    // ---------------------------------------------------------------------------
+    // FixtureTflHttp — path-traversal guard (task #11)
+    // ---------------------------------------------------------------------------
+
+    /// Helper: creates a FixtureTflHttp pointing at a temp dir (no real fixtures needed
+    /// for validation tests — errors occur before any filesystem access).
+    fn any_fixture_http() -> FixtureTflHttp {
+        FixtureTflHttp::new(PathBuf::from("/tmp"))
+    }
+
+    #[tokio::test]
+    async fn rejects_dotdot_endpoint() {
+        let err = any_fixture_http()
+            .fetch("..", "passwd")
+            .await
+            .expect_err("must reject .. endpoint");
+        assert!(
+            matches!(err, TflError::InvalidRequest { .. }),
+            "expected InvalidRequest, got: {err:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn rejects_path_traversal_in_id() {
+        let err = any_fixture_http()
+            .fetch("arrivals", "../../etc/passwd")
+            .await
+            .expect_err("must reject path-traversal id");
+        assert!(
+            matches!(err, TflError::InvalidRequest { .. }),
+            "expected InvalidRequest, got: {err:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn rejects_empty_endpoint() {
+        let err = any_fixture_http()
+            .fetch("", "940GZZLUBZP")
+            .await
+            .expect_err("must reject empty endpoint");
+        assert!(
+            matches!(err, TflError::InvalidRequest { .. }),
+            "expected InvalidRequest, got: {err:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn rejects_empty_id() {
+        let err = any_fixture_http()
+            .fetch("arrivals", "")
+            .await
+            .expect_err("must reject empty id");
+        assert!(
+            matches!(err, TflError::InvalidRequest { .. }),
+            "expected InvalidRequest, got: {err:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn rejects_slash_in_id() {
+        let err = any_fixture_http()
+            .fetch("arrivals", "some/path")
+            .await
+            .expect_err("must reject slash in id");
+        assert!(
+            matches!(err, TflError::InvalidRequest { .. }),
+            "expected InvalidRequest, got: {err:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn rejects_backslash_in_endpoint() {
+        let err = any_fixture_http()
+            .fetch("arri\\vals", "940GZZLUBZP")
+            .await
+            .expect_err("must reject backslash in endpoint");
+        assert!(
+            matches!(err, TflError::InvalidRequest { .. }),
+            "expected InvalidRequest, got: {err:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn rejects_null_byte_in_id() {
+        let err = any_fixture_http()
+            .fetch("arrivals", "940GZZLU\0BZP")
+            .await
+            .expect_err("must reject null byte in id");
+        assert!(
+            matches!(err, TflError::InvalidRequest { .. }),
+            "expected InvalidRequest, got: {err:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn rejects_dot_in_id() {
+        let err = any_fixture_http()
+            .fetch("arrivals", "some.thing")
+            .await
+            .expect_err("must reject dot in id (potential .. bypass)");
+        assert!(
+            matches!(err, TflError::InvalidRequest { .. }),
+            "expected InvalidRequest, got: {err:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn rejects_component_longer_than_64_chars() {
+        // 65-char component that is otherwise all-safe alphanumerics.
+        let long = "a".repeat(65);
+        let err = any_fixture_http()
+            .fetch("arrivals", &long)
+            .await
+            .expect_err("must reject component > 64 chars");
+        assert!(
+            matches!(err, TflError::InvalidRequest { .. }),
+            "expected InvalidRequest, got: {err:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn accepts_component_of_exactly_64_chars() {
+        // 64-char component: passes the length check but fails as NotFound.
+        let exactly_64 = "a".repeat(64);
+        let err = any_fixture_http()
+            .fetch("arrivals", &exactly_64)
+            .await
+            .expect_err("should fail with NotFound not InvalidRequest");
+        assert!(
+            matches!(err, TflError::NotFound(_) | TflError::Io(_)),
+            "expected NotFound or Io (not InvalidRequest), got: {err:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn accepts_valid_endpoint_and_id() {
+        // Valid inputs should pass validation (they'll fail as NotFound since /tmp
+        // doesn't have a fixtures dir, but they must NOT return InvalidRequest).
+        let err = any_fixture_http()
+            .fetch("arrivals", "940GZZLUBZP")
+            .await
+            .expect_err("should fail with NotFound, not InvalidRequest");
+        assert!(
+            matches!(err, TflError::NotFound(_) | TflError::Io(_)),
+            "expected NotFound or Io (not InvalidRequest), got: {err:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn accepts_hyphen_and_underscore_in_id() {
+        let err = any_fixture_http()
+            .fetch("stop-points", "some_fixture-id")
+            .await
+            .expect_err("should fail with NotFound not InvalidRequest");
+        assert!(
+            matches!(err, TflError::NotFound(_) | TflError::Io(_)),
+            "expected NotFound or Io (not InvalidRequest), got: {err:?}"
         );
     }
 

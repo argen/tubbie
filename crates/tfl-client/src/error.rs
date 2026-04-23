@@ -52,6 +52,14 @@ pub enum TflError {
     /// avoid leaking any app_key that may appear in request URLs.
     #[error("HTTP {status} from TfL API: {body_snippet}")]
     Http { status: u16, body_snippet: String },
+
+    /// The caller supplied an invalid request argument (e.g. path-traversal
+    /// attempt, empty string, forbidden character in `endpoint` or `id`).
+    ///
+    /// This is distinct from `NotFound` — the resource does not exist *because
+    /// the input itself is illegal*, not because a valid resource was absent.
+    #[error("invalid request: {reason}")]
+    InvalidRequest { reason: String },
 }
 
 impl TflError {

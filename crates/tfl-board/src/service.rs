@@ -30,7 +30,7 @@ use futures::stream::{self, Stream};
 use tokio::time::{interval, MissedTickBehavior};
 
 use tfl_client::{clock::Clock, http::TflHttp, TflClient};
-use tfl_domain::{Arrival, Board, Platform};
+use tfl_domain::{Arrival, Board, LineStatus, Platform, Station};
 
 use crate::config::BoardConfig;
 use crate::error::BoardError;
@@ -53,6 +53,27 @@ impl<H: TflHttp, C: Clock> BoardService<H, C> {
 }
 
 impl<H: TflHttp + 'static, C: Clock + 'static> BoardService<H, C> {
+    /// Search for tube stations matching `query`.
+    ///
+    /// Delegates to `TflClient::search_stations`. Results are unfiltered —
+    /// command-layer validation has already rejected malicious inputs.
+    ///
+    /// # Errors
+    /// Returns `BoardError::Fetch` if the TfL client returns an error.
+    pub async fn search_stations(&self, query: &str) -> Result<Vec<Station>, BoardError> {
+        Ok(self.client.search_stations(query).await?)
+    }
+
+    /// Fetch the current status for a single TfL line.
+    ///
+    /// Delegates to `TflClient::get_line_status`.
+    ///
+    /// # Errors
+    /// Returns `BoardError::Fetch` if the TfL client returns an error.
+    pub async fn get_line_status(&self, line_id: &str) -> Result<LineStatus, BoardError> {
+        Ok(self.client.get_line_status(line_id).await?)
+    }
+
     /// Fetch and filter arrivals for one station, returning a `Board`.
     ///
     /// `generated_at` is set from the injected clock, never from `Utc::now()`.
