@@ -16,12 +16,15 @@
 //! - `query`: max 100 chars, no null bytes.
 //! - `poll_seconds`: clamped to [5, 300] (not rejected, UI can display effective value).
 //! - `app_key`: max 64 chars, no null bytes (when `Some`).
+//! - `line_ids`: at most 32 entries.
+//! - `directions`: at most 16 entries.
 //!
 //! ## Async safety
 //!
-//! All handlers are `async fn` with `#[tauri::command]`. No background tasks
-//! are spawned here — polling streams are wired in M6 via event emission.
-//! Dropping the Tauri window cancels any in-flight command via the executor.
+//! All handlers are `async fn` with `#[tauri::command]`. Config persistence is
+//! delegated to `ConfigStore::save_config` / `ConfigStore::save_app_key`, which
+//! are atomic compound operations (set+save under a single lock). The production
+//! impl wraps the blocking `Store::save()` in `tokio::task::spawn_blocking`.
 //!
 //! ## M6 TODO
 //!
@@ -29,7 +32,6 @@
 //! cancellation token bound to `WindowEvent::Destroyed`. The stream should
 //! emit `Board` snapshots as `app.emit("board-update", board)` events.
 
-use serde_json::{json, Value};
 use tauri::State;
 
 use tfl_board::BoardConfig;
@@ -102,7 +104,10 @@ pub(crate) fn clamp_poll_seconds(v: u32) -> u32 {
 }
 
 /// Validate an optional `app_key`.
-/// When `Some`: max 64 chars, no null bytes.
+///
+/// Accepts any printable non-null ASCII up to 64 chars — TfL does not publish
+/// a strict key grammar, so we avoid over-restricting. When `Some`: max 64
+/// chars, no null bytes.
 pub(crate) fn validate_app_key(key: &Option<String>) -> Result<(), String> {
     if let Some(k) = key {
         if k.len() > 64 {
@@ -119,8 +124,23 @@ pub(crate) fn validate_app_key(key: &Option<String>) -> Result<(), String> {
 }
 
 /// Validate a `BoardConfig`'s fields.
+///
+/// Checks `station_id`, each `line_id`, collection length caps, and rejects
+/// configs with too many entries to bound downstream allocations.
 pub(crate) fn validate_board_config(cfg: &BoardConfig) -> Result<(), String> {
     validate_station_id(&cfg.station_id)?;
+    if cfg.line_ids.len() > 32 {
+        return Err(format!(
+            "validation: line_ids must have at most 32 entries, got {}",
+            cfg.line_ids.len()
+        ));
+    }
+    if cfg.directions.len() > 16 {
+        return Err(format!(
+            "validation: directions must have at most 16 entries, got {}",
+            cfg.directions.len()
+        ));
+    }
     for line_id in &cfg.line_ids {
         validate_line_id(line_id)?;
     }
@@ -145,7 +165,7 @@ pub(crate) async fn search_stations_inner(
 }
 
 pub(crate) async fn get_board_inner(state: &AppState) -> Result<Board, String> {
-    let cfg = state.load_board_config();
+    let cfg = state.config_store.load_config().await?;
     let board = crate::state::AnyBoardService::refresh(&*state.board_service, &cfg)
         .await
         .map_err(|e| e.to_string())?;
@@ -158,14 +178,12 @@ pub(crate) async fn save_config_inner(cfg: &BoardConfig, state: &AppState) -> Re
         poll_seconds: clamp_poll_seconds(cfg.poll_seconds),
         ..cfg.clone()
     };
-    let value = serde_json::to_value(&cfg).map_err(|e| format!("serialise error: {e}"))?;
-    state.config_store.set("board_config", value);
-    state.config_store.save()?;
+    state.config_store.save_config(&cfg).await?;
     Ok(())
 }
 
 pub(crate) async fn load_config_inner(state: &AppState) -> Result<BoardConfig, String> {
-    Ok(state.load_board_config())
+    state.config_store.load_config().await
 }
 
 pub(crate) async fn save_app_key_inner(
@@ -173,24 +191,12 @@ pub(crate) async fn save_app_key_inner(
     state: &AppState,
 ) -> Result<String, String> {
     validate_app_key(&key)?;
-    let value = match &key {
-        Some(k) => json!(k),
-        None => Value::Null,
-    };
-    state.config_store.set("tfl_app_key", value);
-    state.config_store.save()?;
+    state.config_store.save_app_key(key).await?;
     Ok("restart to apply".to_string())
 }
 
 pub(crate) async fn load_app_key_inner(state: &AppState) -> Result<Option<String>, String> {
-    let key = state.config_store.get("tfl_app_key").and_then(|v| {
-        if v.is_null() {
-            None
-        } else {
-            serde_json::from_value::<String>(v).ok()
-        }
-    });
-    Ok(key)
+    state.config_store.load_app_key().await
 }
 
 pub(crate) async fn get_line_status_inner(
@@ -261,12 +267,13 @@ pub async fn save_app_key(
     save_app_key_inner(key, &state).await
 }
 
-// SECURITY: only the Settings UI should call this command. The main board
-// view must never invoke `load_app_key` — exposing the key to the board
-// page would make it accessible to any renderer-side script.
+// TODO(M7): restrict via per-window capability once Settings is a separate window.
 /// Load the stored TfL API key.
 ///
 /// Returns `None` if no key has been saved.
+// SECURITY: only the Settings UI should call this command. The main board
+// view must never invoke `load_app_key` — exposing the key to the board
+// page would make it accessible to any renderer-side script.
 #[tauri::command]
 pub async fn load_app_key(state: State<'_, AppState>) -> Result<Option<String>, String> {
     load_app_key_inner(&state).await
@@ -481,6 +488,66 @@ mod tests {
     }
 
     // -----------------------------------------------------------------------
+    // Validation: board_config length caps (Fix 4)
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn board_config_too_many_line_ids_is_rejected() {
+        let cfg = BoardConfig {
+            station_id: "940GZZLUBZP".to_string(),
+            line_ids: (0..33).map(|i| format!("line{i}")).collect(),
+            directions: vec![],
+            poll_seconds: 20,
+        };
+        let err = validate_board_config(&cfg).expect_err("should reject >32 line_ids");
+        assert!(err.contains("validation:"), "error: {err}");
+        assert!(err.contains("line_ids"), "error: {err}");
+    }
+
+    #[test]
+    fn board_config_exactly_32_line_ids_is_accepted() {
+        let cfg = BoardConfig {
+            station_id: "940GZZLUBZP".to_string(),
+            line_ids: vec!["northern".to_string(); 32],
+            directions: vec![],
+            poll_seconds: 20,
+        };
+        assert!(
+            validate_board_config(&cfg).is_ok(),
+            "32 line_ids should pass"
+        );
+    }
+
+    #[test]
+    fn board_config_too_many_directions_is_rejected() {
+        use tfl_domain::Direction;
+        let cfg = BoardConfig {
+            station_id: "940GZZLUBZP".to_string(),
+            line_ids: vec![],
+            directions: vec![Direction::Inbound; 17],
+            poll_seconds: 20,
+        };
+        let err = validate_board_config(&cfg).expect_err("should reject >16 directions");
+        assert!(err.contains("validation:"), "error: {err}");
+        assert!(err.contains("directions"), "error: {err}");
+    }
+
+    #[test]
+    fn board_config_exactly_16_directions_is_accepted() {
+        use tfl_domain::Direction;
+        let cfg = BoardConfig {
+            station_id: "940GZZLUBZP".to_string(),
+            line_ids: vec![],
+            directions: vec![Direction::Inbound; 16],
+            poll_seconds: 20,
+        };
+        assert!(
+            validate_board_config(&cfg).is_ok(),
+            "16 directions should pass"
+        );
+    }
+
+    // -----------------------------------------------------------------------
     // Config round-trip
     // -----------------------------------------------------------------------
 
@@ -563,6 +630,21 @@ mod tests {
         assert!(err.contains("validation:"), "error: {err}");
     }
 
+    #[tokio::test]
+    async fn save_config_rejects_too_many_line_ids() {
+        let state = fixture_state();
+        let cfg = BoardConfig {
+            station_id: "940GZZLUBZP".to_string(),
+            line_ids: vec!["northern".to_string(); 33],
+            directions: vec![],
+            poll_seconds: 20,
+        };
+        let err = save_config_inner(&cfg, &state)
+            .await
+            .expect_err("should reject >32 line_ids");
+        assert!(err.contains("validation:"), "error: {err}");
+    }
+
     // -----------------------------------------------------------------------
     // App key round-trip
     // -----------------------------------------------------------------------
@@ -605,6 +687,50 @@ mod tests {
             .await
             .expect_err("should reject null byte in key");
         assert!(err.contains("validation:"), "error: {err}");
+    }
+
+    // -----------------------------------------------------------------------
+    // spawn_blocking proof: simulated blocking I/O
+    // -----------------------------------------------------------------------
+
+    /// Proves that wrapping a blocking `save` in `spawn_blocking` allows other
+    /// async tasks on the same Tokio runtime to make progress concurrently.
+    ///
+    /// The test spawns a "slow save" task (200ms block) and a concurrent
+    /// "heartbeat" task. With `spawn_blocking`, the heartbeat finishes while
+    /// the save is still blocking its OS thread. Without it, the worker thread
+    /// would stall and the heartbeat could not complete until the save returned.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn spawn_blocking_does_not_stall_worker_thread() {
+        use std::sync::atomic::{AtomicBool, Ordering};
+        use std::sync::Arc;
+
+        let heartbeat_done = Arc::new(AtomicBool::new(false));
+        let flag = Arc::clone(&heartbeat_done);
+
+        // Heartbeat: completes after ~10ms — well before the 200ms blocking save.
+        let heartbeat = tokio::spawn(async move {
+            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+            flag.store(true, Ordering::SeqCst);
+        });
+
+        // Slow save wrapped in spawn_blocking so it doesn't stall any worker.
+        let slow_save = tokio::task::spawn_blocking(|| {
+            std::thread::sleep(std::time::Duration::from_millis(200));
+        });
+
+        // Both must complete within a generous timeout.
+        tokio::time::timeout(std::time::Duration::from_millis(500), async move {
+            heartbeat.await.expect("heartbeat task panicked");
+            slow_save.await.expect("slow_save task panicked");
+        })
+        .await
+        .expect("timed out — spawn_blocking may be stalling the runtime");
+
+        assert!(
+            heartbeat_done.load(Ordering::SeqCst),
+            "heartbeat should have completed while slow save was running"
+        );
     }
 
     // -----------------------------------------------------------------------

@@ -32,11 +32,18 @@ impl FixtureTflHttp {
     }
 }
 
+/// Maximum length (in bytes) allowed for a path component (endpoint or id).
+///
+/// Callers in `commands.rs` already cap identifiers at 32 chars; this 64-char
+/// limit is defence-in-depth to bound the filesystem path length regardless of
+/// call site.
+const MAX_PATH_COMPONENT_LEN: usize = 64;
+
 /// Validate a single path component (endpoint or id) to prevent path traversal.
 ///
 /// Allowed characters: ASCII alphanumeric, `-`, `_`.
-/// Rejected: empty strings, `..`, `/`, `\`, null bytes, absolute-path prefixes,
-/// and any character outside the allowed set.
+/// Rejected: empty strings, components longer than 64 chars, `..`, `/`, `\`,
+/// null bytes, absolute-path prefixes, and any character outside the allowed set.
 ///
 /// # Errors
 /// Returns `TflError::InvalidRequest` if the component is invalid.
@@ -44,6 +51,12 @@ fn validate_path_component(component: &str, field: &str) -> Result<(), TflError>
     if component.is_empty() {
         return Err(TflError::InvalidRequest {
             reason: format!("{field} must not be empty"),
+        });
+    }
+
+    if component.len() > MAX_PATH_COMPONENT_LEN {
+        return Err(TflError::InvalidRequest {
+            reason: format!("path component too long (max {MAX_PATH_COMPONENT_LEN} chars)"),
         });
     }
 
@@ -263,6 +276,34 @@ mod tests {
         assert!(
             matches!(err, TflError::InvalidRequest { .. }),
             "expected InvalidRequest, got: {err:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn rejects_component_longer_than_64_chars() {
+        // 65-char component that is otherwise all-safe alphanumerics.
+        let long = "a".repeat(65);
+        let err = any_fixture_http()
+            .fetch("arrivals", &long)
+            .await
+            .expect_err("must reject component > 64 chars");
+        assert!(
+            matches!(err, TflError::InvalidRequest { .. }),
+            "expected InvalidRequest, got: {err:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn accepts_component_of_exactly_64_chars() {
+        // 64-char component: passes the length check but fails as NotFound.
+        let exactly_64 = "a".repeat(64);
+        let err = any_fixture_http()
+            .fetch("arrivals", &exactly_64)
+            .await
+            .expect_err("should fail with NotFound not InvalidRequest");
+        assert!(
+            matches!(err, TflError::NotFound(_) | TflError::Io(_)),
+            "expected NotFound or Io (not InvalidRequest), got: {err:?}"
         );
     }
 
