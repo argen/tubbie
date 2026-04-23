@@ -16,3 +16,7 @@ tokio = { workspace = true }
 reqwest = { workspace = true }
 chrono = { workspace = true }
 thiserror = { workspace = true }
+tempfile = "3"
+
+[dev-dependencies]
+tempfile = "3"
