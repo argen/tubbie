@@ -1,14 +1,47 @@
 import { defineConfig } from 'vitest/config';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
+import { resolve } from 'path';
+
+const alias = {
+  $lib: resolve(__dirname, 'src/lib'),
+  '$app/navigation': resolve(__dirname, 'src/lib/__mocks__/app-navigation.ts'),
+  '$app/stores': resolve(__dirname, 'src/lib/__mocks__/app-stores.ts'),
+};
 
 export default defineConfig({
   plugins: [svelte()],
+  resolve: { alias },
   test: {
-    // Default environment is node — lean and fast for unit tests.
-    // For DOM tests, add `// @vitest-environment happy-dom` at the top of the
-    // test file (files matching **/*.dom.test.ts by convention).
+    // Default environment: node — fast, for pure logic tests.
     environment: 'node',
-    include: ['src/**/*.{test,spec}.ts', 'src/**/__tests__/**/*.ts'],
+    // Vitest 4 uses `projects` to run different environments
+    projects: [
+      {
+        // Pure logic tests: node env
+        plugins: [svelte()],
+        resolve: { alias },
+        test: {
+          name: 'unit',
+          environment: 'node',
+          include: ['src/lib/__tests__/*.test.ts', 'src/lib/__tests__/*.spec.ts'],
+        },
+      },
+      {
+        // DOM component tests: happy-dom
+        // Must use browser-side Svelte resolution
+        plugins: [svelte()],
+        resolve: {
+          alias,
+          conditions: ['browser', 'module', 'import', 'default'],
+        },
+        test: {
+          name: 'dom',
+          environment: 'happy-dom',
+          include: ['src/lib/__tests__/dom/*.dom.test.ts'],
+          setupFiles: ['src/lib/__tests__/dom/setup.ts'],
+        },
+      },
+    ],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov'],

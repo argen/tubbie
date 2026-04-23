@@ -1,0 +1,267 @@
+/* ============================================================
+   tubbie — dot-matrix arrivals board global styles
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   Bundled fonts (self-hosted, SIL OFL — see src/lib/fonts/README.md)
+   font-display: block prevents flash of system font.
+   ------------------------------------------------------------ */
+
+@font-face {
+  font-family: 'VT323';
+  src: url('/src/lib/fonts/VT323.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+
+@font-face {
+  font-family: 'DSEG14Classic';
+  src: url('/src/lib/fonts/DSEG14Classic-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+
+/* ------------------------------------------------------------
+   CSS custom property themes.
+   Applied as a class on <html>: class="theme-classic-amber"
+   Each theme defines all tokens required by tfl_domain::Theme.
+   ------------------------------------------------------------ */
+
+:root,
+.theme-classic-amber {
+  --bg: #0a0a0a;
+  --fg: #ffb800;
+  --accent: #ffd060;
+  --platform-label: #cc9000;
+  --due-flash: #ffd060;
+  --ticker-bg: #111111;
+  --ticker-fg: #ffb800;
+  --stale-accent: #ff8c00;
+  --row-divider: #2a2000;
+  --header-border: #2a1800;
+  --settings-bg: #141200;
+  --input-bg: #1a1600;
+  --input-border: #3a2800;
+  --button-bg: #ffb800;
+  --button-fg: #0a0a0a;
+  --chip-bg: #1e1800;
+  --chip-selected-bg: #ffb800;
+  --chip-selected-fg: #0a0a0a;
+  --focus-ring: #ffb80066;
+  --scrollbar: #2a2000;
+}
+
+.theme-classic-orange {
+  --bg: #0a0a0a;
+  --fg: #ff6b00;
+  --accent: #ff9040;
+  --platform-label: #cc5500;
+  --due-flash: #ff9040;
+  --ticker-bg: #111111;
+  --ticker-fg: #ff6b00;
+  --stale-accent: #ffaa00;
+  --row-divider: #2a1000;
+  --header-border: #2a1200;
+  --settings-bg: #120a00;
+  --input-bg: #1a0e00;
+  --input-border: #3a1e00;
+  --button-bg: #ff6b00;
+  --button-fg: #0a0a0a;
+  --chip-bg: #1e1000;
+  --chip-selected-bg: #ff6b00;
+  --chip-selected-fg: #0a0a0a;
+  --focus-ring: #ff6b0066;
+  --scrollbar: #2a1000;
+}
+
+.theme-modern-white {
+  --bg: #0d0d0d;
+  --fg: #f0f0f0;
+  --accent: #ffffff;
+  --platform-label: #c0c0c0;
+  --due-flash: #ffffff;
+  --ticker-bg: #171717;
+  --ticker-fg: #e0e0e0;
+  --stale-accent: #ff8c00;
+  --row-divider: #242424;
+  --header-border: #2a2a2a;
+  --settings-bg: #141414;
+  --input-bg: #1e1e1e;
+  --input-border: #383838;
+  --button-bg: #f0f0f0;
+  --button-fg: #0d0d0d;
+  --chip-bg: #1e1e1e;
+  --chip-selected-bg: #f0f0f0;
+  --chip-selected-fg: #0d0d0d;
+  --focus-ring: #f0f0f066;
+  --scrollbar: #282828;
+}
+
+.theme-high-contrast {
+  --bg: #000000;
+  --fg: #ffffff;
+  --accent: #ffff00;
+  --platform-label: #ffff00;
+  --due-flash: #ffff00;
+  --ticker-bg: #000000;
+  --ticker-fg: #ffffff;
+  --stale-accent: #ff8800;
+  --row-divider: #444444;
+  --header-border: #666666;
+  --settings-bg: #0a0a0a;
+  --input-bg: #111111;
+  --input-border: #888888;
+  --button-bg: #ffff00;
+  --button-fg: #000000;
+  --chip-bg: #111111;
+  --chip-selected-bg: #ffff00;
+  --chip-selected-fg: #000000;
+  --focus-ring: #ffff0088;
+  --scrollbar: #444444;
+}
+
+/* ------------------------------------------------------------
+   Box-sizing reset
+   ------------------------------------------------------------ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* ------------------------------------------------------------
+   Base
+   ------------------------------------------------------------ */
+
+html {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: 'VT323', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  font-size: 18px;
+  height: 100%;
+  /* Apply default theme */
+  /* Class is set dynamically by applyTheme() */
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--fg);
+  -webkit-font-smoothing: none; /* Keep crisp pixel rendering for dot-matrix feel */
+  font-smooth: never;
+}
+
+/* LED glow text effect — applied to board text surfaces */
+.led-text {
+  text-shadow:
+    0 0 4px var(--fg),
+    0 0 8px color-mix(in srgb, var(--fg) 40%, transparent);
+}
+
+.led-accent {
+  text-shadow:
+    0 0 4px var(--accent),
+    0 0 8px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+/* ------------------------------------------------------------
+   Due flash animation
+   ------------------------------------------------------------ */
+
+@keyframes due-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.due-pulse {
+  animation: due-pulse 1s ease-in-out infinite;
+  color: var(--due-flash);
+}
+
+/* Reduced-motion: disable animation, use bold highlight instead */
+@media (prefers-reduced-motion: reduce) {
+  .due-pulse {
+    animation: none;
+    font-weight: bold;
+    color: var(--due-flash);
+  }
+}
+
+/* ------------------------------------------------------------
+   Refresh pulse — 1px bottom border flash on board header
+   ------------------------------------------------------------ */
+
+@keyframes refresh-pulse {
+  0% {
+    border-bottom-color: var(--accent);
+    box-shadow: 0 1px 0 var(--accent);
+  }
+  100% {
+    border-bottom-color: var(--header-border);
+    box-shadow: none;
+  }
+}
+
+.refresh-pulse {
+  animation: refresh-pulse 400ms ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .refresh-pulse {
+    animation: none;
+    border-bottom-color: var(--header-border);
+  }
+}
+
+/* ------------------------------------------------------------
+   Scrollbar styling (WebKit / Blink for Tauri WebView)
+   ------------------------------------------------------------ */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar);
+  border-radius: 3px;
+}
+
+/* ------------------------------------------------------------
+   Focus ring — keyboard navigation
+   ------------------------------------------------------------ */
+
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* ------------------------------------------------------------
+   Utility classes
+   ------------------------------------------------------------ */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
