@@ -5,14 +5,21 @@ edition = "2021"
 publish = false
 description = "TfL HTTP trait seam, fixture replay impl, and Clock abstraction."
 
+[features]
+# Gates integration tests that hit api.tfl.gov.uk.
+# The ReqwestTflHttp impl itself compiles without this feature.
+live = []
+
 [dependencies]
 tfl-domain = { path = "../tfl-domain" }
 serde = { workspace = true }
 serde_json = { workspace = true }
-tokio = { workspace = true }
+tokio = { workspace = true, features = ["time"] }
 reqwest = { workspace = true }
 thiserror = { workspace = true }
 chrono = { workspace = true }
+url = { workspace = true }
+zeroize = { workspace = true }
 
 [dev-dependencies]
 tokio = { workspace = true }

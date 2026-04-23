@@ -1285,6 +1285,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "tfl-board"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "futures",
+ "serde_json",
+ "tfl-client",
+ "tfl-domain",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
 name = "tfl-client"
 version = "0.1.0"
 dependencies = [
@@ -1297,7 +1310,9 @@ dependencies = [
  "tfl-domain",
  "thiserror",
  "tokio",
+ "url",
  "wiremock",
+ "zeroize",
 ]
 
 [[package]]
