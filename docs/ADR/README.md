@@ -15,3 +15,4 @@ To supersede an ADR: update its Status field; never renumber or rename.
 | 3  | [pure-rust-core-with-trait-seams](./pure-rust-core-with-trait-seams.md) | Accepted |
 | 4  | [fixture-replay-testing](./fixture-replay-testing.md) | Accepted |
 | 5  | [open-sourcing-checklist](./open-sourcing-checklist.md) | Proposed |
+| 6  | [northern-line-branch-inference](./northern-line-branch-inference.md) | Accepted |
