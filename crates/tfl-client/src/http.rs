@@ -293,9 +293,7 @@ impl ReqwestTflHttp {
 
                 Err(RetryDecision::Retry {
                     after: retry_after,
-                    err: TflError::RateLimited {
-                        retry_after,
-                    },
+                    err: TflError::RateLimited { retry_after },
                 })
             }
 
@@ -413,10 +411,7 @@ pub fn parse_retry_after(header: &str, now: DateTime<Utc>) -> Option<Duration> {
             return Some(Duration::ZERO);
         }
         // Convert positive chrono::Duration to std::time::Duration.
-        return delta
-            .to_std()
-            .ok()
-            .or(Some(Duration::ZERO));
+        return delta.to_std().ok().or(Some(Duration::ZERO));
     }
 
     None
@@ -649,10 +644,7 @@ mod tests {
     #[test]
     fn parse_retry_after_integer_5() {
         let now = chrono::Utc::now();
-        assert_eq!(
-            parse_retry_after("5", now),
-            Some(Duration::from_secs(5))
-        );
+        assert_eq!(parse_retry_after("5", now), Some(Duration::from_secs(5)));
     }
 
     #[test]
@@ -667,10 +659,7 @@ mod tests {
     #[test]
     fn parse_retry_after_integer_0() {
         let now = chrono::Utc::now();
-        assert_eq!(
-            parse_retry_after("0", now),
-            Some(Duration::from_secs(0))
-        );
+        assert_eq!(parse_retry_after("0", now), Some(Duration::from_secs(0)));
     }
 
     #[test]
@@ -700,7 +689,11 @@ mod tests {
             .unwrap()
             .with_timezone(&Utc);
         let result = parse_retry_after("Fri, 24 Apr 2026 11:59:00 GMT", now);
-        assert_eq!(result, Some(Duration::ZERO), "past HTTP-date should yield 0s");
+        assert_eq!(
+            result,
+            Some(Duration::ZERO),
+            "past HTTP-date should yield 0s"
+        );
     }
 
     #[test]
