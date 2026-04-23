@@ -59,7 +59,7 @@ pub enum Direction {
     Inbound,
     /// Outbound on a circular / terminal line.
     Outbound,
-    /// Direction unknown (field absent or unrecognised from TfL).
+    /// Graceful-degradation fallback when the TfL direction string is unrecognised. See `infer_direction` priority list.
     Unknown,
 }
 
@@ -70,21 +70,6 @@ pub enum NorthernBranch {
     Bank,
     /// Via Charing Cross / West End branch.
     CharingCross,
-}
-
-impl Direction {
-    /// Derive the display label used on real TfL boards.
-    pub fn label(&self) -> &str {
-        match self {
-            Direction::Northbound { .. } => "Northbound",
-            Direction::Southbound { .. } => "Southbound",
-            Direction::Eastbound => "Eastbound",
-            Direction::Westbound => "Westbound",
-            Direction::Inbound => "Inbound",
-            Direction::Outbound => "Outbound",
-            Direction::Unknown => "Unknown",
-        }
-    }
 }
 
 // ---------------------------------------------------------------------------
@@ -99,6 +84,9 @@ impl Direction {
 /// 2. Northern-line branch from `towards` suffix when `line_id == "northern"`.
 /// 3. Raw `direction` field (`"inbound"` / `"outbound"`) as a fallback.
 /// 4. `Direction::Unknown` if nothing matches.
+///
+/// Exposed for integration tests and future M2 enrichment; normally invoked via
+/// the `Deserialize` impl on `Arrival`.
 pub fn infer_direction(
     platform_name: &str,
     direction: &str,
@@ -157,29 +145,5 @@ fn infer_northern_branch(towards: &str) -> Option<NorthernBranch> {
         Some(NorthernBranch::CharingCross)
     } else {
         None
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Serde round-trip support for Arrival deserialization
-// ---------------------------------------------------------------------------
-//
-// When TfL JSON is deserialized into `Arrival`, the `direction` field holds
-// a raw string (`"inbound"` / `"outbound"`) that doesn't match `Direction`'s
-// enum variants. The client layer (M2) is responsible for calling
-// `infer_direction` and replacing the raw value with the rich type.
-//
-// For M1 we provide a `from_tfl_raw` constructor so the contract tests can
-// parse the raw `direction` string and convert it in one step.
-
-impl Direction {
-    /// Construct a `Direction` from the raw TfL `direction` string, without
-    /// any platform or `towards` context. Useful for simple round-trip tests.
-    pub fn from_raw(s: &str) -> Self {
-        match s {
-            "inbound" => Direction::Inbound,
-            "outbound" => Direction::Outbound,
-            _ => Direction::Unknown,
-        }
     }
 }

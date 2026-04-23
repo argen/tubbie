@@ -149,6 +149,8 @@ pub struct LineRef {
 // ---------------------------------------------------------------------------
 
 /// A TfL line (tube only for now).
+///
+/// TODO(M2): Line enrichment from /Line endpoint for board line-colour lookup.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Line {
     pub id: String,
@@ -165,6 +167,8 @@ pub struct Line {
 /// This is an *interpreted* type — not a direct TfL wire format. The client
 /// layer (M2) maps TfL's `lineStatuses[].statusSeverityDescription` and
 /// `disruption.description` into this struct.
+///
+/// TODO(M4): LineStatus drives <LineStatusTicker/> disruption text; see M4 polling-stream spec.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct LineStatus {
     pub line_id: String,
@@ -173,6 +177,8 @@ pub struct LineStatus {
 }
 
 /// An individual severity entry within a `LineStatus`.
+///
+/// TODO(M4): StatusEntry is the severity row inside LineStatus; rendered by M6 ticker.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct StatusEntry {
     /// Numeric severity code from TfL (10 = Good Service).
@@ -221,6 +227,8 @@ pub struct TflDisruption {
 // ---------------------------------------------------------------------------
 
 /// A grouped arrivals board for a station, ready for rendering.
+///
+/// TODO(M4): Board is the top-level state returned by BoardService::refresh; see M4.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Board {
     pub station_id: String,

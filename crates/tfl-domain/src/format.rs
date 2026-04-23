@@ -52,7 +52,11 @@ pub fn group_by_platform(arrivals: Vec<Arrival>) -> Vec<Platform> {
     platform_order
         .into_iter()
         .map(|name| {
-            let mut arrivals = platform_map.remove(&name).unwrap_or_default();
+            // Invariant: every name in platform_order was inserted into platform_map
+            // in the same loop, so remove() must succeed.
+            let mut arrivals = platform_map
+                .remove(&name)
+                .expect("platform_map key guaranteed by construction — name came from platform_order in the same loop");
             arrivals.sort_by_key(|a| a.time_to_station);
             Platform { name, arrivals }
         })

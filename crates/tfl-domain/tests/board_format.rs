@@ -35,7 +35,8 @@ fn format_arrival_line(arrival: &Arrival, now: DateTime<Utc>) -> String {
     // minus the fixture clock (not `time_to_station` directly) so the snapshot
     // reflects realistic TfL formatting at the moment the fixture was recorded.
     let seconds_until = (arrival.expected_arrival - now).num_seconds();
-    let duration = Duration::seconds(seconds_until);
+    let duration = Duration::try_seconds(seconds_until)
+        .expect("seconds_until is derived from real fixture timestamps and cannot overflow");
     let time_label = format_time_to_station(duration);
     format!("  {:>6}  {}", time_label, arrival.destination_name)
 }

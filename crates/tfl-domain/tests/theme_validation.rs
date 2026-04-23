@@ -81,12 +81,16 @@ fn multiple_missing_tokens_reported() {
     let err = theme.validate().unwrap_err();
     match err {
         ThemeError::MissingTokens { missing } => {
-            assert_eq!(missing.len(), 3);
-            // Check all three are present (order may vary since HashMap is unordered,
-            // but the implementation returns them in REQUIRED_TOKENS declaration order).
-            assert!(missing.contains(&"bg".to_string()));
-            assert!(missing.contains(&"stale-accent".to_string()));
-            assert!(missing.contains(&"row-divider".to_string()));
+            // validate() sorts missing tokens alphabetically for deterministic output.
+            assert_eq!(
+                missing,
+                vec![
+                    "bg".to_string(),
+                    "row-divider".to_string(),
+                    "stale-accent".to_string(),
+                ],
+                "missing tokens must be returned in sorted alphabetical order"
+            );
         }
     }
 }

@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use thiserror::Error;
 
 /// Required palette tokens that every theme must define.
-pub const REQUIRED_TOKENS: &[&str] = &[
+const REQUIRED_TOKENS: &[&str] = &[
     "bg",
     "fg",
     "accent",
@@ -38,11 +38,12 @@ impl Theme {
     /// Returns `Err(ThemeError::MissingTokens { missing })` listing every
     /// absent token, sorted for deterministic output.
     pub fn validate(&self) -> Result<(), ThemeError> {
-        let missing: Vec<String> = REQUIRED_TOKENS
+        let mut missing: Vec<String> = REQUIRED_TOKENS
             .iter()
             .filter(|&&token| !self.palette.contains_key(token))
             .map(|&t| t.to_string())
             .collect();
+        missing.sort();
 
         if missing.is_empty() {
             Ok(())

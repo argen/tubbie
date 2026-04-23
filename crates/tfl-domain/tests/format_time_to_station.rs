@@ -28,8 +28,12 @@ fn format_cases() {
         (90, "2 mins"),
         // Rounding: 91 s → 1.52 min → rounds to 2
         (91, "2 mins"),
+        // 149 s → (149+30)/60 = 2 (just below the 2→3 boundary)
+        (149, "2 mins"),
         // 150 s = 2.5 min → rounds to 3 (half-up: (150+30)/60 = 3)
         (150, "3 mins"),
+        // 151 s → (151+30)/60 = 3 (just above the 2→3 boundary)
+        (151, "3 mins"),
         // 217 s (from Belsize Park fixture) → (217+30)/60 = 4 → "4 mins"
         (217, "4 mins"),
         // 847 s → (847+30)/60 = 14 → "14 mins"
