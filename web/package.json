@@ -19,6 +19,7 @@
     "test:watch": "vitest",
     "precommit": "lint-staged && npm run typecheck && npm run test",
     "verify": "npm run lint && npm run format:check && npm run typecheck && npm run test",
+    "prepare": "svelte-kit sync",
     "postinstall": "simple-git-hooks"
   },
   "simple-git-hooks": {
