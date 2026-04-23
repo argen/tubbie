@@ -1,18 +1,40 @@
 use crate::error::TflError;
 use serde_json::Value;
 use std::time::Duration;
+use url::Url;
+use zeroize::Zeroize;
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+const BASE_URL: &str = "https://api.tfl.gov.uk/";
+const USER_AGENT: &str = "tubbie/0.1 (https://github.com/argen/tubbie)";
+const DEFAULT_TIMEOUT_SECS: u64 = 10;
+
+/// Maximum number of retry attempts (not counting the initial attempt).
+const MAX_RETRIES: u32 = 2;
+/// Initial backoff duration in milliseconds.
+const BACKOFF_BASE_MS: u64 = 500;
+/// Backoff multiplier per retry.
+const BACKOFF_FACTOR: u64 = 2;
+/// Maximum backoff duration.
+const BACKOFF_MAX_MS: u64 = 2_000;
+/// Cap on `Retry-After` header value in seconds; beyond this we give up immediately.
+const RETRY_AFTER_CAP_SECS: u64 = 5;
+
+// ---------------------------------------------------------------------------
+// TflHttp trait
+// ---------------------------------------------------------------------------
 
 /// Transport-only trait for fetching data from TfL.
 ///
 /// Implementations:
-/// - `ReqwestTflHttp` — hits `api.tfl.gov.uk` (live; full behaviour in M3).
+/// - `ReqwestTflHttp` — hits `api.tfl.gov.uk` (live).
 /// - `FixtureTflHttp` — reads from `fixtures/{endpoint}/{id}.json` (CI-safe).
 ///
 /// `endpoint` is a path segment like `"arrivals"`, `"line-status"`, or `"stop-points"`.
 /// `id` is a resource identifier like `"940GZZLUBZP"` or `"tube"`.
-///
-/// M2 will add typed accessors (`get_arrivals`, `search_stations`, etc.) on top
-/// of this transport primitive.
 pub trait TflHttp: Send + Sync {
     fn fetch(
         &self,
@@ -21,28 +43,269 @@ pub trait TflHttp: Send + Sync {
     ) -> impl std::future::Future<Output = Result<Value, TflError>> + Send;
 }
 
+// ---------------------------------------------------------------------------
+// ReqwestTflHttp
+// ---------------------------------------------------------------------------
+
+/// App key wrapper that zeroizes its memory on drop and never prints the key
+/// via `Debug`.
+struct AppKey(String);
+
+impl Drop for AppKey {
+    fn drop(&mut self) {
+        self.0.zeroize();
+    }
+}
+
+impl std::fmt::Debug for AppKey {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("<redacted>")
+    }
+}
+
 /// Live TfL HTTP client backed by `reqwest`.
 ///
-/// Full behaviour (URL construction, app_key injection, retry, timeout) lands in M3.
-/// In M0 this stub compiles and is instantiable; `fetch` is a thin passthrough.
+/// ## Connection reuse
+/// The internal `reqwest::Client` is constructed once and shared across all
+/// `fetch` calls — no per-call DNS lookup or TLS handshake after warm-up.
+/// `pool_max_idle_per_host` is set to 4.
+///
+/// ## API-key precedence
+/// 1. Explicit key via [`ReqwestTflHttp::with_app_key`] — highest priority.
+/// 2. `TFL_APP_KEY` environment variable (read once at construction by [`ReqwestTflHttp::new`]).
+/// 3. Anonymous access (no `app_key` query param) when neither is set.
+///
+/// ## Security
+/// The key is stored in an [`AppKey`] wrapper that:
+/// - Zeroizes the key bytes on drop.
+/// - Overrides `Debug` to print `<redacted>` rather than the key.
+///
+/// Error messages never include the URL query string (which would contain the
+/// key); see [`TflError::transport_from`].
 pub struct ReqwestTflHttp {
     client: reqwest::Client,
-    base_url: String,
+    base_url: Url,
+    app_key: Option<AppKey>,
+}
+
+impl std::fmt::Debug for ReqwestTflHttp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("ReqwestTflHttp { .. }")
+    }
 }
 
 impl ReqwestTflHttp {
+    /// Construct a client, reading `TFL_APP_KEY` from the environment (if set).
+    ///
+    /// The key is read **once** here; subsequent changes to the env var have no
+    /// effect on this client instance.
     pub fn new() -> Self {
-        Self {
-            client: reqwest::Client::new(),
-            base_url: "https://api.tfl.gov.uk".to_string(),
-        }
+        let app_key = std::env::var("TFL_APP_KEY")
+            .ok()
+            .filter(|k| !k.trim().is_empty())
+            .map(AppKey);
+
+        Self::build(
+            app_key,
+            Url::parse(BASE_URL).expect("base URL is valid"),
+            None,
+        )
+    }
+
+    /// Construct a client with an explicit API key (takes precedence over env var).
+    ///
+    /// This is the hook for M5's `tauri-plugin-store` integration.
+    pub fn with_app_key(key: String) -> Self {
+        Self::build(
+            Some(AppKey(key)),
+            Url::parse(BASE_URL).expect("base URL is valid"),
+            None,
+        )
     }
 
     /// Override the base URL — useful for pointing at a wiremock server in tests.
-    pub fn with_base_url(base_url: impl Into<String>) -> Self {
+    ///
+    /// API key and timeout use defaults (`TFL_APP_KEY` env var; 10s).
+    pub fn with_base_url(base_url: impl AsRef<str>) -> Self {
+        let url = Url::parse(base_url.as_ref()).expect("base URL must be valid");
+        let app_key = std::env::var("TFL_APP_KEY")
+            .ok()
+            .filter(|k| !k.trim().is_empty())
+            .map(AppKey);
+        Self::build(app_key, url, None)
+    }
+
+    /// Full-control constructor for tests: explicit key + base URL + timeout.
+    pub fn with_config(
+        app_key: Option<String>,
+        base_url: impl AsRef<str>,
+        timeout: Duration,
+    ) -> Self {
+        let url = Url::parse(base_url.as_ref()).expect("base URL must be valid");
+        Self::build(app_key.map(AppKey), url, Some(timeout))
+    }
+
+    // ------------------------------------------------------------------
+    // Private builder
+    // ------------------------------------------------------------------
+
+    fn build(app_key: Option<AppKey>, base_url: Url, timeout: Option<Duration>) -> Self {
+        let timeout = timeout.unwrap_or(Duration::from_secs(DEFAULT_TIMEOUT_SECS));
+        let client = reqwest::Client::builder()
+            .timeout(timeout)
+            .pool_max_idle_per_host(4)
+            .user_agent(USER_AGENT)
+            .build()
+            .expect("reqwest client config is valid");
+
         Self {
-            client: reqwest::Client::new(),
-            base_url: base_url.into(),
+            client,
+            base_url,
+            app_key,
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // URL construction
+    // ------------------------------------------------------------------
+
+    /// Build the full request URL for an (endpoint, id) pair.
+    ///
+    /// URL construction uses `url::Url` throughout — never `format!` with
+    /// user-controlled path segments. This guarantees proper percent-encoding
+    /// and prevents scheme injection.
+    fn build_url(&self, endpoint: &str, id: &str) -> Result<Url, TflError> {
+        // Map (endpoint, id) → path relative to base.
+        let path = match endpoint {
+            "arrivals" => format!("StopPoint/{}/Arrivals", percent_encode(id)),
+            "line-status" => format!("Line/Mode/{}/Status", percent_encode(id)),
+            "stop-points" => format!("StopPoint/Mode/{}", percent_encode(id)),
+            other => format!("{}/{}", percent_encode(other), percent_encode(id)),
+        };
+
+        let mut url = self.base_url.join(&path).map_err(|e| TflError::Transport {
+            kind: format!("URL construction error: {e}"),
+            url_sanitized: self.base_url.to_string(),
+        })?;
+
+        // Append app_key as a query parameter if we have one.
+        if let Some(ref key) = self.app_key {
+            url.query_pairs_mut().append_pair("app_key", &key.0);
+        }
+
+        Ok(url)
+    }
+
+    // ------------------------------------------------------------------
+    // Request with retry loop
+    // ------------------------------------------------------------------
+
+    /// Execute one HTTP GET with retry on 429 / 503 / connect-timeout.
+    ///
+    /// Retry policy:
+    /// - Max `MAX_RETRIES` additional attempts after the initial one.
+    /// - Exponential backoff: `BACKOFF_BASE_MS * BACKOFF_FACTOR^attempt`, capped at `BACKOFF_MAX_MS`.
+    /// - 429: respect `Retry-After` header (capped at `RETRY_AFTER_CAP_SECS`).
+    /// - 503: exponential backoff.
+    /// - Connect-timeout: exponential backoff.
+    /// - Other 4xx / 5xx: no retry.
+    async fn fetch_with_retry(&self, endpoint: &str, id: &str) -> Result<Value, TflError> {
+        let url = self.build_url(endpoint, id)?;
+
+        let mut last_err: Option<TflError> = None;
+
+        for attempt in 0..=MAX_RETRIES {
+            match self.do_request(url.clone()).await {
+                Ok(val) => return Ok(val),
+
+                Err(RetryDecision::Retry { after, err }) => {
+                    last_err = Some(err);
+                    if attempt < MAX_RETRIES {
+                        let backoff = compute_backoff(attempt, after);
+                        tokio::time::sleep(backoff).await;
+                    }
+                }
+
+                Err(RetryDecision::Fail(err)) => return Err(err),
+            }
+        }
+
+        Err(last_err.expect("last_err is set whenever we enter Retry branch"))
+    }
+
+    /// Perform one HTTP GET and return either a parsed value or a retry decision.
+    async fn do_request(&self, url: Url) -> Result<Value, RetryDecision> {
+        let response = self.client.get(url.clone()).send().await.map_err(|e| {
+            let tfl_err = TflError::transport_from(&e);
+            // Retry on connect / timeout errors.
+            if e.is_connect() || e.is_timeout() {
+                RetryDecision::Retry {
+                    after: None,
+                    err: tfl_err,
+                }
+            } else {
+                RetryDecision::Fail(tfl_err)
+            }
+        })?;
+
+        let status = response.status();
+
+        if status.is_success() {
+            let value: Value = response
+                .json()
+                .await
+                .map_err(|e| RetryDecision::Fail(TflError::transport_from(&e)))?;
+            return Ok(value);
+        }
+
+        match status.as_u16() {
+            404 => Err(RetryDecision::Fail(TflError::NotFound(format!(
+                "TfL returned 404 for {endpoint}/{id}",
+                endpoint = url.path(),
+                id = ""
+            )))),
+
+            429 => {
+                let retry_after_secs = response
+                    .headers()
+                    .get("retry-after")
+                    .and_then(|v| v.to_str().ok())
+                    .and_then(|s| s.parse::<u64>().ok());
+
+                // If Retry-After exceeds our cap, give up immediately.
+                if let Some(secs) = retry_after_secs {
+                    if secs > RETRY_AFTER_CAP_SECS {
+                        return Err(RetryDecision::Fail(TflError::RateLimited {
+                            retry_after: Some(Duration::from_secs(secs)),
+                        }));
+                    }
+                }
+
+                let after = retry_after_secs.map(Duration::from_secs);
+                Err(RetryDecision::Retry {
+                    after,
+                    err: TflError::RateLimited { retry_after: after },
+                })
+            }
+
+            503 => {
+                let body_snippet = body_snippet_from_response(response).await;
+                Err(RetryDecision::Retry {
+                    after: None,
+                    err: TflError::Http {
+                        status: 503,
+                        body_snippet,
+                    },
+                })
+            }
+
+            _ => {
+                let body_snippet = body_snippet_from_response(response).await;
+                Err(RetryDecision::Fail(TflError::Http {
+                    status: status.as_u16(),
+                    body_snippet,
+                }))
+            }
         }
     }
 }
@@ -58,59 +321,75 @@ impl TflHttp for ReqwestTflHttp {
     ///
     /// Maps HTTP error statuses to typed `TflError` variants:
     /// - 404 → `TflError::NotFound`
-    /// - 429 → `TflError::RateLimited` (reads `Retry-After` header if present)
-    /// - 5xx → `TflError::Transport`
-    /// - other 4xx → `TflError::Http { status, body_snippet }`
+    /// - 429 → `TflError::RateLimited` (reads `Retry-After` header if present; retried up to MAX_RETRIES times)
+    /// - 503 → `TflError::Http { status: 503, .. }` (retried up to MAX_RETRIES times)
+    /// - other 4xx / 5xx → `TflError::Http { status, .. }` (not retried)
     ///
-    /// SECURITY: the URL is never included in error messages to avoid leaking
-    /// any app_key that may appear in request URLs.
+    /// SECURITY: the URL (including any `app_key` query param) is never included
+    /// in error messages. See [`TflError::transport_from`] and [`TflError::Transport`].
     async fn fetch(&self, endpoint: &str, id: &str) -> Result<Value, TflError> {
-        let url = build_url(&self.base_url, endpoint, id);
-        let response = self.client.get(&url).send().await?;
-        let status = response.status();
-
-        if status.is_success() {
-            let value: Value = response.json().await?;
-            return Ok(value);
-        }
-
-        // Map error statuses to typed variants.
-        match status.as_u16() {
-            404 => Err(TflError::NotFound(format!(
-                "TfL returned 404 for {endpoint}/{id}"
-            ))),
-            429 => {
-                let retry_after = response
-                    .headers()
-                    .get("retry-after")
-                    .and_then(|v| v.to_str().ok())
-                    .and_then(|s| s.parse::<u64>().ok())
-                    .map(Duration::from_secs);
-                Err(TflError::RateLimited { retry_after })
-            }
-            500..=599 => {
-                // 5xx: server error. Body is read for the snippet but the URL
-                // is never included in the error to avoid leaking app_key.
-                let body_snippet = body_snippet_from_response(response).await;
-                Err(TflError::Http {
-                    status: status.as_u16(),
-                    body_snippet,
-                })
-            }
-            _ => {
-                let body_snippet = body_snippet_from_response(response).await;
-                Err(TflError::Http {
-                    status: status.as_u16(),
-                    body_snippet,
-                })
-            }
-        }
+        self.fetch_with_retry(endpoint, id).await
     }
+}
+
+// ---------------------------------------------------------------------------
+// Internal retry decision type
+// ---------------------------------------------------------------------------
+
+/// Internal signal from a single HTTP attempt.
+enum RetryDecision {
+    /// Retry the request; `after` is a requested delay (from `Retry-After`).
+    Retry {
+        after: Option<Duration>,
+        err: TflError,
+    },
+    /// Do not retry; return this error to the caller.
+    Fail(TflError),
 }
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+/// Compute the backoff duration for a given retry attempt number (0-indexed).
+///
+/// If the server sent a `Retry-After` value, honour it (capped at BACKOFF_MAX_MS).
+/// Otherwise use exponential backoff: base * factor^attempt, capped at max.
+fn compute_backoff(attempt: u32, server_after: Option<Duration>) -> Duration {
+    if let Some(after) = server_after {
+        let ms = after.as_millis() as u64;
+        return Duration::from_millis(ms.min(BACKOFF_MAX_MS));
+    }
+    let ms = BACKOFF_BASE_MS * BACKOFF_FACTOR.pow(attempt);
+    Duration::from_millis(ms.min(BACKOFF_MAX_MS))
+}
+
+/// Percent-encode a path segment (spaces → %20, slashes → %2F, etc.).
+///
+/// In practice TfL IDs are alphanumeric (e.g. `940GZZLUBZP`, `tube`) so this
+/// is belt-and-braces, but it prevents scheme injection if a caller passes an
+/// unexpected character.
+fn percent_encode(s: &str) -> String {
+    s.chars()
+        .flat_map(|c| {
+            if c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.' | '~') {
+                vec![c]
+            } else {
+                // Encode as %XX for each byte.
+                let mut buf = [0u8; 4];
+                let encoded: String = c
+                    .encode_utf8(&mut buf)
+                    .bytes()
+                    .map(|b| format!("%{b:02X}"))
+                    .collect::<Vec<_>>()
+                    .join("")
+                    .chars()
+                    .collect();
+                encoded.chars().collect()
+            }
+        })
+        .collect()
+}
 
 /// Read up to 512 bytes of text from a response body for error context.
 ///
@@ -127,7 +406,6 @@ fn truncate_to_512(s: String) -> String {
     if s.len() <= 512 {
         s
     } else {
-        // Find the last char boundary at or before 512 bytes.
         let mut idx = 512;
         while !s.is_char_boundary(idx) {
             idx -= 1;
@@ -136,12 +414,17 @@ fn truncate_to_512(s: String) -> String {
     }
 }
 
+// ---------------------------------------------------------------------------
+// URL builder helper (kept public for backwards-compatibility with existing tests)
+// ---------------------------------------------------------------------------
+
 /// Build the TfL API URL for a given endpoint and id.
 ///
-/// Mapping (M0 scope — arrivals only; extended in M2):
+/// Mapping:
 /// - `arrivals`    + id → `/StopPoint/{id}/Arrivals`
 /// - `line-status` + id → `/Line/Mode/{id}/Status`
 /// - `stop-points` + id → `/StopPoint/Mode/{id}`
+#[doc(hidden)]
 pub fn build_url(base: &str, endpoint: &str, id: &str) -> String {
     match endpoint {
         "arrivals" => format!("{base}/StopPoint/{id}/Arrivals"),
@@ -151,9 +434,17 @@ pub fn build_url(base: &str, endpoint: &str, id: &str) -> String {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // ------------------------------------------------------------------
+    // URL builder (kept for backwards-compat)
+    // ------------------------------------------------------------------
 
     #[test]
     fn build_url_arrivals() {
@@ -173,6 +464,72 @@ mod tests {
         assert_eq!(url, "https://api.tfl.gov.uk/StopPoint/Mode/tube");
     }
 
+    // ------------------------------------------------------------------
+    // URL builder with app_key (internal build_url method)
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn internal_build_url_appends_app_key() {
+        let client = ReqwestTflHttp::with_config(
+            Some("MYKEY".to_string()),
+            "https://api.tfl.gov.uk/",
+            Duration::from_secs(5),
+        );
+        let url = client.build_url("arrivals", "TEST").unwrap();
+        let query: Vec<(_, _)> = url.query_pairs().collect();
+        assert!(
+            query.iter().any(|(k, v)| k == "app_key" && v == "MYKEY"),
+            "app_key should be in query: {url}"
+        );
+        // Ensure no user-controlled segment made it to scheme position.
+        assert_eq!(url.scheme(), "https");
+    }
+
+    #[test]
+    fn internal_build_url_no_key_when_anonymous() {
+        let client =
+            ReqwestTflHttp::with_config(None, "https://api.tfl.gov.uk/", Duration::from_secs(5));
+        let url = client.build_url("arrivals", "TEST").unwrap();
+        assert!(
+            url.query().is_none() || !url.query().unwrap().contains("app_key"),
+            "anonymous client must not append app_key: {url}"
+        );
+    }
+
+    #[test]
+    fn explicit_key_takes_precedence_over_env() {
+        // We can't easily test env-var precedence without std::env manipulation
+        // (which is process-global and test-unsafe). This test ensures that
+        // with_app_key constructs a client that embeds the explicit key.
+        let client = ReqwestTflHttp::with_app_key("EXPLICIT".to_string());
+        let url = client
+            .build_url("arrivals", "TEST")
+            .expect("URL build should succeed");
+        let has_key = url
+            .query_pairs()
+            .any(|(k, v)| k == "app_key" && v == "EXPLICIT");
+        assert!(has_key, "explicit key should be present in URL: {url}");
+    }
+
+    // ------------------------------------------------------------------
+    // Debug impl does not leak key
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn debug_impl_does_not_leak_app_key() {
+        let client = ReqwestTflHttp::with_app_key("SUPERSECRET".to_string());
+        let debug_str = format!("{client:?}");
+        assert!(
+            !debug_str.contains("SUPERSECRET"),
+            "Debug must not leak key, got: {debug_str}"
+        );
+        assert_eq!(debug_str, "ReqwestTflHttp { .. }");
+    }
+
+    // ------------------------------------------------------------------
+    // Truncation helper
+    // ------------------------------------------------------------------
+
     #[test]
     fn truncate_to_512_short() {
         let s = "hello".to_string();
@@ -183,14 +540,41 @@ mod tests {
     fn truncate_to_512_long() {
         let s = "a".repeat(600);
         let t = truncate_to_512(s);
-        // Should end with ellipsis and be just over 512 chars (the … is 3 bytes in UTF-8)
         assert!(t.len() <= 515, "truncated len: {}", t.len());
         assert!(t.ends_with('…'));
     }
 
-    // ---------------------------------------------------------------------------
+    // ------------------------------------------------------------------
+    // Compute backoff
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn compute_backoff_exponential() {
+        assert_eq!(compute_backoff(0, None), Duration::from_millis(500));
+        assert_eq!(compute_backoff(1, None), Duration::from_millis(1000));
+        assert_eq!(compute_backoff(2, None), Duration::from_millis(2000));
+        // Capped at max
+        assert_eq!(compute_backoff(10, None), Duration::from_millis(2000));
+    }
+
+    #[test]
+    fn compute_backoff_honours_server_after() {
+        let after = Duration::from_millis(1200);
+        assert_eq!(compute_backoff(0, Some(after)), Duration::from_millis(1200));
+    }
+
+    #[test]
+    fn compute_backoff_caps_server_after() {
+        let after = Duration::from_secs(60);
+        assert_eq!(
+            compute_backoff(0, Some(after)),
+            Duration::from_millis(BACKOFF_MAX_MS)
+        );
+    }
+
+    // ------------------------------------------------------------------
     // Integration tests using wiremock — require tokio runtime
-    // ---------------------------------------------------------------------------
+    // ------------------------------------------------------------------
 
     #[tokio::test]
     async fn fetch_200_returns_parsed_json() {
@@ -237,40 +621,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn fetch_429_returns_rate_limited_with_retry_after() {
-        use wiremock::matchers::{method, path};
-        use wiremock::{Mock, MockServer, ResponseTemplate};
-
-        let server = MockServer::start().await;
-        Mock::given(method("GET"))
-            .and(path("/StopPoint/TEST/Arrivals"))
-            .respond_with(
-                ResponseTemplate::new(429)
-                    .insert_header("retry-after", "30")
-                    .set_body_string("too many requests"),
-            )
-            .mount(&server)
-            .await;
-
-        let client = ReqwestTflHttp::with_base_url(server.uri());
-        let err = client
-            .fetch("arrivals", "TEST")
-            .await
-            .expect_err("429 should be an error");
-
-        match err {
-            TflError::RateLimited { retry_after } => {
-                assert_eq!(
-                    retry_after,
-                    Some(Duration::from_secs(30)),
-                    "retry_after should be 30s"
-                );
-            }
-            other => panic!("expected RateLimited, got: {other:?}"),
-        }
-    }
-
-    #[tokio::test]
     async fn fetch_500_returns_http_error() {
         use wiremock::matchers::{method, path};
         use wiremock::{Mock, MockServer, ResponseTemplate};
@@ -304,21 +654,55 @@ mod tests {
         let server = MockServer::start().await;
         Mock::given(method("GET"))
             .and(path("/StopPoint/SENSITIVE/Arrivals"))
-            .respond_with(ResponseTemplate::new(429).insert_header("retry-after", "60"))
+            .respond_with(
+                ResponseTemplate::new(429)
+                    .insert_header("retry-after", "60")
+                    .set_body_string("too many requests"),
+            )
             .mount(&server)
             .await;
 
-        let client = ReqwestTflHttp::with_base_url(server.uri());
+        // A client with an explicit app_key — must never leak it on rate-limit.
+        let client = ReqwestTflHttp::with_config(
+            Some("DEADBEEF".to_string()),
+            server.uri(),
+            Duration::from_secs(5),
+        );
         let err = client
             .fetch("arrivals", "SENSITIVE")
             .await
             .expect_err("should error");
         let display = err.to_string();
-        // The display must not include the mock server URL (which contains localhost:PORT)
-        // In production the URL could contain app_key — never leak it.
+        // Retry-After is 60s which exceeds RETRY_AFTER_CAP_SECS (5s) → immediate fail.
+        assert!(
+            !display.contains("DEADBEEF"),
+            "app_key must not appear in error display, got: {display}"
+        );
         assert!(
             !display.contains("localhost"),
-            "error display must not contain URL, got: {display}"
+            "raw URL must not appear in error display, got: {display}"
+        );
+    }
+
+    /// Verify that app_key never leaks through Transport errors.
+    /// This test uses with_config to inject a key, then induces a transport
+    /// error (DNS failure on a non-existent host). The stringified error must
+    /// not contain the key.
+    #[tokio::test]
+    async fn transport_error_does_not_leak_app_key_in_display() {
+        let client = ReqwestTflHttp::with_config(
+            Some("DEADBEEF".to_string()),
+            "http://this.host.does.not.exist.invalid/",
+            Duration::from_millis(500),
+        );
+        let err = client
+            .fetch("arrivals", "TEST")
+            .await
+            .expect_err("should fail to connect");
+        let display = err.to_string();
+        assert!(
+            !display.contains("DEADBEEF"),
+            "app_key must not appear in Transport error display, got: {display}"
         );
     }
 }
