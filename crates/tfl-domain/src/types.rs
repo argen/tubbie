@@ -210,6 +210,10 @@ pub struct TflLine {
 pub struct TflLineStatus {
     pub status_severity: i32,
     pub status_severity_description: String,
+    /// Free-text reason string from TfL, often duplicating `disruption.description`.
+    /// Present when there is a disruption; absent for Good Service.
+    #[serde(default)]
+    pub reason: Option<String>,
     #[serde(default)]
     pub disruption: Option<TflDisruption>,
 }
