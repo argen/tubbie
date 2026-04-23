@@ -30,3 +30,7 @@ test:
 # Check formatting only (used in CI)
 fmt-check:
     cargo fmt --all -- --check
+
+# Record TfL API fixtures to fixtures/ (hits live API — run once per milestone)
+record-fixtures:
+    cargo run -p fixture-recorder --release
