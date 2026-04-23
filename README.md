@@ -29,6 +29,27 @@ just dev
 > **Note:** `just dev` is a placeholder until M5/M6 when the Tauri shell and
 > SvelteKit frontend are wired together.
 
+## Regenerating fixtures
+
+Fixtures are committed TfL API responses used for offline, deterministic tests.
+They live in `fixtures/{endpoint}/{id}.json` alongside a `{id}.meta.json` sidecar
+recording when each fixture was captured and from what URL (`app_key` is always
+stripped before writing).
+
+To refresh:
+
+```sh
+just record-fixtures
+```
+
+This hits the live TfL API (anonymous access, no key needed) for:
+- `arrivals/{id}.json` — 4 representative stations (Belsize Park, King's Cross, Bank, Oxford Circus)
+- `line-status/tube.json` — all tube line statuses
+- `stop-points/tube.json` — searchable station list (~1 MB)
+
+Refresh before each milestone that touches domain types, and commit the updated
+fixtures alongside the code changes.
+
 ## Architecture
 
 See [`docs/README.md`](docs/README.md) for conceptual documentation and

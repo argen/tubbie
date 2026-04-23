@@ -1,0 +1,685 @@
+[
+  {
+    "$type": "Tfl.Api.Presentation.Entities.Line, Tfl.Api.Presentation.Entities",
+    "created": "2026-03-31T11:01:31.31Z",
+    "crowding": {
+      "$type": "Tfl.Api.Presentation.Entities.Crowding, Tfl.Api.Presentation.Entities"
+    },
+    "disruptions": [],
+    "id": "bakerloo",
+    "lineStatuses": [
+      {
+        "$type": "Tfl.Api.Presentation.Entities.LineStatus, Tfl.Api.Presentation.Entities",
+        "created": "0001-01-01T00:00:00",
+        "disruption": {
+          "$type": "Tfl.Api.Presentation.Entities.Disruption, Tfl.Api.Presentation.Entities",
+          "affectedRoutes": [],
+          "affectedStops": [],
+          "category": "RealTime",
+          "categoryDescription": "RealTime",
+          "closureText": "severeDelays",
+          "description": "Bakerloo Line: No service between Queen's Park and Harrow & Wealdstone and SEVERE DELAYS on the rest of the line due to strike action. Services are operating approximately every 6 minutes. Tube services will finish early tonight, so please complete your journey by 20:00.  "
+        },
+        "id": 0,
+        "lineId": "bakerloo",
+        "reason": "Bakerloo Line: No service between Queen's Park and Harrow & Wealdstone and SEVERE DELAYS on the rest of the line due to strike action. Services are operating approximately every 6 minutes. Tube services will finish early tonight, so please complete your journey by 20:00.  ",
+        "statusSeverity": 6,
+        "statusSeverityDescription": "Severe Delays",
+        "validityPeriods": [
+          {
+            "$type": "Tfl.Api.Presentation.Entities.ValidityPeriod, Tfl.Api.Presentation.Entities",
+            "fromDate": "2026-04-23T15:22:23Z",
+            "isNow": true,
+            "toDate": "2026-04-24T00:29:00Z"
+          }
+        ]
+      },
+      {
+        "$type": "Tfl.Api.Presentation.Entities.LineStatus, Tfl.Api.Presentation.Entities",
+        "created": "0001-01-01T00:00:00",
+        "disruption": {
+          "$type": "Tfl.Api.Presentation.Entities.Disruption, Tfl.Api.Presentation.Entities",
+          "affectedRoutes": [],
+          "affectedStops": [],
+          "category": "RealTime",
+          "categoryDescription": "RealTime",
+          "closureText": "partSuspended",
+          "description": "Bakerloo Line: No service between Queen's Park and Harrow & Wealdstone and SEVERE DELAYS on the rest of the line due to strike action. Services are operating approximately every 6 minutes. Tube services will finish early tonight, so please complete your journey by 20:00.  "
+        },
+        "id": 0,
+        "lineId": "bakerloo",
+        "reason": "Bakerloo Line: No service between Queen's Park and Harrow & Wealdstone and SEVERE DELAYS on the rest of the line due to strike action. Services are operating approximately every 6 minutes. Tube services will finish early tonight, so please complete your journey by 20:00.  ",
+        "statusSeverity": 3,
+        "statusSeverityDescription": "Part Suspended",
+        "validityPeriods": [
+          {
+            "$type": "Tfl.Api.Presentation.Entities.ValidityPeriod, Tfl.Api.Presentation.Entities",
+            "fromDate": "2026-04-23T15:22:23Z",
+            "isNow": true,
+            "toDate": "2026-04-23T19:31:07Z"
+          }
+        ]
+      }
+    ],
+    "modeName": "tube",
+    "modified": "2026-03-31T11:01:31.31Z",
+    "name": "Bakerloo",
+    "routeSections": [],
+    "serviceTypes": [
+      {
+        "$type": "Tfl.Api.Presentation.Entities.LineServiceTypeInfo, Tfl.Api.Presentation.Entities",
+        "name": "Regular",
+        "uri": "/Line/Route?ids=Bakerloo&serviceTypes=Regular"
+      }
+    ]
+  },
+  {
+    "$type": "Tfl.Api.Presentation.Entities.Line, Tfl.Api.Presentation.Entities",
+    "created": "2026-03-31T11:01:31.293Z",
+    "crowding": {
+      "$type": "Tfl.Api.Presentation.Entities.Crowding, Tfl.Api.Presentation.Entities"
+    },
+    "disruptions": [],
+    "id": "central",
+    "lineStatuses": [
+      {
+        "$type": "Tfl.Api.Presentation.Entities.LineStatus, Tfl.Api.Presentation.Entities",
+        "created": "0001-01-01T00:00:00",
+        "disruption": {
+          "$type": "Tfl.Api.Presentation.Entities.Disruption, Tfl.Api.Presentation.Entities",
+          "affectedRoutes": [],
+          "affectedStops": [],
+          "category": "RealTime",
+          "categoryDescription": "RealTime",
+          "closureText": "severeDelays",
+          "description": "Central Line: No service between White City and Liverpool Street and SEVERE DELAYS on the rest of the line due to strike action. Services are operating between White City and West Ruislip / Ealing Broadway, between Liverpool Street and Epping / Hainault via Woodford and between Hainault and Woodford via Chigwell, approximately every 10 minutes. Tube services will finish early tonight, so please complete your journey by 20:00. "
+        },
+        "id": 0,
+        "lineId": "central",
+        "reason": "Central Line: No service between White City and Liverpool Street and SEVERE DELAYS on the rest of the line due to strike action. Services are operating between White City and West Ruislip / Ealing Broadway, between Liverpool Street and Epping / Hainault via Woodford and between Hainault and Woodford via Chigwell, approximately every 10 minutes. Tube services will finish early tonight, so please complete your journey by 20:00. ",
+        "statusSeverity": 6,
+        "statusSeverityDescription": "Severe Delays",
+        "validityPeriods": [
+          {
+            "$type": "Tfl.Api.Presentation.Entities.ValidityPeriod, Tfl.Api.Presentation.Entities",
+            "fromDate": "2026-04-23T14:04:12Z",
+            "isNow": true,
+            "toDate": "2026-04-24T00:29:00Z"
+          }
+        ]
+      },
+      {
+        "$type": "Tfl.Api.Presentation.Entities.LineStatus, Tfl.Api.Presentation.Entities",
+        "created": "0001-01-01T00:00:00",
+        "disruption": {
+          "$type": "Tfl.Api.Presentation.Entities.Disruption, Tfl.Api.Presentation.Entities",
+          "affectedRoutes": [],
+          "affectedStops": [],
+          "category": "RealTime",
+          "categoryDescription": "RealTime",
+          "closureText": "partSuspended",
+          "description": "Central Line: No service between White City and Liverpool Street and SEVERE DELAYS on the rest of the line due to strike action. Services are operating between White City and West Ruislip / Ealing Broadway, between Liverpool Street and Epping / Hainault via Woodford and between Hainault and Woodford via Chigwell, approximately every 10 minutes. Tube services will finish early tonight, so please complete your journey by 20:00. "
+        },
+        "id": 0,
+        "lineId": "central",
+        "reason": "Central Line: No service between White City and Liverpool Street and SEVERE DELAYS on the rest of the line due to strike action. Services are operating between White City and West Ruislip / Ealing Broadway, between Liverpool Street and Epping / Hainault via Woodford and between Hainault and Woodford via Chigwell, approximately every 10 minutes. Tube services will finish early tonight, so please complete your journey by 20:00. ",
+        "statusSeverity": 3,
+        "statusSeverityDescription": "Part Suspended",
+        "validityPeriods": [
+          {
+            "$type": "Tfl.Api.Presentation.Entities.ValidityPeriod, Tfl.Api.Presentation.Entities",
+            "fromDate": "2026-04-23T14:04:12Z",
+            "isNow": true,
+            "toDate": "2026-04-23T19:31:07Z"
+          }
+        ]
+      }
+    ],
+    "modeName": "tube",
+    "modified": "2026-03-31T11:01:31.293Z",
+    "name": "Central",
+    "routeSections": [],
+    "serviceTypes": [
+      {
+        "$type": "Tfl.Api.Presentation.Entities.LineServiceTypeInfo, Tfl.Api.Presentation.Entities",
+        "name": "Regular",
+        "uri": "/Line/Route?ids=Central&serviceTypes=Regular"
+      },
+      {
+        "$type": "Tfl.Api.Presentation.Entities.LineServiceTypeInfo, Tfl.Api.Presentation.Entities",
+        "name": "Night",
+        "uri": "/Line/Route?ids=Central&serviceTypes=Night"
+      }
+    ]
+  },
+  {
+    "$type": "Tfl.Api.Presentation.Entities.Line, Tfl.Api.Presentation.Entities",
+    "created": "2026-03-31T11:01:31.31Z",
+    "crowding": {
+      "$type": "Tfl.Api.Presentation.Entities.Crowding, Tfl.Api.Presentation.Entities"
+    },
+    "disruptions": [],
+    "id": "circle",
+    "lineStatuses": [
+      {
+        "$type": "Tfl.Api.Presentation.Entities.LineStatus, Tfl.Api.Presentation.Entities",
+        "created": "0001-01-01T00:00:00",
+        "disruption": {
+          "$type": "Tfl.Api.Presentation.Entities.Disruption, Tfl.Api.Presentation.Entities",
+          "affectedRoutes": [],
+          "affectedStops": [],
+          "category": "RealTime",
+          "categoryDescription": "RealTime",
+          "closureText": "suspended",
+          "description": "Circle Line: No service on the entire line due to strike action. Services on other Tube lines will finish early tonight, so please complete your journey by 20:00 "
+        },
+        "id": 0,
+        "lineId": "circle",
+        "reason": "Circle Line: No service on the entire line due to strike action. Services on other Tube lines will finish early tonight, so please complete your journey by 20:00 ",
+        "statusSeverity": 2,
+        "statusSeverityDescription": "Suspended",
+        "validityPeriods": [
+          {
+            "$type": "Tfl.Api.Presentation.Entities.ValidityPeriod, Tfl.Api.Presentation.Entities",
+            "fromDate": "2026-04-23T11:34:29Z",
+            "isNow": true,
+            "toDate": "2026-04-23T19:31:07Z"
+          }
+        ]
+      }
+    ],
+    "modeName": "tube",
+    "modified": "2026-03-31T11:01:31.31Z",
+    "name": "Circle",
+    "routeSections": [],
+    "serviceTypes": [
+      {
+        "$type": "Tfl.Api.Presentation.Entities.LineServiceTypeInfo, Tfl.Api.Presentation.Entities",
+        "name": "Regular",
+        "uri": "/Line/Route?ids=Circle&serviceTypes=Regular"
+      }
+    ]
+  },
+  {
+    "$type": "Tfl.Api.Presentation.Entities.Line, Tfl.Api.Presentation.Entities",
+    "created": "2026-03-31T11:01:31.31Z",
+    "crowding": {
+      "$type": "Tfl.Api.Presentation.Entities.Crowding, Tfl.Api.Presentation.Entities"
+    },
+    "disruptions": [],
+    "id": "district",
+    "lineStatuses": [
+      {
+        "$type": "Tfl.Api.Presentation.Entities.LineStatus, Tfl.Api.Presentation.Entities",
+        "created": "0001-01-01T00:00:00",
+        "disruption": {
+          "$type": "Tfl.Api.Presentation.Entities.Disruption, Tfl.Api.Presentation.Entities",
+          "affectedRoutes": [],
+          "affectedStops": [],
+          "category": "RealTime",
+          "categoryDescription": "RealTime",
+          "closureText": "severeDelays",
+          "description": "District Line: Severe delays on the entire line due to strike action. Services are operating approximately every 15 minutes. Tube services will finish early tonight, so please complete your journey by 20:00. "
+        },
+        "id": 0,
+        "lineId": "district",
+        "reason": "District Line: Severe delays on the entire line due to strike action. Services are operating approximately every 15 minutes. Tube services will finish early tonight, so please complete your journey by 20:00. ",
+        "statusSeverity": 6,
+        "statusSeverityDescription": "Severe Delays",
+        "validityPeriods": [
+          {
+            "$type": "Tfl.Api.Presentation.Entities.ValidityPeriod, Tfl.Api.Presentation.Entities",
+            "fromDate": "2026-04-23T13:37:19Z",
+            "isNow": true,
+            "toDate": "2026-04-24T00:29:00Z"
+          }
+        ]
+      }
+    ],
+    "modeName": "tube",
+    "modified": "2026-03-31T11:01:31.31Z",
+    "name": "District",
+    "routeSections": [],
+    "serviceTypes": [
+      {
+        "$type": "Tfl.Api.Presentation.Entities.LineServiceTypeInfo, Tfl.Api.Presentation.Entities",
+        "name": "Regular",
+        "uri": "/Line/Route?ids=District&serviceTypes=Regular"
+      }
+    ]
+  },
+  {
+    "$type": "Tfl.Api.Presentation.Entities.Line, Tfl.Api.Presentation.Entities",
+    "created": "2026-03-31T11:01:31.31Z",
+    "crowding": {
+      "$type": "Tfl.Api.Presentation.Entities.Crowding, Tfl.Api.Presentation.Entities"
+    },
+    "disruptions": [],
+    "id": "hammersmith-city",
+    "lineStatuses": [
+      {
+        "$type": "Tfl.Api.Presentation.Entities.LineStatus, Tfl.Api.Presentation.Entities",
+        "created": "0001-01-01T00:00:00",
+        "disruption": {
+          "$type": "Tfl.Api.Presentation.Entities.Disruption, Tfl.Api.Presentation.Entities",
+          "affectedRoutes": [],
+          "affectedStops": [],
+          "category": "RealTime",
+          "categoryDescription": "RealTime",
+          "closureText": "severeDelays",
+          "description": "Hammersmith and City Line: No service between Liverpool Street and Barking and SEVERE DELAYS on the rest of the line due to strike action. Services are operating approximately between Hammersmith and Aldgate approximately every 25 minutes. Tube services will finish early tonight, so please complete your journey by 20:00.  "
+        },
+        "id": 0,
+        "lineId": "hammersmith-city",
+        "reason": "Hammersmith and City Line: No service between Liverpool Street and Barking and SEVERE DELAYS on the rest of the line due to strike action. Services are operating approximately between Hammersmith and Aldgate approximately every 25 minutes. Tube services will finish early tonight, so please complete your journey by 20:00.  ",
+        "statusSeverity": 6,
+        "statusSeverityDescription": "Severe Delays",
+        "validityPeriods": [
+          {
+            "$type": "Tfl.Api.Presentation.Entities.ValidityPeriod, Tfl.Api.Presentation.Entities",
+            "fromDate": "2026-04-23T16:09:13Z",
+            "isNow": true,
+            "toDate": "2026-04-24T00:29:00Z"
+          }
+        ]
+      },
+      {
+        "$type": "Tfl.Api.Presentation.Entities.LineStatus, Tfl.Api.Presentation.Entities",
+        "created": "0001-01-01T00:00:00",
+        "disruption": {
+          "$type": "Tfl.Api.Presentation.Entities.Disruption, Tfl.Api.Presentation.Entities",
+          "affectedRoutes": [],
+          "affectedStops": [],
+          "category": "RealTime",
+          "categoryDescription": "RealTime",
+          "closureText": "partSuspended",
+          "description": "Hammersmith and City Line: No service between Liverpool Street and Barking and SEVERE DELAYS on the rest of the line due to strike action. Services are operating approximately between Hammersmith and Aldgate approximately every 25 minutes. Tube services will finish early tonight, so please complete your journey by 20:00.  "
+        },
+        "id": 0,
+        "lineId": "hammersmith-city",
+        "reason": "Hammersmith and City Line: No service between Liverpool Street and Barking and SEVERE DELAYS on the rest of the line due to strike action. Services are operating approximately between Hammersmith and Aldgate approximately every 25 minutes. Tube services will finish early tonight, so please complete your journey by 20:00.  ",
+        "statusSeverity": 3,
+        "statusSeverityDescription": "Part Suspended",
+        "validityPeriods": [
+          {
+            "$type": "Tfl.Api.Presentation.Entities.ValidityPeriod, Tfl.Api.Presentation.Entities",
+            "fromDate": "2026-04-23T16:09:13Z",
+            "isNow": true,
+            "toDate": "2026-04-23T19:31:07Z"
+          }
+        ]
+      }
+    ],
+    "modeName": "tube",
+    "modified": "2026-03-31T11:01:31.31Z",
+    "name": "Hammersmith & City",
+    "routeSections": [],
+    "serviceTypes": [
+      {
+        "$type": "Tfl.Api.Presentation.Entities.LineServiceTypeInfo, Tfl.Api.Presentation.Entities",
+        "name": "Regular",
+        "uri": "/Line/Route?ids=Hammersmith & City&serviceTypes=Regular"
+      }
+    ]
+  },
+  {
+    "$type": "Tfl.Api.Presentation.Entities.Line, Tfl.Api.Presentation.Entities",
+    "created": "2026-03-31T11:01:31.31Z",
+    "crowding": {
+      "$type": "Tfl.Api.Presentation.Entities.Crowding, Tfl.Api.Presentation.Entities"
+    },
+    "disruptions": [],
+    "id": "jubilee",
+    "lineStatuses": [
+      {
+        "$type": "Tfl.Api.Presentation.Entities.LineStatus, Tfl.Api.Presentation.Entities",
+        "created": "0001-01-01T00:00:00",
+        "disruption": {
+          "$type": "Tfl.Api.Presentation.Entities.Disruption, Tfl.Api.Presentation.Entities",
+          "affectedRoutes": [],
+          "affectedStops": [],
+          "category": "RealTime",
+          "categoryDescription": "RealTime",
+          "closureText": "severeDelays",
+          "description": "Jubilee Line: Severe delays on the entire line due to strike action. Services are operating approximately every 5 minutes. Tube services will finish early tonight, so please complete your journey by 20:00. "
+        },
+        "id": 0,
+        "lineId": "jubilee",
+        "reason": "Jubilee Line: Severe delays on the entire line due to strike action. Services are operating approximately every 5 minutes. Tube services will finish early tonight, so please complete your journey by 20:00. ",
+        "statusSeverity": 6,
+        "statusSeverityDescription": "Severe Delays",
+        "validityPeriods": [
+          {
+            "$type": "Tfl.Api.Presentation.Entities.ValidityPeriod, Tfl.Api.Presentation.Entities",
+            "fromDate": "2026-04-23T13:52:21Z",
+            "isNow": true,
+            "toDate": "2026-04-24T00:29:00Z"
+          }
+        ]
+      }
+    ],
+    "modeName": "tube",
+    "modified": "2026-03-31T11:01:31.31Z",
+    "name": "Jubilee",
+    "routeSections": [],
+    "serviceTypes": [
+      {
+        "$type": "Tfl.Api.Presentation.Entities.LineServiceTypeInfo, Tfl.Api.Presentation.Entities",
+        "name": "Regular",
+        "uri": "/Line/Route?ids=Jubilee&serviceTypes=Regular"
+      },
+      {
+        "$type": "Tfl.Api.Presentation.Entities.LineServiceTypeInfo, Tfl.Api.Presentation.Entities",
+        "name": "Night",
+        "uri": "/Line/Route?ids=Jubilee&serviceTypes=Night"
+      }
+    ]
+  },
+  {
+    "$type": "Tfl.Api.Presentation.Entities.Line, Tfl.Api.Presentation.Entities",
+    "created": "2026-03-31T11:01:31.31Z",
+    "crowding": {
+      "$type": "Tfl.Api.Presentation.Entities.Crowding, Tfl.Api.Presentation.Entities"
+    },
+    "disruptions": [],
+    "id": "metropolitan",
+    "lineStatuses": [
+      {
+        "$type": "Tfl.Api.Presentation.Entities.LineStatus, Tfl.Api.Presentation.Entities",
+        "created": "0001-01-01T00:00:00",
+        "disruption": {
+          "$type": "Tfl.Api.Presentation.Entities.Disruption, Tfl.Api.Presentation.Entities",
+          "affectedRoutes": [],
+          "affectedStops": [],
+          "category": "RealTime",
+          "categoryDescription": "RealTime",
+          "closureText": "severeDelays",
+          "description": "Metropolitan Line: No service between Baker Street and Aldgate and SEVERE DELAYS on the rest of the line due to strike action. Services are operating between Baker Street and Harrow-on-the-Hill every 10 minutes, between Harrow-on-the-Hill and Watford / Uxbridge every 15 minutes, and between Harrow-on-the-Hill and Chesham / Amersham every 30 minutes.  Tube services will finish early tonight, so please complete your journey by 20:00. "
+        },
+        "id": 0,
+        "lineId": "metropolitan",
+        "reason": "Metropolitan Line: No service between Baker Street and Aldgate and SEVERE DELAYS on the rest of the line due to strike action. Services are operating between Baker Street and Harrow-on-the-Hill every 10 minutes, between Harrow-on-the-Hill and Watford / Uxbridge every 15 minutes, and between Harrow-on-the-Hill and Chesham / Amersham every 30 minutes.  Tube services will finish early tonight, so please complete your journey by 20:00. ",
+        "statusSeverity": 6,
+        "statusSeverityDescription": "Severe Delays",
+        "validityPeriods": [
+          {
+            "$type": "Tfl.Api.Presentation.Entities.ValidityPeriod, Tfl.Api.Presentation.Entities",
+            "fromDate": "2026-04-23T13:43:41Z",
+            "isNow": true,
+            "toDate": "2026-04-24T00:29:00Z"
+          }
+        ]
+      },
+      {
+        "$type": "Tfl.Api.Presentation.Entities.LineStatus, Tfl.Api.Presentation.Entities",
+        "created": "0001-01-01T00:00:00",
+        "disruption": {
+          "$type": "Tfl.Api.Presentation.Entities.Disruption, Tfl.Api.Presentation.Entities",
+          "affectedRoutes": [],
+          "affectedStops": [],
+          "category": "RealTime",
+          "categoryDescription": "RealTime",
+          "closureText": "partSuspended",
+          "description": "Metropolitan Line: No service between Baker Street and Aldgate and SEVERE DELAYS on the rest of the line due to strike action. Services are operating between Baker Street and Harrow-on-the-Hill every 10 minutes, between Harrow-on-the-Hill and Watford / Uxbridge every 15 minutes, and between Harrow-on-the-Hill and Chesham / Amersham every 30 minutes.  Tube services will finish early tonight, so please complete your journey by 20:00. "
+        },
+        "id": 0,
+        "lineId": "metropolitan",
+        "reason": "Metropolitan Line: No service between Baker Street and Aldgate and SEVERE DELAYS on the rest of the line due to strike action. Services are operating between Baker Street and Harrow-on-the-Hill every 10 minutes, between Harrow-on-the-Hill and Watford / Uxbridge every 15 minutes, and between Harrow-on-the-Hill and Chesham / Amersham every 30 minutes.  Tube services will finish early tonight, so please complete your journey by 20:00. ",
+        "statusSeverity": 3,
+        "statusSeverityDescription": "Part Suspended",
+        "validityPeriods": [
+          {
+            "$type": "Tfl.Api.Presentation.Entities.ValidityPeriod, Tfl.Api.Presentation.Entities",
+            "fromDate": "2026-04-23T13:43:41Z",
+            "isNow": true,
+            "toDate": "2026-04-23T19:31:07Z"
+          }
+        ]
+      }
+    ],
+    "modeName": "tube",
+    "modified": "2026-03-31T11:01:31.31Z",
+    "name": "Metropolitan",
+    "routeSections": [],
+    "serviceTypes": [
+      {
+        "$type": "Tfl.Api.Presentation.Entities.LineServiceTypeInfo, Tfl.Api.Presentation.Entities",
+        "name": "Regular",
+        "uri": "/Line/Route?ids=Metropolitan&serviceTypes=Regular"
+      }
+    ]
+  },
+  {
+    "$type": "Tfl.Api.Presentation.Entities.Line, Tfl.Api.Presentation.Entities",
+    "created": "2026-03-31T11:01:31.293Z",
+    "crowding": {
+      "$type": "Tfl.Api.Presentation.Entities.Crowding, Tfl.Api.Presentation.Entities"
+    },
+    "disruptions": [],
+    "id": "northern",
+    "lineStatuses": [
+      {
+        "$type": "Tfl.Api.Presentation.Entities.LineStatus, Tfl.Api.Presentation.Entities",
+        "created": "0001-01-01T00:00:00",
+        "disruption": {
+          "$type": "Tfl.Api.Presentation.Entities.Disruption, Tfl.Api.Presentation.Entities",
+          "affectedRoutes": [],
+          "affectedStops": [],
+          "category": "RealTime",
+          "categoryDescription": "RealTime",
+          "closureText": "severeDelays",
+          "description": "Northern Line: Severe delays due to strike action. Services are operating approximately every 15 minutes. Tube services will finish early tonight, so please complete your journey by 20:00. "
+        },
+        "id": 0,
+        "lineId": "northern",
+        "reason": "Northern Line: Severe delays due to strike action. Services are operating approximately every 15 minutes. Tube services will finish early tonight, so please complete your journey by 20:00. ",
+        "statusSeverity": 6,
+        "statusSeverityDescription": "Severe Delays",
+        "validityPeriods": [
+          {
+            "$type": "Tfl.Api.Presentation.Entities.ValidityPeriod, Tfl.Api.Presentation.Entities",
+            "fromDate": "2026-04-23T13:46:01Z",
+            "isNow": true,
+            "toDate": "2026-04-24T00:29:00Z"
+          }
+        ]
+      }
+    ],
+    "modeName": "tube",
+    "modified": "2026-03-31T11:01:31.293Z",
+    "name": "Northern",
+    "routeSections": [],
+    "serviceTypes": [
+      {
+        "$type": "Tfl.Api.Presentation.Entities.LineServiceTypeInfo, Tfl.Api.Presentation.Entities",
+        "name": "Regular",
+        "uri": "/Line/Route?ids=Northern&serviceTypes=Regular"
+      },
+      {
+        "$type": "Tfl.Api.Presentation.Entities.LineServiceTypeInfo, Tfl.Api.Presentation.Entities",
+        "name": "Night",
+        "uri": "/Line/Route?ids=Northern&serviceTypes=Night"
+      }
+    ]
+  },
+  {
+    "$type": "Tfl.Api.Presentation.Entities.Line, Tfl.Api.Presentation.Entities",
+    "created": "2026-03-31T11:01:31.293Z",
+    "crowding": {
+      "$type": "Tfl.Api.Presentation.Entities.Crowding, Tfl.Api.Presentation.Entities"
+    },
+    "disruptions": [],
+    "id": "piccadilly",
+    "lineStatuses": [
+      {
+        "$type": "Tfl.Api.Presentation.Entities.LineStatus, Tfl.Api.Presentation.Entities",
+        "created": "0001-01-01T00:00:00",
+        "disruption": {
+          "$type": "Tfl.Api.Presentation.Entities.Disruption, Tfl.Api.Presentation.Entities",
+          "affectedRoutes": [],
+          "affectedStops": [],
+          "category": "RealTime",
+          "categoryDescription": "RealTime",
+          "closureText": "severeDelays",
+          "description": "Piccadilly Line: No service between Arnos Grove and Acton Town / Uxbridge and SEVERE DELAYS on the rest of the line due to strike action. Services are operating between Arnos Grove and Cockfosters and between Acton Town and Heathrow Terminals 2 & 3 via Terminal 4, approximately every 20 minutes. Tube services will finish early tonight, so please complete your journey by 20:00. "
+        },
+        "id": 0,
+        "lineId": "piccadilly",
+        "reason": "Piccadilly Line: No service between Arnos Grove and Acton Town / Uxbridge and SEVERE DELAYS on the rest of the line due to strike action. Services are operating between Arnos Grove and Cockfosters and between Acton Town and Heathrow Terminals 2 & 3 via Terminal 4, approximately every 20 minutes. Tube services will finish early tonight, so please complete your journey by 20:00. ",
+        "statusSeverity": 6,
+        "statusSeverityDescription": "Severe Delays",
+        "validityPeriods": [
+          {
+            "$type": "Tfl.Api.Presentation.Entities.ValidityPeriod, Tfl.Api.Presentation.Entities",
+            "fromDate": "2026-04-23T14:12:58Z",
+            "isNow": true,
+            "toDate": "2026-04-24T00:29:00Z"
+          }
+        ]
+      },
+      {
+        "$type": "Tfl.Api.Presentation.Entities.LineStatus, Tfl.Api.Presentation.Entities",
+        "created": "0001-01-01T00:00:00",
+        "disruption": {
+          "$type": "Tfl.Api.Presentation.Entities.Disruption, Tfl.Api.Presentation.Entities",
+          "affectedRoutes": [],
+          "affectedStops": [],
+          "category": "RealTime",
+          "categoryDescription": "RealTime",
+          "closureText": "partSuspended",
+          "description": "Piccadilly Line: No service between Arnos Grove and Acton Town / Uxbridge and SEVERE DELAYS on the rest of the line due to strike action. Services are operating between Arnos Grove and Cockfosters and between Acton Town and Heathrow Terminals 2 & 3 via Terminal 4, approximately every 20 minutes. Tube services will finish early tonight, so please complete your journey by 20:00. "
+        },
+        "id": 0,
+        "lineId": "piccadilly",
+        "reason": "Piccadilly Line: No service between Arnos Grove and Acton Town / Uxbridge and SEVERE DELAYS on the rest of the line due to strike action. Services are operating between Arnos Grove and Cockfosters and between Acton Town and Heathrow Terminals 2 & 3 via Terminal 4, approximately every 20 minutes. Tube services will finish early tonight, so please complete your journey by 20:00. ",
+        "statusSeverity": 3,
+        "statusSeverityDescription": "Part Suspended",
+        "validityPeriods": [
+          {
+            "$type": "Tfl.Api.Presentation.Entities.ValidityPeriod, Tfl.Api.Presentation.Entities",
+            "fromDate": "2026-04-23T14:12:58Z",
+            "isNow": true,
+            "toDate": "2026-04-23T19:31:07Z"
+          }
+        ]
+      }
+    ],
+    "modeName": "tube",
+    "modified": "2026-03-31T11:01:31.293Z",
+    "name": "Piccadilly",
+    "routeSections": [],
+    "serviceTypes": [
+      {
+        "$type": "Tfl.Api.Presentation.Entities.LineServiceTypeInfo, Tfl.Api.Presentation.Entities",
+        "name": "Regular",
+        "uri": "/Line/Route?ids=Piccadilly&serviceTypes=Regular"
+      },
+      {
+        "$type": "Tfl.Api.Presentation.Entities.LineServiceTypeInfo, Tfl.Api.Presentation.Entities",
+        "name": "Night",
+        "uri": "/Line/Route?ids=Piccadilly&serviceTypes=Night"
+      }
+    ]
+  },
+  {
+    "$type": "Tfl.Api.Presentation.Entities.Line, Tfl.Api.Presentation.Entities",
+    "created": "2026-03-31T11:01:31.293Z",
+    "crowding": {
+      "$type": "Tfl.Api.Presentation.Entities.Crowding, Tfl.Api.Presentation.Entities"
+    },
+    "disruptions": [],
+    "id": "victoria",
+    "lineStatuses": [
+      {
+        "$type": "Tfl.Api.Presentation.Entities.LineStatus, Tfl.Api.Presentation.Entities",
+        "created": "0001-01-01T00:00:00",
+        "disruption": {
+          "$type": "Tfl.Api.Presentation.Entities.Disruption, Tfl.Api.Presentation.Entities",
+          "affectedRoutes": [],
+          "affectedStops": [],
+          "category": "RealTime",
+          "categoryDescription": "RealTime",
+          "closureText": "severeDelays",
+          "description": "Victoria Line: Severe delays on the entire line due to strike action. Services are operating approximately every 5 minutes.  Tube services will finish early tonight, so please complete your journey by 20:00. "
+        },
+        "id": 0,
+        "lineId": "victoria",
+        "reason": "Victoria Line: Severe delays on the entire line due to strike action. Services are operating approximately every 5 minutes.  Tube services will finish early tonight, so please complete your journey by 20:00. ",
+        "statusSeverity": 6,
+        "statusSeverityDescription": "Severe Delays",
+        "validityPeriods": [
+          {
+            "$type": "Tfl.Api.Presentation.Entities.ValidityPeriod, Tfl.Api.Presentation.Entities",
+            "fromDate": "2026-04-23T15:33:46Z",
+            "isNow": true,
+            "toDate": "2026-04-24T00:29:00Z"
+          }
+        ]
+      }
+    ],
+    "modeName": "tube",
+    "modified": "2026-03-31T11:01:31.293Z",
+    "name": "Victoria",
+    "routeSections": [],
+    "serviceTypes": [
+      {
+        "$type": "Tfl.Api.Presentation.Entities.LineServiceTypeInfo, Tfl.Api.Presentation.Entities",
+        "name": "Regular",
+        "uri": "/Line/Route?ids=Victoria&serviceTypes=Regular"
+      },
+      {
+        "$type": "Tfl.Api.Presentation.Entities.LineServiceTypeInfo, Tfl.Api.Presentation.Entities",
+        "name": "Night",
+        "uri": "/Line/Route?ids=Victoria&serviceTypes=Night"
+      }
+    ]
+  },
+  {
+    "$type": "Tfl.Api.Presentation.Entities.Line, Tfl.Api.Presentation.Entities",
+    "created": "2026-03-31T11:01:31.293Z",
+    "crowding": {
+      "$type": "Tfl.Api.Presentation.Entities.Crowding, Tfl.Api.Presentation.Entities"
+    },
+    "disruptions": [],
+    "id": "waterloo-city",
+    "lineStatuses": [
+      {
+        "$type": "Tfl.Api.Presentation.Entities.LineStatus, Tfl.Api.Presentation.Entities",
+        "created": "0001-01-01T00:00:00",
+        "disruption": {
+          "$type": "Tfl.Api.Presentation.Entities.Disruption, Tfl.Api.Presentation.Entities",
+          "affectedRoutes": [],
+          "affectedStops": [],
+          "category": "RealTime",
+          "categoryDescription": "RealTime",
+          "closureText": "severeDelays",
+          "description": "Waterloo and City Line: Severe delays due to strike action. Services are operating approximately every 15 minutes. The Waterloo & City line will close by 18:00 today. Tube services on other lines will also finish early tonight, so please complete your journey by 20:00. "
+        },
+        "id": 0,
+        "lineId": "waterloo-city",
+        "reason": "Waterloo and City Line: Severe delays due to strike action. Services are operating approximately every 15 minutes. The Waterloo & City line will close by 18:00 today. Tube services on other lines will also finish early tonight, so please complete your journey by 20:00. ",
+        "statusSeverity": 6,
+        "statusSeverityDescription": "Severe Delays",
+        "validityPeriods": [
+          {
+            "$type": "Tfl.Api.Presentation.Entities.ValidityPeriod, Tfl.Api.Presentation.Entities",
+            "fromDate": "2026-04-23T13:49:48Z",
+            "isNow": true,
+            "toDate": "2026-04-24T00:29:00Z"
+          }
+        ]
+      }
+    ],
+    "modeName": "tube",
+    "modified": "2026-03-31T11:01:31.293Z",
+    "name": "Waterloo & City",
+    "routeSections": [],
+    "serviceTypes": [
+      {
+        "$type": "Tfl.Api.Presentation.Entities.LineServiceTypeInfo, Tfl.Api.Presentation.Entities",
+        "name": "Regular",
+        "uri": "/Line/Route?ids=Waterloo & City&serviceTypes=Regular"
+      }
+    ]
+  }
+]

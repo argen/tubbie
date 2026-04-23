@@ -1,0 +1,10 @@
+[package]
+name = "tfl-domain"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Pure domain types for tubbie — zero I/O, minimal deps."
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
