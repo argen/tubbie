@@ -1,4 +1,5 @@
 use crate::error::TflError;
+use chrono::{DateTime, Utc};
 use serde_json::Value;
 use std::time::Duration;
 use url::Url;
@@ -15,11 +16,20 @@ const DEFAULT_TIMEOUT_SECS: u64 = 10;
 /// Maximum number of retry attempts (not counting the initial attempt).
 const MAX_RETRIES: u32 = 2;
 /// Initial backoff duration in milliseconds.
+#[cfg(not(test))]
 const BACKOFF_BASE_MS: u64 = 500;
+/// Short backoff for unit/integration tests so we don't burn wall-clock time.
+/// Used in combination with `#[tokio::test(start_paused = true)]`.
+#[cfg(test)]
+const BACKOFF_BASE_MS: u64 = 10;
 /// Backoff multiplier per retry.
 const BACKOFF_FACTOR: u64 = 2;
 /// Maximum backoff duration.
+#[cfg(not(test))]
 const BACKOFF_MAX_MS: u64 = 2_000;
+/// Short backoff cap for tests (mirrors BACKOFF_BASE_MS scaling).
+#[cfg(test)]
+const BACKOFF_MAX_MS: u64 = 40;
 /// Cap on `Retry-After` header value in seconds; beyond this we give up immediately.
 const RETRY_AFTER_CAP_SECS: u64 = 5;
 
@@ -266,25 +276,26 @@ impl ReqwestTflHttp {
             )))),
 
             429 => {
-                let retry_after_secs = response
+                let retry_after = response
                     .headers()
                     .get("retry-after")
                     .and_then(|v| v.to_str().ok())
-                    .and_then(|s| s.parse::<u64>().ok());
+                    .and_then(|s| parse_retry_after(s, Utc::now()));
 
                 // If Retry-After exceeds our cap, give up immediately.
-                if let Some(secs) = retry_after_secs {
-                    if secs > RETRY_AFTER_CAP_SECS {
+                if let Some(dur) = retry_after {
+                    if dur.as_secs() > RETRY_AFTER_CAP_SECS {
                         return Err(RetryDecision::Fail(TflError::RateLimited {
-                            retry_after: Some(Duration::from_secs(secs)),
+                            retry_after: Some(dur),
                         }));
                     }
                 }
 
-                let after = retry_after_secs.map(Duration::from_secs);
                 Err(RetryDecision::Retry {
-                    after,
-                    err: TflError::RateLimited { retry_after: after },
+                    after: retry_after,
+                    err: TflError::RateLimited {
+                        retry_after,
+                    },
                 })
             }
 
@@ -353,15 +364,62 @@ enum RetryDecision {
 
 /// Compute the backoff duration for a given retry attempt number (0-indexed).
 ///
-/// If the server sent a `Retry-After` value, honour it (capped at BACKOFF_MAX_MS).
-/// Otherwise use exponential backoff: base * factor^attempt, capped at max.
+/// If the server sent a `Retry-After` value, honour it as-is (it has already
+/// been pre-filtered to ≤ `RETRY_AFTER_CAP_SECS` at the call site — capping it
+/// again at `BACKOFF_MAX_MS` would violate the server's directive).
+///
+/// Without a server value, use exponential backoff:
+/// `BACKOFF_BASE_MS * BACKOFF_FACTOR^attempt`, capped at `BACKOFF_MAX_MS`.
 fn compute_backoff(attempt: u32, server_after: Option<Duration>) -> Duration {
     if let Some(after) = server_after {
-        let ms = after.as_millis() as u64;
-        return Duration::from_millis(ms.min(BACKOFF_MAX_MS));
+        // Pre-filtered to <= RETRY_AFTER_CAP_SECS at the call site; return as-is.
+        return after;
     }
-    let ms = BACKOFF_BASE_MS * BACKOFF_FACTOR.pow(attempt);
-    Duration::from_millis(ms.min(BACKOFF_MAX_MS))
+    let ms = (BACKOFF_BASE_MS * BACKOFF_FACTOR.pow(attempt)).min(BACKOFF_MAX_MS);
+    Duration::from_millis(ms)
+}
+
+/// Parse the value of a `Retry-After` HTTP header into a `Duration`.
+///
+/// RFC 7231 §7.1.3 allows two forms:
+/// 1. A non-negative integer representing seconds (e.g. `"5"`).
+/// 2. An HTTP-date string (e.g. `"Wed, 24 Apr 2026 12:00:00 GMT"`).
+///
+/// For the integer form the value is returned directly.
+/// For the HTTP-date form the duration is computed as `date - now`; if the
+/// date is in the past the duration is clamped to zero (treat as retry
+/// immediately). If neither form parses, `None` is returned.
+///
+/// The `now` parameter exists so callers can inject a fixed timestamp in tests.
+pub fn parse_retry_after(header: &str, now: DateTime<Utc>) -> Option<Duration> {
+    let header = header.trim();
+    if header.is_empty() {
+        return None;
+    }
+
+    // Try integer seconds first.
+    if let Ok(secs) = header.parse::<u64>() {
+        return Some(Duration::from_secs(secs));
+    }
+
+    // Try HTTP-date form via the `httpdate` crate.
+    // `httpdate::parse_http_date` returns a `std::time::SystemTime`.
+    if let Ok(system_time) = httpdate::parse_http_date(header) {
+        // Convert to chrono::DateTime<Utc> for safe arithmetic.
+        let target: DateTime<Utc> = system_time.into();
+        let delta = target.signed_duration_since(now);
+        if delta <= chrono::Duration::zero() {
+            // Date is in the past — wait 0 seconds.
+            return Some(Duration::ZERO);
+        }
+        // Convert positive chrono::Duration to std::time::Duration.
+        return delta
+            .to_std()
+            .ok()
+            .or(Some(Duration::ZERO));
+    }
+
+    None
 }
 
 /// Percent-encode a path segment (spaces → %20, slashes → %2F, etc.).
@@ -549,12 +607,13 @@ mod tests {
     // ------------------------------------------------------------------
 
     #[test]
-    fn compute_backoff_exponential() {
-        assert_eq!(compute_backoff(0, None), Duration::from_millis(500));
-        assert_eq!(compute_backoff(1, None), Duration::from_millis(1000));
-        assert_eq!(compute_backoff(2, None), Duration::from_millis(2000));
-        // Capped at max
-        assert_eq!(compute_backoff(10, None), Duration::from_millis(2000));
+    fn compute_backoff_exponential_without_server() {
+        // In test builds BACKOFF_BASE_MS=10, BACKOFF_MAX_MS=40.
+        assert_eq!(compute_backoff(0, None), Duration::from_millis(10));
+        assert_eq!(compute_backoff(1, None), Duration::from_millis(20));
+        assert_eq!(compute_backoff(2, None), Duration::from_millis(40));
+        // Capped at BACKOFF_MAX_MS
+        assert_eq!(compute_backoff(10, None), Duration::from_millis(40));
     }
 
     #[test]
@@ -563,13 +622,103 @@ mod tests {
         assert_eq!(compute_backoff(0, Some(after)), Duration::from_millis(1200));
     }
 
+    /// A server Retry-After of 3s must be respected as 3s — NOT capped at
+    /// BACKOFF_MAX_MS (2s). The outer call site already filters values > 5s.
     #[test]
-    fn compute_backoff_caps_server_after() {
-        let after = Duration::from_secs(60);
+    fn compute_backoff_honours_server_retry_after_within_cap() {
+        let after = Duration::from_secs(3);
         assert_eq!(
             compute_backoff(0, Some(after)),
-            Duration::from_millis(BACKOFF_MAX_MS)
+            Duration::from_secs(3),
+            "server Retry-After=3s must not be capped at BACKOFF_MAX_MS"
         );
+    }
+
+    // The old `compute_backoff_caps_server_after` test was asserting the wrong
+    // behaviour: it expected the server's Retry-After to be capped at
+    // BACKOFF_MAX_MS (2s), but a server value of 3s–5s (within RETRY_AFTER_CAP)
+    // should be honoured verbatim. That test has been replaced by
+    // `compute_backoff_honours_server_retry_after_within_cap` above.
+    // Large values (>RETRY_AFTER_CAP_SECS) are rejected at the do_request level
+    // before compute_backoff is ever called, so no capping is needed here.
+
+    // ------------------------------------------------------------------
+    // parse_retry_after
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn parse_retry_after_integer_5() {
+        let now = chrono::Utc::now();
+        assert_eq!(
+            parse_retry_after("5", now),
+            Some(Duration::from_secs(5))
+        );
+    }
+
+    #[test]
+    fn parse_retry_after_integer_120() {
+        let now = chrono::Utc::now();
+        assert_eq!(
+            parse_retry_after("120", now),
+            Some(Duration::from_secs(120))
+        );
+    }
+
+    #[test]
+    fn parse_retry_after_integer_0() {
+        let now = chrono::Utc::now();
+        assert_eq!(
+            parse_retry_after("0", now),
+            Some(Duration::from_secs(0))
+        );
+    }
+
+    #[test]
+    fn parse_retry_after_http_date_future() {
+        // Pin "now" to a fixed point so the test is deterministic.
+        // Target = now + 60 seconds.
+        // April 24, 2026 is a Friday.
+        let now: DateTime<Utc> = chrono::DateTime::parse_from_rfc3339("2026-04-24T12:00:00Z")
+            .unwrap()
+            .with_timezone(&Utc);
+        let result = parse_retry_after("Fri, 24 Apr 2026 12:01:00 GMT", now);
+        assert!(result.is_some(), "HTTP-date 60s in future should parse");
+        let dur = result.unwrap();
+        // Allow ±1s for any rounding in the conversion.
+        assert!(
+            dur.as_secs() >= 59 && dur.as_secs() <= 61,
+            "expected ~60s, got {}s",
+            dur.as_secs()
+        );
+    }
+
+    #[test]
+    fn parse_retry_after_http_date_past() {
+        // Date is in the past → clamp to zero.
+        // April 24, 2026 is a Friday.
+        let now: DateTime<Utc> = chrono::DateTime::parse_from_rfc3339("2026-04-24T12:00:00Z")
+            .unwrap()
+            .with_timezone(&Utc);
+        let result = parse_retry_after("Fri, 24 Apr 2026 11:59:00 GMT", now);
+        assert_eq!(result, Some(Duration::ZERO), "past HTTP-date should yield 0s");
+    }
+
+    #[test]
+    fn parse_retry_after_not_a_number() {
+        let now = chrono::Utc::now();
+        assert_eq!(parse_retry_after("not-a-number", now), None);
+    }
+
+    #[test]
+    fn parse_retry_after_empty() {
+        let now = chrono::Utc::now();
+        assert_eq!(parse_retry_after("", now), None);
+    }
+
+    #[test]
+    fn parse_retry_after_whitespace_only() {
+        let now = chrono::Utc::now();
+        assert_eq!(parse_retry_after("  ", now), None);
     }
 
     // ------------------------------------------------------------------

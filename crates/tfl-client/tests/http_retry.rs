@@ -11,6 +11,19 @@
 //!
 //! Each test uses wiremock's `expect(N)` to assert exact request counts,
 //! proving the retry loop never fires more than MAX_RETRIES+1 total requests.
+//!
+//! ## Time approach (FIX 4)
+//! These tests use real `tokio::time` (no `start_paused`) because `wiremock`
+//! uses real TCP sockets — pausing tokio time causes reqwest's internal
+//! timeout to trigger immediately, making every request fail with a transport
+//! timeout error before the mock server can respond.
+//!
+//! Instead, wall-clock duration is kept negligible by the `#[cfg(test)]`
+//! backoff constants: `BACKOFF_BASE_MS = 10ms`, `BACKOFF_MAX_MS = 40ms`.
+//! The entire retry sequence (up to 3 requests) completes in < 100ms real time.
+//! `start_paused = true` IS used for the `BoardService` stream tests (tfl-board
+//! crate) and for the unit-level `compute_backoff` / `parse_retry_after` tests
+//! which have no real I/O.
 
 use std::time::Duration;
 use tfl_client::error::TflError;

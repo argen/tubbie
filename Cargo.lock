@@ -1302,6 +1302,7 @@ name = "tfl-client"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "httpdate",
  "insta",
  "reqwest",
  "serde",
