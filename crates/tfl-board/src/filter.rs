@@ -95,6 +95,7 @@ mod tests {
             line_ids: vec![], // empty = no filter
             directions: vec![],
             poll_seconds: 20,
+            theme: "classic-amber".to_string(),
         };
         let result = apply_filters(arrivals.clone(), &cfg);
         assert_eq!(result.len(), 3, "empty line_ids should pass all arrivals");
@@ -111,6 +112,7 @@ mod tests {
             line_ids: vec![],
             directions: vec![], // empty = no filter
             poll_seconds: 20,
+            theme: "classic-amber".to_string(),
         };
         let result = apply_filters(arrivals, &cfg);
         assert_eq!(result.len(), 2, "empty directions should pass all arrivals");
@@ -128,6 +130,7 @@ mod tests {
             line_ids: vec!["northern".to_string()],
             directions: vec![],
             poll_seconds: 20,
+            theme: "classic-amber".to_string(),
         };
         let result = apply_filters(arrivals, &cfg);
         assert_eq!(result.len(), 2);
@@ -145,6 +148,7 @@ mod tests {
             line_ids: vec!["Northern".to_string()],
             directions: vec![],
             poll_seconds: 20,
+            theme: "classic-amber".to_string(),
         };
         let result = apply_filters(arrivals, &cfg);
         assert_eq!(result.len(), 1);
@@ -168,6 +172,7 @@ mod tests {
             line_ids: vec![],
             directions: vec![Direction::Northbound { via: None }],
             poll_seconds: 20,
+            theme: "classic-amber".to_string(),
         };
         let result = apply_filters(arrivals, &cfg);
         // Both Northbound variants should match, even with different `via` values
@@ -189,6 +194,7 @@ mod tests {
             line_ids: vec!["northern".to_string()],
             directions: vec![Direction::Northbound { via: None }],
             poll_seconds: 20,
+            theme: "classic-amber".to_string(),
         };
         let result = apply_filters(arrivals, &cfg);
         assert_eq!(result.len(), 1);
@@ -207,6 +213,7 @@ mod tests {
             line_ids: vec!["northern".to_string()],
             directions: vec![],
             poll_seconds: 20,
+            theme: "classic-amber".to_string(),
         };
         let result = apply_filters(arrivals, &cfg);
         assert!(result.is_empty());

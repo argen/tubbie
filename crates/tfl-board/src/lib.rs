@@ -19,6 +19,6 @@ pub mod error;
 pub mod filter;
 pub mod service;
 
-pub use config::BoardConfig;
+pub use config::{BoardConfig, VALID_THEME_IDS};
 pub use error::BoardError;
 pub use service::BoardService;

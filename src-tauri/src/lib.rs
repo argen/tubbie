@@ -6,18 +6,29 @@
 //! ## Architecture
 //!
 //! - `AppState` is constructed here and `manage()`d into the Tauri builder.
-//!   It holds the live `BoardService` and the `StorePluginConfigStore`.
+//!   It holds the live `BoardService`, the `StorePluginConfigStore`, and an
+//!   `AbortHandle` for the active stream task.
 //! - All IPC commands live in `commands.rs`. They are thin wrappers that
 //!   delegate to `tfl-board` / `tfl-client` and return `Result<T, String>`.
 //! - `state.rs` defines `AppState` + the `ConfigStore` trait + `MemoryConfigStore`
 //!   (for tests). `store_impl.rs` has the production `StorePluginConfigStore`.
 //!
-//! ## Polling streams
+//! ## Polling stream wiring (M6)
 //!
-//! M6 TODO: wire `BoardService::stream` here using `tauri::async_runtime::spawn`
-//! bound to the window's `on_window_event(WindowEvent::Destroyed, ...)` lifecycle,
-//! so the task is cancelled when the window closes. The stream emits `Board`
-//! snapshots via `app.emit("board-update", board)`. See M6 spec.
+//! On app startup, after loading the config, we spawn a Tokio task that runs
+//! `BoardService::stream(cfg)` and emits each `Board` as a `board://updated`
+//! Tauri event via `app.emit("board://updated", board)`.
+//!
+//! The task's `AbortHandle` is stored in `AppState::stream_abort`.
+//!
+//! When `save_config` is called:
+//!   1. The new config is persisted to the store.
+//!   2. `AppState::abort_stream()` cancels the running task (clears handle).
+//!   3. A watcher loop (running in its own task) detects the `None` abort handle
+//!      and spawns a fresh task with the latest config from the store.
+//!
+//! On `WindowEvent::Destroyed`, the abort handle is cancelled, cleanly
+//! stopping the stream task before the Tauri runtime exits.
 
 #![deny(unsafe_code)]
 
@@ -27,9 +38,12 @@ pub mod store_impl;
 
 use std::sync::Arc;
 
-use tauri::Manager;
-use tfl_board::BoardService;
+use futures::StreamExt;
+use tauri::{Emitter, Manager};
+use tfl_board::{BoardConfig, BoardService};
 use tfl_client::{clock::SystemClock, http::ReqwestTflHttp, TflClient};
+use tokio::sync::RwLock;
+use tokio::task::AbortHandle;
 
 use commands::{
     get_board, get_line_status, load_app_key, load_config, save_app_key, save_config,
@@ -37,6 +51,65 @@ use commands::{
 };
 use state::{AnyBoardService, AppState};
 use store_impl::StorePluginConfigStore;
+
+/// Spawn a stream task for the latest config, storing its `AbortHandle` in
+/// `stream_abort`.
+///
+/// Called at startup and whenever the abort handle is cleared (config change).
+async fn spawn_stream_task(
+    app_handle: tauri::AppHandle,
+    config_store: Arc<dyn state::ConfigStore>,
+    stream_abort: Arc<RwLock<Option<AbortHandle>>>,
+) {
+    // Load the latest config from the store every time we (re-)start.
+    let cfg: BoardConfig = match config_store.load_config().await {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("[tubbie] Failed to load config for stream task: {e}");
+            return;
+        }
+    };
+
+    let app = app_handle.clone();
+
+    // Build a fresh concrete BoardService for this stream instance.
+    // We cannot call .stream() through the AnyBoardService trait object because
+    // stream() consumes self and returns an impl Stream — impossible to make
+    // object-safe. The service is cheap to construct (no state, just an HTTP
+    // client wrapper).
+    let http = ReqwestTflHttp::new();
+    let client = TflClient::new(http);
+    let service = BoardService::new(client, SystemClock);
+    let mut stream = Box::pin(service.stream(cfg));
+
+    // Use tokio::task::spawn so we get a JoinHandle with abort_handle().
+    let join_handle = tokio::task::spawn(async move {
+        loop {
+            match stream.next().await {
+                Some(Ok(board)) => {
+                    if let Err(e) = app.emit("board://updated", &board) {
+                        eprintln!("[tubbie] Failed to emit board://updated: {e}");
+                    }
+                }
+                Some(Err(e)) => {
+                    // BoardService::stream handles stale-data fallback internally.
+                    // Err only occurs when there is no last-ok board. The stream
+                    // terminates after emitting this error item.
+                    eprintln!("[tubbie] Stream fatal error (no last-ok board): {e}");
+                    break;
+                }
+                None => {
+                    // Stream exhausted after a fatal error.
+                    eprintln!("[tubbie] Board stream ended.");
+                    break;
+                }
+            }
+        }
+    });
+
+    let abort = join_handle.abort_handle();
+    *stream_abort.write().await = Some(abort);
+}
 
 /// Application entry point. Called from `main.rs` (and mobile entry point).
 ///
@@ -70,13 +143,52 @@ pub fn run() {
             let board_service =
                 Arc::new(BoardService::new(client, SystemClock)) as Arc<dyn AnyBoardService>;
             let config_store = Arc::new(store) as Arc<dyn state::ConfigStore>;
+            let stream_abort: Arc<RwLock<Option<AbortHandle>>> = Arc::new(RwLock::new(None));
+
+            // Spawn the initial stream task.
+            let cs = Arc::clone(&config_store);
+            let sa = Arc::clone(&stream_abort);
+            let ah = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                spawn_stream_task(ah, cs, sa).await;
+            });
+
+            // Watcher loop: restarts the stream when the abort handle is
+            // cleared (e.g. after save_config cancels the previous task).
+            let cs2 = Arc::clone(&config_store);
+            let sa2 = Arc::clone(&stream_abort);
+            let ah2 = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                loop {
+                    tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+                    let has_task = sa2.read().await.is_some();
+                    if !has_task {
+                        // Task was aborted (config change or fatal stream error).
+                        // Restart with the current store config.
+                        spawn_stream_task(ah2.clone(), Arc::clone(&cs2), Arc::clone(&sa2)).await;
+                    }
+                }
+            });
 
             app.manage(AppState {
                 board_service,
                 config_store,
+                stream_abort,
             });
 
             Ok(())
+        })
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::Destroyed = event {
+                // Cancel the stream task when the window closes so the
+                // background task does not outlive the Tauri window.
+                let sa = Arc::clone(&window.state::<AppState>().stream_abort);
+                tauri::async_runtime::spawn(async move {
+                    if let Some(handle) = sa.write().await.take() {
+                        handle.abort();
+                    }
+                });
+            }
         })
         .invoke_handler(tauri::generate_handler![
             search_stations,
