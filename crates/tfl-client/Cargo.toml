@@ -18,3 +18,4 @@ chrono = { workspace = true }
 tokio = { workspace = true }
 insta = { workspace = true }
 tempfile = "3"
+wiremock = "0.6"
