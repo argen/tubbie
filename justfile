@@ -31,6 +31,11 @@ test:
 fmt-check:
     cargo fmt --all -- --check
 
+# Run live integration tests against api.tfl.gov.uk (developer-only; not in CI)
+# Set TFL_APP_KEY in your environment to avoid anonymous rate-limits.
+verify-live:
+    cargo test --workspace --features tfl-client/live
+
 # Record TfL API fixtures to fixtures/ (hits live API — run once per milestone)
 record-fixtures:
     cargo run -p fixture-recorder --release

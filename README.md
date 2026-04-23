@@ -20,6 +20,22 @@ just verify
 Both the Rust gate (`cargo fmt --check`, `cargo clippy`, `cargo test`) and the
 web gate (`lint`, `format:check`, `typecheck`, `test`) must be green.
 
+### Running live tests
+
+Live integration tests hit `api.tfl.gov.uk` and are **not run in CI**. To run
+them locally:
+
+```sh
+# Optional but recommended: set your TfL app key to avoid rate-limits.
+export TFL_APP_KEY=your_key_here
+
+just verify-live
+```
+
+This runs `cargo test --workspace --features tfl-client/live`. Tests
+automatically skip (and pass) when network connectivity is unavailable, so
+they never cause unexpected failures on offline machines.
+
 ## Dev server
 
 ```sh

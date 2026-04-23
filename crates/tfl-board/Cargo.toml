@@ -1,0 +1,19 @@
+[package]
+name = "tfl-board"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "BoardService: filtering, polling stream, and stale-data fallback for TfL arrivals."
+
+[dependencies]
+tfl-domain = { path = "../tfl-domain" }
+tfl-client = { path = "../tfl-client" }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "time", "sync"] }
+futures = { workspace = true }
+chrono = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "time", "sync", "test-util"] }
+futures = { workspace = true }
+serde_json = { workspace = true }
