@@ -1,0 +1,8 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "exactOptionalPropertyTypes": false,
+    "noUncheckedIndexedAccess": false
+  },
+  "include": ["**/*.ts", "../src/**/__tests__/**/*.ts", "../src/**/*.test.ts"]
+}
