@@ -15,6 +15,7 @@
 
 use std::sync::Arc;
 
+use async_trait::async_trait;
 use serde_json::Value;
 use tfl_board::{BoardConfig, BoardError, BoardService};
 use tfl_client::{clock::Clock, http::TflHttp};
@@ -26,18 +27,30 @@ use tfl_domain::{Board, LineStatus, Station};
 
 /// Persistence abstraction for app configuration.
 ///
-/// The production implementation (`StorePluginConfigStore`) delegates to
-/// `tauri-plugin-store`. Tests use `MemoryConfigStore` for deterministic,
-/// headless operation without a Tauri runtime.
+/// Each method is a compound atomic operation: `save_config` and `save_app_key`
+/// both perform the in-memory `set` and the durable `save` under a single lock
+/// acquisition, preventing concurrent handlers from observing partial state.
+///
+/// The production implementation (`StorePluginConfigStore`) wraps the blocking
+/// `Store::save()` in `tokio::task::spawn_blocking` so the Tokio worker thread
+/// is never stalled by disk I/O.
+///
+/// Tests use `MemoryConfigStore` for deterministic, headless operation without
+/// a Tauri runtime.
+#[async_trait]
 pub trait ConfigStore: Send + Sync + 'static {
-    /// Read a JSON value by key. Returns `None` if the key is absent.
-    fn get(&self, key: &str) -> Option<Value>;
+    /// Load the board configuration. Returns the documented default
+    /// (Belsize Park, no filters, 20 s poll) if no config has been saved.
+    async fn load_config(&self) -> Result<BoardConfig, String>;
 
-    /// Write a JSON value for key.
-    fn set(&self, key: &str, value: Value);
+    /// Atomically set and persist the board configuration.
+    async fn save_config(&self, cfg: &BoardConfig) -> Result<(), String>;
 
-    /// Persist changes to disk. No-op for the in-memory implementation.
-    fn save(&self) -> Result<(), String>;
+    /// Load the stored TfL API key. Returns `None` if no key has been saved.
+    async fn load_app_key(&self) -> Result<Option<String>, String>;
+
+    /// Atomically set and persist the TfL API key (pass `None` to clear).
+    async fn save_app_key(&self, key: Option<String>) -> Result<(), String>;
 }
 
 // ---------------------------------------------------------------------------
@@ -46,7 +59,7 @@ pub trait ConfigStore: Send + Sync + 'static {
 
 /// A `ConfigStore` implementation backed by a `HashMap` in memory.
 ///
-/// All writes are visible immediately; `save()` is a no-op. Suitable for
+/// All writes are visible immediately; persistence is a no-op. Suitable for
 /// unit-testing command handlers without a Tauri runtime or filesystem.
 pub struct MemoryConfigStore {
     data: std::sync::Mutex<std::collections::HashMap<String, Value>>,
@@ -59,6 +72,21 @@ impl MemoryConfigStore {
             data: std::sync::Mutex::new(std::collections::HashMap::new()),
         }
     }
+
+    fn get_raw(&self, key: &str) -> Option<Value> {
+        self.data
+            .lock()
+            .expect("MemoryConfigStore lock poisoned")
+            .get(key)
+            .cloned()
+    }
+
+    fn set_raw(&self, key: &str, value: Value) {
+        self.data
+            .lock()
+            .expect("MemoryConfigStore lock poisoned")
+            .insert(key.to_string(), value);
+    }
 }
 
 impl Default for MemoryConfigStore {
@@ -67,24 +95,40 @@ impl Default for MemoryConfigStore {
     }
 }
 
+#[async_trait]
 impl ConfigStore for MemoryConfigStore {
-    fn get(&self, key: &str) -> Option<Value> {
-        self.data
-            .lock()
-            .expect("MemoryConfigStore lock poisoned")
-            .get(key)
-            .cloned()
+    async fn load_config(&self) -> Result<BoardConfig, String> {
+        let cfg = self
+            .get_raw("board_config")
+            .and_then(|v| serde_json::from_value(v).ok())
+            .unwrap_or_else(default_board_config);
+        Ok(cfg)
     }
 
-    fn set(&self, key: &str, value: Value) {
-        self.data
-            .lock()
-            .expect("MemoryConfigStore lock poisoned")
-            .insert(key.to_string(), value);
+    async fn save_config(&self, cfg: &BoardConfig) -> Result<(), String> {
+        let value = serde_json::to_value(cfg).map_err(|e| format!("serialise error: {e}"))?;
+        // In-memory: set+save are atomic under the Mutex (no actual I/O).
+        self.set_raw("board_config", value);
+        Ok(())
     }
 
-    fn save(&self) -> Result<(), String> {
-        // In-memory — nothing to flush.
+    async fn load_app_key(&self) -> Result<Option<String>, String> {
+        let key = self.get_raw("tfl_app_key").and_then(|v| {
+            if v.is_null() {
+                None
+            } else {
+                serde_json::from_value::<String>(v).ok()
+            }
+        });
+        Ok(key)
+    }
+
+    async fn save_app_key(&self, key: Option<String>) -> Result<(), String> {
+        let value = match &key {
+            Some(k) => serde_json::json!(k),
+            None => Value::Null,
+        };
+        self.set_raw("tfl_app_key", value);
         Ok(())
     }
 }
@@ -132,17 +176,6 @@ pub struct AppState {
 
     /// Config persistence layer. Swapped for `MemoryConfigStore` in tests.
     pub config_store: Arc<dyn ConfigStore>,
-}
-
-impl AppState {
-    /// Convenience: load `BoardConfig` from the store, falling back to the
-    /// documented default (Belsize Park, no filters, 20 s poll).
-    pub fn load_board_config(&self) -> BoardConfig {
-        self.config_store
-            .get("board_config")
-            .and_then(|v| serde_json::from_value(v).ok())
-            .unwrap_or_else(default_board_config)
-    }
 }
 
 // ---------------------------------------------------------------------------
