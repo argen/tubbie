@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { fly } from 'svelte/transition';
+  import { fade } from 'svelte/transition';
   import type { Arrival } from '$lib/ipc/types.js';
   import {
     formatTimeToStation,
@@ -81,8 +81,24 @@
     setTimeout(tick, msPerChar);
   }
 
+  // Keep in lockstep with the in:fade duration below so the reveal starts
+  // exactly as the row finishes fading in.
+  const FADE_IN_MS = 600;
+
   onMount(() => {
-    startReveal(destination, $reducedMotion);
+    if ($reducedMotion) {
+      startReveal(destination, true);
+      return;
+    }
+    // Guard against unmount during the fade-in (e.g. a very brief arrival
+    // that drops off before the delay fires) — without the cleanup the
+    // timeout would still run and mutate state on a torn-down component.
+    const id = setTimeout(() => {
+      startReveal(destination, false);
+    }, FADE_IN_MS);
+    return () => {
+      clearTimeout(id);
+    };
   });
 
   // ---------------------------------------------------------------------------
@@ -150,8 +166,8 @@
   data-line-id={arrival.line_id}
   style:--line-color={lineColor}
   aria-label="Train {rank}: {destination}, {formattedTime}"
-  in:fly|global={{ y: -20, duration: $reducedMotion ? 0 : 250 }}
-  out:fly|global={{ y: 20, duration: $reducedMotion ? 0 : 200 }}
+  in:fade|global={{ duration: $reducedMotion ? 0 : FADE_IN_MS }}
+  out:fade|global={{ duration: $reducedMotion ? 0 : 200 }}
 >
   <span class="arrival-row__rank" aria-hidden="true">{rank}</span>
 
