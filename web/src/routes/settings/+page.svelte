@@ -10,7 +10,7 @@
   import StationSearch from '$lib/components/StationSearch.svelte';
   import ThemePicker from '$lib/components/ThemePicker.svelte';
   import { hasAppKey, saveAppKey } from '$lib/ipc/commands.js';
-  import type { Direction, Station } from '$lib/ipc/types.js';
+  import type { Direction, LineRef, Station } from '$lib/ipc/types.js';
   import { onMount } from 'svelte';
 
   // ---------------------------------------------------------------------------
@@ -19,6 +19,13 @@
 
   let stationId = $state($config.station_id);
   let stationName = $state('');
+  /**
+   * Lines served by the currently-selected station, populated from
+   * `StationSearch.onSelect`. Empty on first mount (we don't know which
+   * lines the saved station serves without refetching) — the UI then falls
+   * back to the global KNOWN_LINES list.
+   */
+  let stationLines = $state<LineRef[]>([]);
   let lineIds = $state<string[]>([...$config.line_ids]);
   let selectedDirections = $state<Direction[]>([...$config.directions]);
   let pollSeconds = $state($config.poll_seconds);
@@ -73,7 +80,26 @@
   function handleStationSelect(station: Station): void {
     stationId = station.id;
     stationName = station.common_name;
+    stationLines = station.lines;
+    // Prune line_ids to those the new station actually serves so we never
+    // persist a filter the station can't honour. If the new station has no
+    // line metadata (empty `lines`), keep the current selection unchanged —
+    // the chip list falls back to the global list and the user stays in
+    // control.
+    if (station.lines.length > 0) {
+      const allowed = new Set(station.lines.map((l) => l.id));
+      lineIds = lineIds.filter((id) => allowed.has(id));
+    }
   }
+
+  /**
+   * Chip list shown to the user: the currently-selected station's lines when
+   * available, or the full tube-network list as a fallback (first mount, or
+   * stations whose fixture/API response omits line info).
+   */
+  const chipLines = $derived<{ id: string; label: string }[]>(
+    stationLines.length > 0 ? stationLines.map((l) => ({ id: l.id, label: l.name })) : KNOWN_LINES,
+  );
 
   function toggleLine(lineId: string): void {
     if (lineIds.includes(lineId)) {
@@ -214,7 +240,7 @@
         <span class="settings__section-hint">(empty = all lines)</span>
       </h2>
       <div class="settings__chips" role="group" aria-label="Select lines to filter">
-        {#each KNOWN_LINES as line (line.id)}
+        {#each chipLines as line (line.id)}
           <button
             type="button"
             class="settings__chip"
