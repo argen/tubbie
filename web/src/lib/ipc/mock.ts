@@ -88,6 +88,7 @@ const defaultHandlers: Record<string, MockInvokeHandler> = {
   load_config: () => sampleConfig,
   save_app_key: () => 'restart to apply',
   load_app_key: () => null,
+  has_app_key: () => false,
   get_line_status: () => sampleLineStatus,
 };
 

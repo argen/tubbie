@@ -209,6 +209,11 @@ pub(crate) async fn load_app_key_inner(state: &AppState) -> Result<Option<String
     state.config_store.load_app_key().await
 }
 
+pub(crate) async fn has_app_key_inner(state: &AppState) -> Result<bool, String> {
+    let key = state.config_store.load_app_key().await?;
+    Ok(key.is_some())
+}
+
 pub(crate) async fn get_line_status_inner(
     line_id: &str,
     state: &AppState,
@@ -287,6 +292,15 @@ pub async fn save_app_key(
 #[tauri::command]
 pub async fn load_app_key(state: State<'_, AppState>) -> Result<Option<String>, String> {
     load_app_key_inner(&state).await
+}
+
+/// Returns `true` if a TfL API key has been stored, `false` otherwise.
+///
+/// Exposes only a boolean to the renderer — the actual key value never
+/// leaves the Rust process. Use `load_app_key` only in privileged contexts.
+#[tauri::command]
+pub async fn has_app_key(state: State<'_, AppState>) -> Result<bool, String> {
+    has_app_key_inner(&state).await
 }
 
 /// Fetch the current status for a single TfL line.

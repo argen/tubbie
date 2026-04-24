@@ -1,9 +1,15 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
-  import { config, updateConfig, applyTheme, type ThemeId } from '$lib/stores/config.js';
+  import {
+    config,
+    configError,
+    updateConfig,
+    applyTheme,
+    type ThemeId,
+  } from '$lib/stores/config.js';
   import StationSearch from '$lib/components/StationSearch.svelte';
   import ThemePicker from '$lib/components/ThemePicker.svelte';
-  import { loadAppKey, saveAppKey } from '$lib/ipc/commands.js';
+  import { hasAppKey, saveAppKey } from '$lib/ipc/commands.js';
   import type { Direction, Station } from '$lib/ipc/types.js';
   import { onMount } from 'svelte';
 
@@ -18,6 +24,7 @@
   let pollSeconds = $state($config.poll_seconds);
   let theme = $state<string>($config.theme);
   let appKey = $state('');
+  let hasStoredAppKey = $state(false);
   let appKeyVisible = $state(false);
   let appKeyStatus = $state<string | null>(null);
   let appKeySaving = $state(false);
@@ -51,13 +58,13 @@
 
   onMount(async () => {
     try {
-      const key = await loadAppKey();
-      if (key) {
-        appKey = key;
-        appKeyStatus = 'Using your TfL API key';
-      } else {
-        appKeyStatus = 'Using anonymous access (50 requests/min)';
-      }
+      // SECURITY: only fetch presence, not the actual key value.
+      // The key must never be loaded into the renderer heap unless the user
+      // explicitly triggers a "reveal" action (post-MVP).
+      hasStoredAppKey = await hasAppKey();
+      appKeyStatus = hasStoredAppKey
+        ? 'Using your TfL API key'
+        : 'Using anonymous access (50 requests/min)';
     } catch {
       appKeyStatus = 'Could not load API key status';
     }
@@ -102,6 +109,8 @@
         poll_seconds: Math.min(300, Math.max(5, pollSeconds)),
         theme,
       });
+      // configError is managed by updateConfig: cleared on success, set on failure.
+      // We only set saveSuccess=true here; the UI banner is driven by $configError.
       saveSuccess = true;
       setTimeout(() => {
         saveSuccess = false;
@@ -116,9 +125,27 @@
   async function handleSaveAppKey(): Promise<void> {
     appKeySaving = true;
     try {
-      const keyToSave = appKey.trim().length > 0 ? appKey.trim() : null;
+      const trimmed = appKey.trim();
+      const keyToSave = trimmed.length > 0 ? trimmed : null;
       const msg = await saveAppKey(keyToSave);
+      // Clear from heap immediately — key must not linger in renderer state.
+      appKey = '';
+      hasStoredAppKey = keyToSave !== null;
       appKeyStatus = keyToSave ? `Using your TfL API key — ${msg}` : `Cleared. ${msg}`;
+    } catch (err: unknown) {
+      appKeyStatus = `Error: ${err instanceof Error ? err.message : String(err)}`;
+    } finally {
+      appKeySaving = false;
+    }
+  }
+
+  async function handleClearAppKey(): Promise<void> {
+    appKeySaving = true;
+    try {
+      await saveAppKey(null);
+      appKey = '';
+      hasStoredAppKey = false;
+      appKeyStatus = 'Cleared. Restart to apply.';
     } catch (err: unknown) {
       appKeyStatus = `Error: ${err instanceof Error ? err.message : String(err)}`;
     } finally {
@@ -136,6 +163,22 @@
 </svelte:head>
 
 <div class="settings" aria-label="Settings page">
+  {#if $configError}
+    <div class="settings__config-error" role="alert" aria-live="assertive">
+      <span class="settings__config-error-text">{$configError}</span>
+      <button
+        type="button"
+        class="settings__config-error-dismiss"
+        onclick={() => {
+          configError.set(null);
+        }}
+        aria-label="Dismiss error"
+      >
+        ✕
+      </button>
+    </div>
+  {/if}
+
   <header class="settings__header">
     <button
       type="button"
@@ -266,7 +309,9 @@
           id="api-key-input"
           class="settings__api-input"
           bind:value={appKey}
-          placeholder="Paste your TfL app key…"
+          placeholder={hasStoredAppKey
+            ? '(stored — type new to replace)'
+            : '(optional TfL API key)'}
           autocomplete="off"
           maxlength={64}
           aria-label="TfL API key (optional)"
@@ -284,15 +329,28 @@
           {appKeyVisible ? 'Hide' : 'Show'}
         </button>
       </div>
-      <button
-        type="button"
-        class="settings__btn settings__btn--secondary"
-        onclick={handleSaveAppKey}
-        disabled={appKeySaving}
-        aria-label="Save API key (requires restart)"
-      >
-        {appKeySaving ? 'Saving…' : 'Save Key'}
-      </button>
+      <div class="settings__api-actions">
+        <button
+          type="button"
+          class="settings__btn settings__btn--secondary"
+          onclick={handleSaveAppKey}
+          disabled={appKeySaving}
+          aria-label="Save API key (requires restart)"
+        >
+          {appKeySaving ? 'Saving…' : 'Save Key'}
+        </button>
+        {#if hasStoredAppKey}
+          <button
+            type="button"
+            class="settings__btn settings__btn--secondary"
+            onclick={handleClearAppKey}
+            disabled={appKeySaving}
+            aria-label="Clear stored API key"
+          >
+            Clear Key
+          </button>
+        {/if}
+      </div>
       <p id="api-key-hint" class="settings__api-hint settings__api-hint--small">
         Key is stored securely in the system app-data folder. Restart required to apply.
       </p>
@@ -326,6 +384,40 @@
     min-height: calc(100vh - 24px);
     background: var(--bg);
     color: var(--fg);
+  }
+
+  .settings__config-error {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.6rem 1.5rem;
+    background: color-mix(in srgb, var(--stale-accent) 15%, var(--bg));
+    border: 1px solid var(--stale-accent);
+    border-radius: 2px;
+    margin: 0.75rem 1.5rem 0;
+    font-family: 'VT323', monospace;
+    font-size: 0.95rem;
+    color: var(--stale-accent);
+  }
+
+  .settings__config-error-text {
+    flex: 1;
+  }
+
+  .settings__config-error-dismiss {
+    background: transparent;
+    border: none;
+    color: var(--stale-accent);
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 0 0.2rem;
+    opacity: 0.8;
+    flex-shrink: 0;
+  }
+
+  .settings__config-error-dismiss:hover {
+    opacity: 1;
   }
 
   .settings__header {
@@ -537,6 +629,12 @@
   .settings__api-reveal-btn:hover,
   .settings__api-reveal-btn:focus {
     border-color: var(--platform-label);
+  }
+
+  .settings__api-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
   }
 
   /* Buttons */

@@ -46,7 +46,7 @@ use tokio::sync::RwLock;
 use tokio::task::AbortHandle;
 
 use commands::{
-    get_board, get_line_status, load_app_key, load_config, save_app_key, save_config,
+    get_board, get_line_status, has_app_key, load_app_key, load_config, save_app_key, save_config,
     search_stations,
 };
 use state::{AnyBoardService, AppState};
@@ -197,6 +197,7 @@ pub fn run() {
             load_config,
             save_app_key,
             load_app_key,
+            has_app_key,
             get_line_status,
         ])
         .run(tauri::generate_context!())

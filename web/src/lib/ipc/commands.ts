@@ -70,6 +70,19 @@ export async function loadAppKey(): Promise<string | null> {
   throw new TypeError('load_app_key: expected string | null');
 }
 
+/**
+ * Returns true if a TfL API key has been stored, false otherwise.
+ * Use this instead of loadAppKey when you only need to know presence —
+ * the actual key value is never sent to the renderer.
+ */
+export async function hasAppKey(): Promise<boolean> {
+  const raw = await invoke<unknown>('has_app_key');
+  if (typeof raw !== 'boolean') {
+    throw new TypeError('has_app_key: expected boolean response');
+  }
+  return raw;
+}
+
 /** Fetch the current status for a single TfL line. */
 export async function getLineStatus(lineId: string): Promise<LineStatus> {
   const raw = await invoke<unknown>('get_line_status', { lineId });

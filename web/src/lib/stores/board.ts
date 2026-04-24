@@ -13,8 +13,8 @@
  *   $boardError
  */
 
-import { writable } from 'svelte/store';
-import { onBoardUpdated } from '$lib/ipc/commands.js';
+import { writable, get } from 'svelte/store';
+import { onBoardUpdated, getBoard } from '$lib/ipc/commands.js';
 import type { Board } from '$lib/ipc/types.js';
 import type { UnlistenFn } from '@tauri-apps/api/event';
 
@@ -41,18 +41,42 @@ let unlisten: UnlistenFn | null = null;
  * Call this once on app startup (from `+layout.svelte`).
  * Returns a cleanup function — call it when the layout is destroyed.
  */
+/**
+ * Handler shared between the listen callback and the seed fetch.
+ * "Latest wins" by generated_at timestamp: a newer emission always replaces
+ * the current store value, regardless of whether it came from the event stream
+ * or the seed call.
+ */
+function applyBoard(b: Board): void {
+  const current = get(board);
+  if (current !== null && current.generated_at >= b.generated_at) {
+    // Current board is newer or equal — do not regress.
+    return;
+  }
+  board.set(b);
+  boardError.set(null);
+  isLoading.set(false);
+  lastUpdateTs.set(Date.now());
+}
+
 export async function startBoardSubscription(): Promise<() => void> {
   try {
-    unlisten = await onBoardUpdated((b) => {
-      board.set(b);
-      boardError.set(null);
-      isLoading.set(false);
-      lastUpdateTs.set(Date.now());
-    });
+    // 1. Register the event listener FIRST so we don't miss early emissions.
+    unlisten = await onBoardUpdated(applyBoard);
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     boardError.set(`Failed to subscribe to board updates: ${msg}`);
     isLoading.set(false);
+  }
+
+  // 2. One-shot seed: fetch the current board and apply it only if the stream
+  //    hasn't already populated the store (race guard: applyBoard checks timestamps).
+  try {
+    const seedBoard = await getBoard();
+    applyBoard(seedBoard);
+  } catch {
+    // Seed failure is non-fatal — the stream will populate the board on the
+    // next tick. We just leave isLoading=true until that happens.
   }
 
   return () => {

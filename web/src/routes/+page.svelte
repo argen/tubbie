@@ -1,5 +1,6 @@
 <script lang="ts">
   import { board, boardError, isLoading } from '$lib/stores/board.js';
+  import { configError } from '$lib/stores/config.js';
   import Board from '$lib/components/Board.svelte';
   import type { LineStatus } from '$lib/ipc/types.js';
 
@@ -12,6 +13,15 @@
 <svelte:head>
   <title>tubbie — TfL Arrivals</title>
 </svelte:head>
+
+{#if $configError && $board === null}
+  <div class="config-error" role="alert">
+    <p class="config-error__message">{$configError}</p>
+    <p class="config-error__hint">
+      <a href="/settings" class="config-error__link">Open Settings</a> to fix the configuration.
+    </p>
+  </div>
+{/if}
 
 {#if $isLoading && $board === null}
   <div class="loading" role="status" aria-live="polite">
@@ -26,7 +36,11 @@
     <a href="/settings" class="error__settings-link">Open Settings</a>
   </div>
 {:else if $board !== null}
-  <Board board={$board} {statuses} stationName={$board.station_id} />
+  <Board
+    board={$board}
+    {statuses}
+    stationName={$board.platforms[0]?.arrivals[0]?.station_name ?? $board.station_id}
+  />
 {:else}
   <!-- No board yet, show waiting state -->
   <div class="loading" role="status" aria-live="polite">
@@ -110,5 +124,39 @@
   .error__settings-link:focus {
     background: var(--fg);
     color: var(--bg);
+  }
+
+  /* Inline config-error banner — shown even when board is visible */
+  .config-error {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    background: color-mix(in srgb, var(--stale-accent) 15%, var(--bg));
+    border-bottom: 1px solid var(--stale-accent);
+    padding: 0.5rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .config-error__message {
+    font-family: 'VT323', monospace;
+    font-size: 1rem;
+    color: var(--stale-accent);
+    margin: 0;
+  }
+
+  .config-error__hint {
+    font-family: 'VT323', monospace;
+    font-size: 0.85rem;
+    color: var(--platform-label);
+    margin: 0;
+    opacity: 0.8;
+  }
+
+  .config-error__link {
+    color: var(--fg);
   }
 </style>

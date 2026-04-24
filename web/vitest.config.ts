@@ -5,7 +5,6 @@ import { resolve } from 'path';
 const alias = {
   $lib: resolve(__dirname, 'src/lib'),
   '$app/navigation': resolve(__dirname, 'src/lib/__mocks__/app-navigation.ts'),
-  '$app/stores': resolve(__dirname, 'src/lib/__mocks__/app-stores.ts'),
 };
 
 export default defineConfig({
