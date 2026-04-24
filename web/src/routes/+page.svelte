@@ -58,7 +58,7 @@
   }
 
   .loading__text {
-    font-family: 'VT323', monospace;
+    font-family: var(--font-board);
     font-size: 1.5rem;
     color: var(--fg);
     opacity: 0.6;
@@ -96,14 +96,14 @@
   }
 
   .error__message {
-    font-family: 'VT323', monospace;
+    font-family: var(--font-board);
     font-size: 1.2rem;
     color: var(--stale-accent);
     margin: 0;
   }
 
   .error__hint {
-    font-family: 'VT323', monospace;
+    font-family: var(--font-board);
     font-size: 1rem;
     color: var(--platform-label);
     margin: 0;
@@ -111,7 +111,7 @@
   }
 
   .error__settings-link {
-    font-family: 'VT323', monospace;
+    font-family: var(--font-board);
     font-size: 1rem;
     color: var(--fg);
     border: 1px solid var(--fg);
@@ -142,14 +142,14 @@
   }
 
   .config-error__message {
-    font-family: 'VT323', monospace;
+    font-family: var(--font-board);
     font-size: 1rem;
     color: var(--stale-accent);
     margin: 0;
   }
 
   .config-error__hint {
-    font-family: 'VT323', monospace;
+    font-family: var(--font-board);
     font-size: 0.85rem;
     color: var(--platform-label);
     margin: 0;

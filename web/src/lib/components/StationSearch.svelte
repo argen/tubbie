@@ -169,7 +169,7 @@
     background: var(--input-bg);
     border: 1px solid var(--input-border);
     color: var(--fg);
-    font-family: 'VT323', monospace;
+    font-family: var(--font-board);
     font-size: 1.1rem;
     padding: 0.5rem 0.75rem;
     padding-right: 2rem;
@@ -213,7 +213,7 @@
 
   .station-search__error {
     color: var(--stale-accent);
-    font-family: 'VT323', monospace;
+    font-family: var(--font-board);
     font-size: 0.9rem;
     margin: 0.3rem 0 0;
   }
@@ -242,7 +242,7 @@
     padding: 0.5rem 0.75rem;
     cursor: pointer;
     border-bottom: 1px solid var(--row-divider);
-    font-family: 'VT323', monospace;
+    font-family: var(--font-board);
   }
 
   .station-search__result:last-child {

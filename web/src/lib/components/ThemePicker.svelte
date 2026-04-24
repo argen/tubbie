@@ -64,7 +64,7 @@
   }
 
   .theme-picker__legend {
-    font-family: 'VT323', monospace;
+    font-family: var(--font-board);
     font-size: 0.85rem;
     color: var(--platform-label);
     text-transform: uppercase;
@@ -106,7 +106,7 @@
   }
 
   .theme-picker__swatch-label {
-    font-family: 'VT323', monospace;
+    font-family: var(--font-board);
     font-size: 0.75rem;
     letter-spacing: 0.08em;
     text-align: center;

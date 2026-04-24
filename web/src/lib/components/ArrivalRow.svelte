@@ -91,7 +91,7 @@
     padding: 0.3rem 0.5rem;
     border-bottom: 1px solid var(--row-divider);
     list-style: none;
-    font-family: 'VT323', monospace;
+    font-family: var(--font-board);
     font-size: 1.1rem;
     line-height: 1.3;
     min-height: 2rem;

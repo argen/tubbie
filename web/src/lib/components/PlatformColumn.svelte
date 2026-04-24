@@ -68,7 +68,7 @@
 
   .platform-col__dest-header,
   .platform-col__time-header {
-    font-family: 'VT323', monospace;
+    font-family: var(--font-board);
     font-size: 0.75rem;
     color: var(--platform-label);
     opacity: 0.5;
@@ -88,7 +88,7 @@
     padding: 1rem 0.5rem;
     color: var(--platform-label);
     opacity: 0.5;
-    font-family: 'VT323', monospace;
+    font-family: var(--font-board);
     font-size: 1rem;
     text-align: center;
   }

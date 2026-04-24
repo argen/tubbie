@@ -189,7 +189,7 @@
   }
 
   .board__stale-badge {
-    font-family: 'VT323', monospace;
+    font-family: var(--font-board);
     font-size: 0.85rem;
     color: var(--stale-accent);
     letter-spacing: 0.1em;
@@ -264,7 +264,7 @@
     align-items: center;
     justify-content: center;
     color: var(--platform-label);
-    font-family: 'VT323', monospace;
+    font-family: var(--font-board);
     font-size: 1.2rem;
     opacity: 0.5;
   }
