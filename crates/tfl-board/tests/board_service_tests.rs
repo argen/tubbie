@@ -41,6 +41,7 @@ async fn refresh_returns_filtered_board() {
         line_ids: vec!["northern".to_string()],
         directions: vec![Direction::Northbound { via: None }],
         poll_seconds: 20,
+        theme: "classic-amber".to_string(),
     };
 
     let board = svc.refresh(&cfg).await.expect("refresh should succeed");
@@ -163,6 +164,7 @@ async fn filter_by_directions_empty_matches_all_integration() {
         line_ids: vec![],
         directions: vec![], // empty = no filter
         poll_seconds: 20,
+        theme: "classic-amber".to_string(),
     };
 
     let board = svc.refresh(&cfg).await.expect("refresh should succeed");
@@ -199,6 +201,7 @@ async fn filter_by_line_ids_empty_matches_all_integration() {
         line_ids: vec![], // empty = no filter
         directions: vec![],
         poll_seconds: 20,
+        theme: "classic-amber".to_string(),
     };
 
     let board = svc.refresh(&cfg).await.expect("refresh should succeed");
@@ -259,6 +262,7 @@ async fn stream_emits_on_interval() {
         line_ids: vec![],
         directions: vec![],
         poll_seconds: 5, // 5-second interval for test
+        theme: "classic-amber".to_string(),
     };
 
     let mut stream = Box::pin(svc.stream(cfg));
@@ -354,6 +358,7 @@ async fn stream_backpressure_skips_tick_when_refresh_slow() {
         line_ids: vec![],
         directions: vec![],
         poll_seconds: poll_secs as u32,
+        theme: "classic-amber".to_string(),
     };
 
     let stream = Box::pin(svc.stream(cfg));
@@ -453,6 +458,8 @@ async fn stream_on_fetch_failure_emits_stale_board() {
         line_ids: vec![],
         directions: vec![],
         poll_seconds: 2,
+
+        theme: "classic-amber".to_string(),
     };
 
     let mut stream = Box::pin(svc.stream(cfg));
@@ -566,6 +573,7 @@ async fn stream_cancellation_drops_in_flight() {
         line_ids: vec![],
         directions: vec![],
         poll_seconds: 60, // long interval so only one tick fires
+        theme: "classic-amber".to_string(),
     };
 
     let stream = Box::pin(svc.stream(cfg));
@@ -671,6 +679,8 @@ async fn stream_stale_transition_atomic() {
         line_ids: vec![],
         directions: vec![],
         poll_seconds: 2,
+
+        theme: "classic-amber".to_string(),
     };
 
     let mut stream = Box::pin(svc.stream(cfg));
@@ -760,6 +770,8 @@ async fn stream_terminates_after_fatal_error_no_last_ok() {
         line_ids: vec![],
         directions: vec![],
         poll_seconds: 2,
+
+        theme: "classic-amber".to_string(),
     };
 
     let mut stream = Box::pin(svc.stream(cfg));
@@ -802,6 +814,8 @@ async fn stream_continues_with_stale_fallback_when_last_ok_exists() {
         line_ids: vec![],
         directions: vec![],
         poll_seconds: 2,
+
+        theme: "classic-amber".to_string(),
     };
 
     let mut stream = Box::pin(svc.stream(cfg));

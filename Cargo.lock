@@ -4425,6 +4425,7 @@ name = "tubbie"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "futures",
  "serde",
  "serde_json",
  "tauri",

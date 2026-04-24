@@ -20,6 +20,7 @@ use serde_json::Value;
 use tfl_board::{BoardConfig, BoardError, BoardService};
 use tfl_client::{clock::Clock, http::TflHttp};
 use tfl_domain::{Board, LineStatus, Station};
+use tokio::{sync::RwLock, task::AbortHandle};
 
 // ---------------------------------------------------------------------------
 // ConfigStore trait
@@ -176,6 +177,26 @@ pub struct AppState {
 
     /// Config persistence layer. Swapped for `MemoryConfigStore` in tests.
     pub config_store: Arc<dyn ConfigStore>,
+
+    /// Handle to the running stream task.
+    ///
+    /// Holds `Some(handle)` when a stream task is active. Set to `None` and
+    /// the task aborted when `save_config` is called (stream restarts with
+    /// new config from `lib.rs`). Also aborted on window close.
+    pub stream_abort: Arc<RwLock<Option<AbortHandle>>>,
+}
+
+impl AppState {
+    /// Abort the current stream task (if any).
+    ///
+    /// Clearing the abort handle signals the watcher loop in `lib.rs` to
+    /// restart the stream with the latest config from the store.
+    /// This is async because `RwLock::write` is async.
+    pub async fn abort_stream(&self) {
+        if let Some(handle) = self.stream_abort.write().await.take() {
+            handle.abort();
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------

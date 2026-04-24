@@ -34,7 +34,7 @@
 
 use tauri::State;
 
-use tfl_board::BoardConfig;
+use tfl_board::{BoardConfig, VALID_THEME_IDS};
 use tfl_domain::{Board, LineStatus, Station};
 
 use crate::state::AppState;
@@ -146,6 +146,13 @@ pub(crate) fn validate_board_config(cfg: &BoardConfig) -> Result<(), String> {
     }
     // directions: enum values validated by serde deserialization
     // poll_seconds: clamped, not rejected
+    // theme: must be one of the four known theme IDs
+    if !VALID_THEME_IDS.contains(&cfg.theme.as_str()) {
+        return Err(format!(
+            "validation: theme must be one of {:?}, got {:?}",
+            VALID_THEME_IDS, cfg.theme
+        ));
+    }
     Ok(())
 }
 
@@ -179,6 +186,9 @@ pub(crate) async fn save_config_inner(cfg: &BoardConfig, state: &AppState) -> Re
         ..cfg.clone()
     };
     state.config_store.save_config(&cfg).await?;
+    // Cancel the current stream task. The watcher loop in lib.rs will detect
+    // the cleared abort handle and restart the stream with the new config.
+    state.abort_stream().await;
     Ok(())
 }
 
@@ -197,6 +207,11 @@ pub(crate) async fn save_app_key_inner(
 
 pub(crate) async fn load_app_key_inner(state: &AppState) -> Result<Option<String>, String> {
     state.config_store.load_app_key().await
+}
+
+pub(crate) async fn has_app_key_inner(state: &AppState) -> Result<bool, String> {
+    let key = state.config_store.load_app_key().await?;
+    Ok(key.is_some())
 }
 
 pub(crate) async fn get_line_status_inner(
@@ -279,6 +294,15 @@ pub async fn load_app_key(state: State<'_, AppState>) -> Result<Option<String>, 
     load_app_key_inner(&state).await
 }
 
+/// Returns `true` if a TfL API key has been stored, `false` otherwise.
+///
+/// Exposes only a boolean to the renderer — the actual key value never
+/// leaves the Rust process. Use `load_app_key` only in privileged contexts.
+#[tauri::command]
+pub async fn has_app_key(state: State<'_, AppState>) -> Result<bool, String> {
+    has_app_key_inner(&state).await
+}
+
 /// Fetch the current status for a single TfL line.
 ///
 /// `line_id` must be a valid lowercase line identifier (e.g. `"northern"`).
@@ -301,6 +325,7 @@ mod tests {
     use std::sync::Arc;
     use tfl_board::BoardService;
     use tfl_client::{clock::FakeClock, fixture::FixtureTflHttp, TflClient};
+    use tokio::sync::RwLock;
 
     /// Path to the workspace fixtures directory (relative to this crate's manifest).
     fn fixture_dir() -> std::path::PathBuf {
@@ -318,6 +343,7 @@ mod tests {
         AppState {
             board_service,
             config_store,
+            stream_abort: Arc::new(RwLock::new(None)),
         }
     }
 
@@ -498,6 +524,7 @@ mod tests {
             line_ids: (0..33).map(|i| format!("line{i}")).collect(),
             directions: vec![],
             poll_seconds: 20,
+            theme: "classic-amber".to_string(),
         };
         let err = validate_board_config(&cfg).expect_err("should reject >32 line_ids");
         assert!(err.contains("validation:"), "error: {err}");
@@ -511,6 +538,7 @@ mod tests {
             line_ids: vec!["northern".to_string(); 32],
             directions: vec![],
             poll_seconds: 20,
+            theme: "classic-amber".to_string(),
         };
         assert!(
             validate_board_config(&cfg).is_ok(),
@@ -526,6 +554,7 @@ mod tests {
             line_ids: vec![],
             directions: vec![Direction::Inbound; 17],
             poll_seconds: 20,
+            theme: "classic-amber".to_string(),
         };
         let err = validate_board_config(&cfg).expect_err("should reject >16 directions");
         assert!(err.contains("validation:"), "error: {err}");
@@ -540,6 +569,7 @@ mod tests {
             line_ids: vec![],
             directions: vec![Direction::Inbound; 16],
             poll_seconds: 20,
+            theme: "classic-amber".to_string(),
         };
         assert!(
             validate_board_config(&cfg).is_ok(),
@@ -559,6 +589,7 @@ mod tests {
             line_ids: vec!["northern".to_string()],
             directions: vec![],
             poll_seconds: 30,
+            theme: "classic-amber".to_string(),
         };
         save_config_inner(&cfg, &state)
             .await
@@ -589,6 +620,7 @@ mod tests {
             line_ids: vec![],
             directions: vec![],
             poll_seconds: 9999,
+            theme: "classic-amber".to_string(),
         };
         save_config_inner(&cfg, &state)
             .await
@@ -608,6 +640,7 @@ mod tests {
             line_ids: vec![],
             directions: vec![],
             poll_seconds: 20,
+            theme: "classic-amber".to_string(),
         };
         let err = save_config_inner(&cfg, &state)
             .await
@@ -623,6 +656,7 @@ mod tests {
             line_ids: vec!["Northern".to_string()], // uppercase — invalid
             directions: vec![],
             poll_seconds: 20,
+            theme: "classic-amber".to_string(),
         };
         let err = save_config_inner(&cfg, &state)
             .await
@@ -638,6 +672,7 @@ mod tests {
             line_ids: vec!["northern".to_string(); 33],
             directions: vec![],
             poll_seconds: 20,
+            theme: "classic-amber".to_string(),
         };
         let err = save_config_inner(&cfg, &state)
             .await
@@ -753,6 +788,7 @@ mod tests {
             line_ids: vec![],
             directions: vec![],
             poll_seconds: 20,
+            theme: "classic-amber".to_string(),
         };
         save_config_inner(&cfg, &state).await.unwrap();
         let board = get_board_inner(&state).await.unwrap();
