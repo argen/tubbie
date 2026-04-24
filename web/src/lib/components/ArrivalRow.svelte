@@ -48,6 +48,46 @@
   });
 
   // ---------------------------------------------------------------------------
+  // Marquee: if the destination text overflows its column after reveal,
+  // scroll it horizontally. Track overflow in px and duration so slow
+  // overflows don't race past the eye.
+  // ---------------------------------------------------------------------------
+
+  let destEl: HTMLSpanElement | undefined = $state();
+  let overflowPx = $state(0);
+
+  // Characters per second for the marquee scroll. ~12 c/s matches a comfortable
+  // read speed on the TfL boards.
+  const MARQUEE_CHARS_PER_SEC = 12;
+
+  function measureOverflow(): void {
+    if (!destEl) return;
+    const overflow = destEl.scrollWidth - destEl.clientWidth;
+    overflowPx = overflow > 1 ? overflow : 0;
+  }
+
+  $effect(() => {
+    if (!revealComplete || $reducedMotion) {
+      overflowPx = 0;
+      return;
+    }
+    // Let layout settle before measuring.
+    const raf = requestAnimationFrame(measureOverflow);
+    const onResize = (): void => {
+      measureOverflow();
+    };
+    window.addEventListener('resize', onResize);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', onResize);
+    };
+  });
+
+  const marqueeDuration = $derived(
+    overflowPx > 0 ? Math.max(arrival.destination_name.length / MARQUEE_CHARS_PER_SEC, 4) : 0,
+  );
+
+  // ---------------------------------------------------------------------------
   // Time formatting + due state
   // ---------------------------------------------------------------------------
 
@@ -63,9 +103,20 @@
 >
   <span class="arrival-row__rank" aria-hidden="true">{rank}</span>
 
-  <span class="arrival-row__dest led-text" aria-label="Destination: {arrival.destination_name}">
-    {revealComplete ? arrival.destination_name : revealedDest}
-    {#if !revealComplete}<span class="arrival-row__cursor" aria-hidden="true">_</span>{/if}
+  <span
+    class="arrival-row__dest led-text"
+    class:arrival-row__dest--marquee={overflowPx > 0}
+    aria-label="Destination: {arrival.destination_name}"
+    bind:this={destEl}
+  >
+    <span
+      class="arrival-row__dest-track"
+      style:--marquee-shift="-{overflowPx}px"
+      style:--marquee-duration="{marqueeDuration}s"
+    >
+      {revealComplete ? arrival.destination_name : revealedDest}
+      {#if !revealComplete}<span class="arrival-row__cursor" aria-hidden="true">_</span>{/if}
+    </span>
   </span>
 
   <span class="arrival-row__via" aria-label="Towards: {arrival.towards}">
@@ -114,6 +165,43 @@
     overflow: hidden;
     text-overflow: ellipsis;
     letter-spacing: 0.03em;
+    min-width: 0; /* allow the 1fr grid column to actually shrink below content */
+  }
+
+  /* When the marquee kicks in we don't want the ellipsis to appear alongside
+     the scrolling text. */
+  .arrival-row__dest--marquee {
+    text-overflow: clip;
+  }
+
+  .arrival-row__dest-track {
+    display: inline-block;
+    white-space: nowrap;
+    /* No transition on non-marquee rows — keep reveal crisp. */
+  }
+
+  /* When destination overflows the column, scroll horizontally. The overflow
+     distance and duration are set as CSS custom properties from the script. */
+  .arrival-row__dest--marquee .arrival-row__dest-track {
+    animation: dest-marquee var(--marquee-duration, 8s) ease-in-out infinite alternate;
+    will-change: transform;
+  }
+
+  @keyframes dest-marquee {
+    0%,
+    15% {
+      transform: translateX(0);
+    }
+    85%,
+    100% {
+      transform: translateX(var(--marquee-shift, 0));
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .arrival-row__dest--marquee .arrival-row__dest-track {
+      animation: none;
+    }
   }
 
   .arrival-row__via {

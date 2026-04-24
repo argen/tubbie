@@ -20,8 +20,11 @@
     <span class="platform-col__label" aria-hidden="true">
       {displayName}
     </span>
-    <span class="platform-col__dest-header" aria-hidden="true">Destination</span>
-    <span class="platform-col__time-header" aria-hidden="true">Time</span>
+    <div class="platform-col__subheader" aria-hidden="true">
+      <span class="platform-col__dest-header">Destination</span>
+      <span></span>
+      <span class="platform-col__time-header">Time</span>
+    </div>
   </header>
 
   {#if arrivals.length === 0}
@@ -47,16 +50,16 @@
   }
 
   .platform-col__header {
-    display: grid;
-    grid-template-columns: 1fr auto auto;
-    column-gap: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
     padding: 0.4rem 0.5rem 0.3rem;
     border-bottom: 1px solid var(--row-divider);
     background: var(--settings-bg);
   }
 
   .platform-col__label {
-    font-family: 'DSEG14Classic', 'VT323', monospace;
+    font-family: var(--font-board);
     font-size: 0.9rem;
     color: var(--platform-label);
     text-transform: uppercase;
@@ -64,6 +67,16 @@
     text-shadow:
       0 0 4px var(--platform-label),
       0 0 8px color-mix(in srgb, var(--platform-label) 30%, transparent);
+  }
+
+  /* Matches ArrivalRow's grid so "Destination" / "Time" sit over the
+     actual columns below. The second `auto` cell is the "via" column
+     header and is intentionally blank. */
+  .platform-col__subheader {
+    display: grid;
+    grid-template-columns: 1.2rem 1fr auto auto;
+    column-gap: 0.5rem;
+    align-items: end;
   }
 
   .platform-col__dest-header,
@@ -74,7 +87,16 @@
     opacity: 0.5;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    align-self: end;
+  }
+
+  .platform-col__dest-header {
+    grid-column: 2;
+  }
+
+  .platform-col__time-header {
+    grid-column: 4;
+    text-align: right;
+    min-width: 4.5rem;
   }
 
   .platform-col__list {
