@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
   import type { Board, LineStatus } from '$lib/ipc/types.js';
-  import { formatTime } from '$lib/utils/format.js';
+  import { formatTime, shortStationName } from '$lib/utils/format.js';
   import { lastUpdateTs } from '$lib/stores/board.js';
   import { reducedMotion } from '$lib/stores/reducedMotion.js';
   import PlatformColumn from './PlatformColumn.svelte';
@@ -104,9 +104,7 @@
   // ---------------------------------------------------------------------------
 
   const displayName = $derived(
-    stationName.length > 0
-      ? stationName.replace(' Underground Station', '').toUpperCase()
-      : board.station_id,
+    stationName.length > 0 ? shortStationName(stationName).toUpperCase() : board.station_id,
   );
 </script>
 

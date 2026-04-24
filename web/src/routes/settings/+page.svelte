@@ -10,7 +10,9 @@
   import StationSearch from '$lib/components/StationSearch.svelte';
   import ThemePicker from '$lib/components/ThemePicker.svelte';
   import { hasAppKey, saveAppKey } from '$lib/ipc/commands.js';
+  import { board } from '$lib/stores/board.js';
   import { debounce } from '$lib/utils/debounce.js';
+  import { shortStationName } from '$lib/utils/format.js';
   import type { Direction, LineRef, Station } from '$lib/ipc/types.js';
   import { onMount } from 'svelte';
 
@@ -127,6 +129,25 @@
     }
     void persist();
   }
+
+  /**
+   * Human-readable name of the station currently saved in config.
+   *
+   * Precedence:
+   *  1. Local `stationName` — set by `handleStationSelect` so a freshly-picked
+   *     station shows its name before the board stream catches up.
+   *  2. `station_name` from the latest board arrival — survives settings
+   *     re-entry when the user already has an active board.
+   *
+   * `shortStationName` strips the " Underground Station" suffix so the label
+   * matches what the board header shows. Empty when neither source is
+   * populated (e.g. brand-new install, no arrivals yet).
+   */
+  const currentStationName = $derived.by(() => {
+    if (stationName.length > 0) return shortStationName(stationName);
+    const fromBoard = $board?.platforms[0]?.arrivals[0]?.station_name ?? '';
+    return fromBoard.length > 0 ? shortStationName(fromBoard) : '';
+  });
 
   /**
    * Lines the selected station actually serves, or `null` when unknown
@@ -260,16 +281,17 @@
     <!-- Station search -->
     <section class="settings__section" aria-labelledby="section-station">
       <h2 id="section-station" class="settings__section-title">Station</h2>
-      <StationSearch selectedId={stationId} onSelect={handleStationSelect} />
-      {#if stationName}
-        <p class="settings__selected-station" aria-live="polite">
-          Selected: {stationName}
-        </p>
-      {:else if stationId}
-        <p class="settings__selected-station" aria-live="polite">
-          Station ID: {stationId}
+      {#if currentStationName}
+        <p
+          class="settings__current-station"
+          aria-live="polite"
+          data-testid="settings-current-station"
+        >
+          <span class="settings__current-station-label">Current:</span>
+          <span class="settings__current-station-name">{currentStationName}</span>
         </p>
       {/if}
+      <StationSearch selectedId={stationId} onSelect={handleStationSelect} />
     </section>
 
     <!-- Line filter -->
@@ -295,7 +317,7 @@
             aria-label={available
               ? `Toggle ${line.label} line`
               : `${line.label} line is not served by this station`}
-            title={available ? undefined : `Not served by ${stationName || 'this station'}`}
+            title={available ? undefined : `Not served by ${currentStationName || 'this station'}`}
           >
             {line.label}
           </button>
@@ -548,12 +570,29 @@
     margin-left: 0.5rem;
   }
 
-  .settings__selected-station {
+  .settings__current-station {
     font-family: var(--font-board);
-    font-size: 0.9rem;
+    font-size: 0.95rem;
+    margin: 0 0 0.1rem;
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    letter-spacing: 0.04em;
+  }
+
+  .settings__current-station-label {
+    color: var(--platform-label);
+    opacity: 0.6;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+
+  .settings__current-station-name {
     color: var(--accent);
-    margin: 0;
-    opacity: 0.8;
+    text-shadow:
+      0 0 4px var(--accent),
+      0 0 8px color-mix(in srgb, var(--accent) 40%, transparent);
   }
 
   /* Chips */

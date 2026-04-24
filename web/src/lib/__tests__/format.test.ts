@@ -4,6 +4,7 @@ import {
   isDue,
   revealDuration,
   shortPlatformName,
+  shortStationName,
   truncate,
 } from '$lib/utils/format.js';
 
@@ -73,6 +74,42 @@ describe('shortPlatformName', () => {
 
   it('handles empty string', () => {
     expect(shortPlatformName('')).toBe('');
+  });
+});
+
+describe('shortStationName', () => {
+  it('strips the " Underground Station" suffix', () => {
+    expect(shortStationName('Morden Underground Station')).toBe('Morden');
+    expect(shortStationName('Belsize Park Underground Station')).toBe('Belsize Park');
+  });
+
+  it('is case-insensitive on the suffix', () => {
+    expect(shortStationName('Morden underground station')).toBe('Morden');
+    expect(shortStationName('Morden UNDERGROUND STATION')).toBe('Morden');
+  });
+
+  it('also strips " DLR Station" and " Rail Station"', () => {
+    expect(shortStationName('Canary Wharf DLR Station')).toBe('Canary Wharf');
+    expect(shortStationName('Stratford Rail Station')).toBe('Stratford');
+  });
+
+  it('does not strip when the suffix is in the middle of the name', () => {
+    // Regression guard: "Battersea Power Station Underground Station" should
+    // still drop the trailing suffix once, leaving "Battersea Power Station".
+    expect(shortStationName('Battersea Power Station Underground Station')).toBe(
+      'Battersea Power Station',
+    );
+  });
+
+  it('returns the input unchanged when no suffix matches', () => {
+    expect(shortStationName('Morden')).toBe('Morden');
+    expect(shortStationName('Edgware')).toBe('Edgware');
+    expect(shortStationName('')).toBe('');
+  });
+
+  it('returns the input unchanged when trimming would leave an empty name', () => {
+    // Pathological: the whole string IS the suffix.
+    expect(shortStationName('Underground Station')).toBe('Underground Station');
   });
 });
 
