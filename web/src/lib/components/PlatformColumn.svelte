@@ -16,11 +16,13 @@
 </script>
 
 <section class="platform-col" aria-label="Platform: {displayName}">
-  <header class="platform-col__header">
-    <span class="platform-col__label" aria-hidden="true">
-      {displayName}
-    </span>
-    <div class="platform-col__subheader" aria-hidden="true">
+  <header class="platform-col__header" aria-hidden="true">
+    <div class="platform-col__row platform-col__row--label">
+      <span></span>
+      <span class="platform-col__label">{displayName}</span>
+    </div>
+    <div class="platform-col__row platform-col__row--subheader">
+      <span></span>
       <span class="platform-col__dest-header">Destination</span>
       <span></span>
       <span class="platform-col__time-header">Time</span>
@@ -52,13 +54,23 @@
   .platform-col__header {
     display: flex;
     flex-direction: column;
-    gap: 0.2rem;
+    gap: 0.15rem;
     padding: 0.4rem 0.5rem 0.3rem;
     border-bottom: 1px solid var(--row-divider);
     background: var(--settings-bg);
   }
 
+  /* Both header rows share ArrivalRow's grid so NORTHBOUND, "Destination",
+     and the destination text below all line up at the same x-position. */
+  .platform-col__row {
+    display: grid;
+    grid-template-columns: 1.2rem 1fr auto auto;
+    column-gap: 0.5rem;
+    align-items: center;
+  }
+
   .platform-col__label {
+    grid-column: 2 / -1;
     font-family: var(--font-board);
     font-size: 0.9rem;
     color: var(--platform-label);
@@ -67,16 +79,6 @@
     text-shadow:
       0 0 4px var(--platform-label),
       0 0 8px color-mix(in srgb, var(--platform-label) 30%, transparent);
-  }
-
-  /* Matches ArrivalRow's grid so "Destination" / "Time" sit over the
-     actual columns below. The second `auto` cell is the "via" column
-     header and is intentionally blank. */
-  .platform-col__subheader {
-    display: grid;
-    grid-template-columns: 1.2rem 1fr auto auto;
-    column-gap: 0.5rem;
-    align-items: end;
   }
 
   .platform-col__dest-header,
