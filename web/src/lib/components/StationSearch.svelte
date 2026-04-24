@@ -17,28 +17,59 @@
   let listboxOpen = $state(false);
   let inputEl: HTMLInputElement | undefined = $state();
   let activeIdx = $state(-1);
+  // Flipped true after the first completed search for the current query; lets
+  // us tell "still typing / still loading" apart from "search ran, no results".
+  let searched = $state(false);
 
-  // Debounced search — 200ms, latest-wins
+  /** Safety net so a stuck IPC call never leaves the user staring at a spinner. */
+  const SEARCH_TIMEOUT_MS = 12_000;
+
+  function searchWithTimeout(q: string): Promise<Station[]> {
+    return new Promise<Station[]>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        reject(
+          new Error(
+            `Search timed out after ${String(SEARCH_TIMEOUT_MS / 1000)}s — check your network and TfL API access.`,
+          ),
+        );
+      }, SEARCH_TIMEOUT_MS);
+      searchStations(q)
+        .then((stations) => {
+          clearTimeout(timer);
+          resolve(stations);
+        })
+        .catch((err: unknown) => {
+          clearTimeout(timer);
+          reject(err instanceof Error ? err : new Error(String(err)));
+        });
+    });
+  }
+
+  // Debounced search — 200 ms, latest-wins. `handleInput` bumps the debounce
+  // generation on every keystroke (including clears), so stale resolutions
+  // from the previous query are discarded by `debounceAsync`.
   const debouncedSearch = debounceAsync(
-    async (q: string) => {
-      if (q.trim().length === 0) {
-        searching = false;
-        return [];
-      }
-      searching = true;
-      return searchStations(q);
+    async (q: string): Promise<Station[]> => {
+      // Skip the backend round-trip for an empty query; `onResult` still
+      // fires so we can re-settle local UI state.
+      if (q.trim().length === 0) return [];
+      return searchWithTimeout(q);
     },
     200,
     (res: Station[]) => {
       results = res;
-      listboxOpen = results.length > 0;
       searching = false;
       searchError = null;
       activeIdx = -1;
+      // If the user cleared the input, treat this as "not searched"; the
+      // listbox stays closed and the empty-state hint stays hidden.
+      searched = query.trim().length > 0;
+      listboxOpen = searched && results.length > 0;
     },
     (err: unknown) => {
       searchError = err instanceof Error ? err.message : String(err);
       searching = false;
+      searched = true;
     },
   );
 
@@ -48,15 +79,31 @@
       results = [];
       listboxOpen = false;
       searching = false;
-    } else {
-      debouncedSearch(query);
+      searched = false;
+      // Bump the debounce generation so any in-flight call discards its result.
+      debouncedSearch('');
+      return;
     }
+    // Reset "no results" state until the new search resolves, and turn the
+    // spinner on immediately so the user sees the 200 ms debounce window as
+    // "still searching" rather than "broken".
+    searched = false;
+    searching = true;
+    debouncedSearch(query);
   }
 
   function selectStation(station: Station): void {
     query = station.common_name;
     listboxOpen = false;
     results = [];
+    searching = false;
+    searchError = null;
+    // Without this the empty-state branch would fire immediately: `searched`
+    // would stay true from the preceding search, `query` would still be the
+    // selected station name, `results` would have just been cleared — so the
+    // UI would render "No tube stations match 'Victoria'" right under a
+    // station the user just picked.
+    searched = false;
     onSelect(station);
   }
 
@@ -149,6 +196,15 @@
         </li>
       {/each}
     </ul>
+  {:else if searched && !searching && query.trim().length > 0 && results.length === 0 && !searchError}
+    <p
+      class="station-search__empty"
+      role="status"
+      aria-live="polite"
+      data-testid="station-search-empty"
+    >
+      No tube stations match “{query.trim()}”.
+    </p>
   {/if}
 </div>
 
@@ -215,6 +271,14 @@
     color: var(--stale-accent);
     font-family: var(--font-board);
     font-size: 0.9rem;
+    margin: 0.3rem 0 0;
+  }
+
+  .station-search__empty {
+    font-family: var(--font-board);
+    font-size: 0.9rem;
+    color: var(--platform-label);
+    opacity: 0.75;
     margin: 0.3rem 0 0;
   }
 

@@ -175,9 +175,11 @@ describe('Settings — Fix 3: configError banner', () => {
 
     render(SettingsPage);
 
-    // Click "Save Settings".
-    const saveBtn = await waitFor(() => screen.getByRole('button', { name: /save settings/i }));
-    await fireEvent.click(saveBtn);
+    // Trigger an autosave via any chip; the Save Settings button no longer exists.
+    const northbound = await waitFor(() =>
+      screen.getByRole('button', { name: /toggle northbound direction/i }),
+    );
+    await fireEvent.click(northbound);
 
     // configError store should be populated.
     await waitFor(() => {

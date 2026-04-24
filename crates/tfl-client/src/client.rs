@@ -28,7 +28,20 @@
 
 use crate::error::TflError;
 use crate::http::TflHttp;
+use std::sync::Mutex;
+use std::time::{Duration, Instant};
 use tfl_domain::types::{Arrival, LineStatus, Station, StatusEntry, TflLine};
+
+/// How long a `stop-points/tube` response stays cached before the next
+/// `search_stations` call refetches. 15 minutes keeps the 16 MB payload off
+/// the wire for typical settings-page sessions while still picking up TfL
+/// station-metadata edits within a lunchbreak.
+const STOP_POINTS_TTL: Duration = Duration::from_secs(15 * 60);
+
+struct StopPointsCacheEntry {
+    fetched_at: Instant,
+    stations: Vec<Station>,
+}
 
 /// Typed TfL API client, generic over any `TflHttp` transport.
 ///
@@ -41,12 +54,16 @@ use tfl_domain::types::{Arrival, LineStatus, Station, StatusEntry, TflLine};
 /// ```
 pub struct TflClient<H: TflHttp> {
     http: H,
+    stop_points_cache: Mutex<Option<StopPointsCacheEntry>>,
 }
 
 impl<H: TflHttp> TflClient<H> {
     /// Create a new `TflClient` wrapping the given transport.
     pub fn new(http: H) -> Self {
-        Self { http }
+        Self {
+            http,
+            stop_points_cache: Mutex::new(None),
+        }
     }
 
     /// Fetch the live arrival predictions for a stop point.
@@ -119,19 +136,22 @@ impl<H: TflHttp> TflClient<H> {
             return Ok(vec![]);
         }
 
-        let value = self.http.fetch("stop-points", "tube").await?;
-
-        // TfL returns a paginated envelope: `{ "total": N, "stopPoints": [...] }`.
-        // Extract the `stopPoints` array.
-        let stop_points_value = value.get("stopPoints").unwrap_or(&value).clone();
-
-        let stations: Vec<Station> = serde_json::from_value(stop_points_value)?;
-
+        let stations = self.stop_points_cached().await?;
         let q = trimmed.to_lowercase();
 
-        // Filter to tube-mode stations that contain the query substring.
+        // Filter to tube-mode stations whose id is the canonical group parent
+        // (TfL's `940GZZLU{CODE}` prefix). This drops:
+        //   - Platform-level children `9400ZZLU*` — same common name, would
+        //     produce duplicate rows in the dropdown.
+        //   - NaPTAN bus-stop-at-station records `4900ZZLU*` — same location
+        //     but no tube line info.
+        //   - Hub stop-points `HUB*` — multi-mode aggregators mixing bus and
+        //     national-rail services with no stable tube id for arrivals.
+        // ~272 canonical entries remain (one per London Underground station),
+        // which is the shape the user expects in the dropdown.
         let mut matches: Vec<Station> = stations
             .into_iter()
+            .filter(|s| s.id.starts_with("940GZZLU"))
             .filter(|s| s.modes.iter().any(|m| m == "tube"))
             .filter(|s| s.common_name.to_lowercase().contains(&q))
             .collect();
@@ -149,6 +169,81 @@ impl<H: TflHttp> TflClient<H> {
 
         matches.truncate(20);
         Ok(matches)
+    }
+
+    /// Pre-fetch and cache the stop-points list. Fire-and-forget from app
+    /// startup so the first `search_stations` call is instant.
+    ///
+    /// Idempotent: if the cache is already fresh, returns its size without a
+    /// network round-trip. Returns the cached station count.
+    pub async fn warm_stop_points_cache(&self) -> Result<usize, TflError> {
+        let stations = self.stop_points_cached().await?;
+        Ok(stations.len())
+    }
+
+    /// Fetch the full tube stop-points list, serving from cache when fresh.
+    ///
+    /// Cache TTL is [`STOP_POINTS_TTL`]. On miss, fetches `/StopPoint/Mode/tube`
+    /// once and stores the deserialized `Vec<Station>` under a mutex.
+    ///
+    /// The lock is held only for a synchronous read/write around the Mutex —
+    /// the network call happens outside the critical section, so two concurrent
+    /// callers may briefly both fetch on a cold cache. That is acceptable:
+    /// the duplicate work is paid once per process start, not per keystroke.
+    async fn stop_points_cached(&self) -> Result<Vec<Station>, TflError> {
+        if let Some(cached) = self.read_fresh_cache() {
+            return Ok(cached);
+        }
+
+        let value = self.http.fetch("stop-points", "tube").await?;
+        let stop_points_value = value.get("stopPoints").unwrap_or(&value).clone();
+        let stations: Vec<Station> = serde_json::from_value(stop_points_value)?;
+
+        match self.stop_points_cache.lock() {
+            Ok(mut guard) => {
+                *guard = Some(StopPointsCacheEntry {
+                    fetched_at: Instant::now(),
+                    stations: stations.clone(),
+                });
+            }
+            Err(poison) => {
+                // A previous panic poisoned the mutex. Surface it so the bug
+                // is observable rather than silently refetching 16 MB forever.
+                eprintln!("[tfl-client] stop-points cache mutex poisoned; recovering: {poison}");
+                let mut guard = poison.into_inner();
+                *guard = Some(StopPointsCacheEntry {
+                    fetched_at: Instant::now(),
+                    stations: stations.clone(),
+                });
+            }
+        }
+
+        Ok(stations)
+    }
+
+    fn read_fresh_cache(&self) -> Option<Vec<Station>> {
+        let guard = match self.stop_points_cache.lock() {
+            Ok(g) => g,
+            Err(poison) => {
+                eprintln!("[tfl-client] stop-points cache mutex poisoned on read; recovering");
+                poison.into_inner()
+            }
+        };
+        let entry = guard.as_ref()?;
+        if entry.fetched_at.elapsed() < STOP_POINTS_TTL {
+            Some(entry.stations.clone())
+        } else {
+            None
+        }
+    }
+
+    /// Drop any cached stop-points response. Test-only — production code
+    /// relies on the TTL.
+    #[cfg(test)]
+    pub fn invalidate_stop_points_cache(&self) {
+        if let Ok(mut guard) = self.stop_points_cache.lock() {
+            *guard = None;
+        }
     }
 }
 

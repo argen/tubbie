@@ -147,6 +147,7 @@ pub trait AnyBoardService: Send + Sync + 'static {
     async fn search_stations(&self, query: &str) -> Result<Vec<Station>, BoardError>;
     async fn get_line_status(&self, line_id: &str) -> Result<LineStatus, BoardError>;
     async fn refresh(&self, cfg: &BoardConfig) -> Result<Board, BoardError>;
+    async fn warm_stop_points_cache(&self) -> Result<usize, BoardError>;
 }
 
 #[async_trait::async_trait]
@@ -161,6 +162,10 @@ impl<H: TflHttp + 'static, C: Clock + 'static> AnyBoardService for BoardService<
 
     async fn refresh(&self, cfg: &BoardConfig) -> Result<Board, BoardError> {
         BoardService::refresh(self, cfg).await
+    }
+
+    async fn warm_stop_points_cache(&self) -> Result<usize, BoardError> {
+        BoardService::warm_stop_points_cache(self).await
     }
 }
 

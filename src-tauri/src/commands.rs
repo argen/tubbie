@@ -165,9 +165,26 @@ pub(crate) async fn search_stations_inner(
     state: &AppState,
 ) -> Result<Vec<Station>, String> {
     validate_query(query)?;
+    #[cfg(debug_assertions)]
+    let started = std::time::Instant::now();
     let stations = crate::state::AnyBoardService::search_stations(&*state.board_service, query)
         .await
         .map_err(|e| e.to_string())?;
+    #[cfg(debug_assertions)]
+    {
+        let names: Vec<&str> = stations
+            .iter()
+            .take(3)
+            .map(|s| s.common_name.as_str())
+            .collect();
+        eprintln!(
+            "[search_stations] q={:?} elapsed={}ms results={} first={:?}",
+            query,
+            started.elapsed().as_millis(),
+            stations.len(),
+            names,
+        );
+    }
     Ok(stations)
 }
 

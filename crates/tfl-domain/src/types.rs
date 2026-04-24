@@ -133,8 +133,14 @@ impl<'de> Deserialize<'de> for Arrival {
 ///
 /// When neither is present (trimmed fixture), `lines` is empty — callers fall
 /// back to the global "all tube lines" list.
+///
+/// ## Serialization is snake_case (deliberate)
+///
+/// `Serialize` emits `common_name`, matching the TypeScript `Station` interface
+/// at `web/src/lib/ipc/types.ts:84`. The Deserialize impl below reads the
+/// TfL wire format (camelCase `commonName`, `lineModeGroups`) via an internal
+/// `RawStation` — the two directions don't share a rename rule.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
 pub struct Station {
     pub id: String,
     pub common_name: String,
@@ -173,8 +179,11 @@ impl<'de> Deserialize<'de> for Station {
         }
 
         let raw = RawStation::deserialize(deserializer)?;
-        let lines = if !raw.lines.is_empty() {
+        let lines: Vec<LineRef> = if !raw.lines.is_empty() {
             raw.lines
+                .into_iter()
+                .filter(|l| is_tube_line_id(&l.id))
+                .collect()
         } else {
             raw.line_mode_groups
                 .into_iter()
@@ -184,6 +193,12 @@ impl<'de> Deserialize<'de> for Station {
                 // constrains us to tube stations upstream).
                 .filter(|g| g.mode_name.is_empty() || g.mode_name == "tube")
                 .flat_map(|g| g.line_identifier.into_iter())
+                // Hub stop-points mix bus routes, national-rail services, and
+                // tube lines into the same list when modeName is absent; the
+                // tube-id whitelist removes the non-tube entries so the chip
+                // UI doesn't render "52, 390, GATWICK-EXPRESS, …" next to a
+                // station name.
+                .filter(|id| is_tube_line_id(id))
                 .map(|id| {
                     let name = pretty_line_name(&id).to_string();
                     LineRef { id, name }
@@ -226,6 +241,30 @@ pub fn pretty_line_name(id: &str) -> &str {
         "waterloo-city" => "Waterloo & City",
         other => other,
     }
+}
+
+/// `true` iff `id` is a known tube / Underground line identifier. Used to
+/// filter out bus route numbers, national-rail services, and other non-tube
+/// entries that TfL returns alongside tube lines on `lineModeGroups` for hub
+/// stop-points (e.g. Victoria the hub has `52, 390, 38, district, circle,
+/// gatwick-express, …`).
+pub fn is_tube_line_id(id: &str) -> bool {
+    matches!(
+        id,
+        "bakerloo"
+            | "central"
+            | "circle"
+            | "district"
+            | "elizabeth"
+            | "elizabeth-line"
+            | "hammersmith-city"
+            | "jubilee"
+            | "metropolitan"
+            | "northern"
+            | "piccadilly"
+            | "victoria"
+            | "waterloo-city"
+    )
 }
 
 // ---------------------------------------------------------------------------
