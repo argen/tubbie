@@ -2,7 +2,12 @@
   import { onMount } from 'svelte';
   import { fly } from 'svelte/transition';
   import type { Arrival } from '$lib/ipc/types.js';
-  import { formatTimeToStation, isDue, revealDuration } from '$lib/utils/format.js';
+  import {
+    formatTimeToStation,
+    isDue,
+    revealDuration,
+    shortStationName,
+  } from '$lib/utils/format.js';
   import { reducedMotion } from '$lib/stores/reducedMotion.js';
 
   interface Props {
@@ -11,6 +16,11 @@
   }
 
   const { arrival, rank }: Props = $props();
+
+  // Real dot-matrix boards show "Morden", not "Morden Underground Station".
+  // Kept in a local const so reveal, marquee copies, and aria-labels stay
+  // in sync — otherwise the screen-reader string drifts from the visible one.
+  const destination = $derived(shortStationName(arrival.destination_name));
 
   // ---------------------------------------------------------------------------
   // Char-by-char reveal
@@ -44,7 +54,7 @@
   }
 
   onMount(() => {
-    startReveal(arrival.destination_name, $reducedMotion);
+    startReveal(destination, $reducedMotion);
   });
 
   // ---------------------------------------------------------------------------
@@ -109,7 +119,7 @@
 
 <li
   class="arrival-row"
-  aria-label="Train {rank}: {arrival.destination_name}, {formattedTime}"
+  aria-label="Train {rank}: {destination}, {formattedTime}"
   in:fly|global={{ y: -20, duration: $reducedMotion ? 0 : 250 }}
   out:fly|global={{ y: 20, duration: $reducedMotion ? 0 : 200 }}
 >
@@ -118,17 +128,17 @@
   <span
     class="arrival-row__dest led-text"
     class:arrival-row__dest--marquee={overflowing}
-    aria-label="Destination: {arrival.destination_name}"
+    aria-label="Destination: {destination}"
     bind:this={destEl}
   >
     {#if overflowing}
       <span class="arrival-row__dest-track" style:animation-duration="{marqueeDuration}s">
-        <span class="arrival-row__dest-copy">{arrival.destination_name}</span>
-        <span class="arrival-row__dest-copy" aria-hidden="true">{arrival.destination_name}</span>
+        <span class="arrival-row__dest-copy">{destination}</span>
+        <span class="arrival-row__dest-copy" aria-hidden="true">{destination}</span>
       </span>
     {:else}
       <span class="arrival-row__dest-track">
-        {revealComplete ? arrival.destination_name : revealedDest}
+        {revealComplete ? destination : revealedDest}
         {#if !revealComplete}<span class="arrival-row__cursor" aria-hidden="true">_</span>{/if}
       </span>
     {/if}

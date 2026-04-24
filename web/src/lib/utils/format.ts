@@ -46,6 +46,29 @@ export function shortPlatformName(fullName: string): string {
 }
 
 /**
+ * Trim the TfL " Underground Station" / " DLR Station" / " Rail Station"
+ * suffix so station/destination names match the real dot-matrix board,
+ * where "Morden Underground Station" is rendered as just "Morden".
+ *
+ * Case-insensitive on the suffix; the preceding name keeps its original
+ * casing so callers can decide whether to uppercase downstream.
+ * Returns the input unchanged when no known suffix is present (or when
+ * the input is empty / would become empty after trimming).
+ */
+export function shortStationName(fullName: string): string {
+  const suffixes = [' Underground Station', ' DLR Station', ' Rail Station'];
+  const lower = fullName.toLowerCase();
+  for (const suf of suffixes) {
+    const sufLower = suf.toLowerCase();
+    if (lower.endsWith(sufLower)) {
+      const trimmed = fullName.slice(0, fullName.length - suf.length).trim();
+      if (trimmed.length > 0) return trimmed;
+    }
+  }
+  return fullName;
+}
+
+/**
  * Return true if the given time_to_station should show as "Due".
  */
 export function isDue(seconds: number): boolean {
