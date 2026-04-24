@@ -34,7 +34,7 @@ fn direction_matches(direction: Direction, filter: &[Direction]) -> bool {
     if filter.is_empty() {
         return true;
     }
-    filter.iter().any(|f| *f == direction)
+    filter.contains(&direction)
 }
 
 // ---------------------------------------------------------------------------
