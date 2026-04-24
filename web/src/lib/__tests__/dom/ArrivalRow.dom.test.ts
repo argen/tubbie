@@ -82,6 +82,30 @@ describe('ArrivalRow', () => {
   });
 });
 
+describe('ArrivalRow — line colour stripe', () => {
+  it('exposes the line id and a var(--line-*) colour via inline style', () => {
+    render(ArrivalRow, { props: { arrival: sampleArrival, rank: 1 } });
+    const li = screen.getByRole('listitem');
+    expect(li.getAttribute('data-line-id')).toBe('northern');
+    // Svelte's style:--line-color binding writes to element.style directly.
+    expect(li.style.getPropertyValue('--line-color')).toBe('var(--line-northern)');
+  });
+
+  it('maps "elizabeth-line" to the Elizabeth colour variable', () => {
+    const elizabeth: Arrival = { ...sampleArrival, line_id: 'elizabeth-line' };
+    render(ArrivalRow, { props: { arrival: elizabeth, rank: 1 } });
+    const li = screen.getByRole('listitem');
+    expect(li.style.getPropertyValue('--line-color')).toBe('var(--line-elizabeth)');
+  });
+
+  it('falls back to transparent for unknown line ids', () => {
+    const unknown: Arrival = { ...sampleArrival, line_id: 'not-a-real-line' };
+    render(ArrivalRow, { props: { arrival: unknown, rank: 1 } });
+    const li = screen.getByRole('listitem');
+    expect(li.style.getPropertyValue('--line-color')).toBe('transparent');
+  });
+});
+
 describe('ArrivalRow — reduced-motion', () => {
   it('shows blinking cursor when reduced motion is off (animation in progress)', () => {
     // The top-level vi.mock returns reducedMotion = false, so the char-by-char

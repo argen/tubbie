@@ -41,6 +41,27 @@
 :root {
   --font-board:
     'Geist Pixel Square', 'VT323', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+
+  /* ------------------------------------------------------------
+     TfL official line colours. Theme-agnostic — rendered as a
+     thin stripe on each arrival row so multi-line stations can
+     be read at a glance. Reference:
+     https://content.tfl.gov.uk/tfl-colour-standard.pdf
+     ------------------------------------------------------------ */
+  --line-bakerloo: #b36305;
+  --line-central: #e32017;
+  --line-circle: #ffd300;
+  --line-district: #00782a;
+  --line-elizabeth: #6950a1;
+  --line-hammersmith-city: #f3a9bb;
+  --line-jubilee: #a0a5a9;
+  --line-metropolitan: #9b0056;
+  --line-northern: #ffffff;
+  --line-piccadilly: #003688;
+  --line-victoria: #0098d4;
+  --line-waterloo-city: #95cdba;
+  --line-dlr: #00a4a7;
+  --line-overground: #ee7c0e;
 }
 
 /* ------------------------------------------------------------

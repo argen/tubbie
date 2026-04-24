@@ -22,6 +22,34 @@
   // in sync — otherwise the screen-reader string drifts from the visible one.
   const destination = $derived(shortStationName(arrival.destination_name));
 
+  // TfL line id → CSS custom property name defined in app.css. A small map
+  // (rather than string-templating `--line-${id}`) lets us alias TfL's id
+  // variants (e.g. "elizabeth-line") and fall back silently for unknown ids
+  // instead of emitting a reference to a non-existent variable.
+  const LINE_COLOR_VAR: Record<string, string> = {
+    bakerloo: '--line-bakerloo',
+    central: '--line-central',
+    circle: '--line-circle',
+    district: '--line-district',
+    'elizabeth-line': '--line-elizabeth',
+    elizabeth: '--line-elizabeth',
+    'hammersmith-city': '--line-hammersmith-city',
+    jubilee: '--line-jubilee',
+    metropolitan: '--line-metropolitan',
+    northern: '--line-northern',
+    piccadilly: '--line-piccadilly',
+    victoria: '--line-victoria',
+    'waterloo-city': '--line-waterloo-city',
+    dlr: '--line-dlr',
+    'london-overground': '--line-overground',
+    overground: '--line-overground',
+  };
+
+  const lineColor = $derived.by(() => {
+    const name = LINE_COLOR_VAR[arrival.line_id];
+    return name ? `var(${name})` : 'transparent';
+  });
+
   // ---------------------------------------------------------------------------
   // Char-by-char reveal
   // ---------------------------------------------------------------------------
@@ -119,6 +147,8 @@
 
 <li
   class="arrival-row"
+  data-line-id={arrival.line_id}
+  style:--line-color={lineColor}
   aria-label="Train {rank}: {destination}, {formattedTime}"
   in:fly|global={{ y: -20, duration: $reducedMotion ? 0 : 250 }}
   out:fly|global={{ y: 20, duration: $reducedMotion ? 0 : 200 }}
@@ -164,7 +194,10 @@
     grid-template-columns: 1.2rem 1fr auto auto;
     column-gap: 0.5rem;
     align-items: center;
-    padding: 0.3rem 0.5rem;
+    /* 4px left stripe carries the line colour; padding-left compensates so
+       the rank digit lines up with where it was before the stripe existed. */
+    padding: 0.3rem 0.5rem 0.3rem calc(0.5rem + 4px);
+    border-left: 4px solid var(--line-color, transparent);
     border-bottom: 1px solid var(--row-divider);
     list-style: none;
     font-family: var(--font-board);
