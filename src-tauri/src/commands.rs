@@ -795,6 +795,61 @@ mod tests {
         assert_eq!(board.station_id, "940GZZLUKSX");
     }
 
+    /// End-to-end proof: saving a new station + multi-line filter is honoured
+    /// when the board is next requested — the two UX changes the user cares
+    /// about ("does changing station actually work?" and "can I pick more
+    /// than one line?") share the same pipeline.
+    #[tokio::test]
+    async fn save_config_then_get_board_applies_station_and_multi_line_filter() {
+        let state = fixture_state();
+
+        // 1. Save a config pointing at King's Cross (multi-line station) with
+        //    two explicitly-allowed lines.
+        let cfg = BoardConfig {
+            station_id: "940GZZLUKSX".to_string(),
+            line_ids: vec!["northern".to_string(), "victoria".to_string()],
+            directions: vec![],
+            poll_seconds: 20,
+            theme: "classic-amber".to_string(),
+        };
+        save_config_inner(&cfg, &state)
+            .await
+            .expect("save should succeed");
+
+        // 2. Refresh the board. Station and filter should both have landed.
+        let board = get_board_inner(&state)
+            .await
+            .expect("get_board should succeed");
+        assert_eq!(
+            board.station_id, "940GZZLUKSX",
+            "station_id from saved config must drive refresh"
+        );
+
+        // 3. Every arrival on every platform must belong to one of the two
+        //    allowed lines — nothing else may leak through.
+        let seen_lines: std::collections::HashSet<String> = board
+            .platforms
+            .iter()
+            .flat_map(|p| p.arrivals.iter().map(|a| a.line_id.clone()))
+            .collect();
+        assert!(
+            !seen_lines.is_empty(),
+            "filtered board should still have arrivals"
+        );
+        for line_id in &seen_lines {
+            assert!(
+                line_id == "northern" || line_id == "victoria",
+                "unexpected line_id {line_id:?} leaked past the line_ids filter; saw: {seen_lines:?}"
+            );
+        }
+        // And at least one of the two allowed lines must actually appear,
+        // otherwise the filter is vacuously satisfied.
+        assert!(
+            seen_lines.contains("northern") || seen_lines.contains("victoria"),
+            "expected northern or victoria in filtered board, got: {seen_lines:?}"
+        );
+    }
+
     // -----------------------------------------------------------------------
     // search_stations
     // -----------------------------------------------------------------------

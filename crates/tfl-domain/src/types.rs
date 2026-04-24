@@ -122,9 +122,18 @@ impl<'de> Deserialize<'de> for Arrival {
 
 /// A tube station from TfL's StopPoint API.
 ///
-/// The trimmed `tube.json` stop-points fixture omits the `lines` field;
-/// `#[serde(default)]` handles that gracefully.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+/// ## Line info projection
+///
+/// TfL's stop-points response doesn't emit a ready-made `lines` array. It
+/// emits `lineModeGroups` (grouped by transport mode). Our `Deserialize` impl
+/// reads both:
+///   - if the JSON already contains a processed `lines` array, use it verbatim
+///     (backward-compat with inline-JSON tests and any future API that adds it);
+///   - otherwise project the tube entry of `lineModeGroups` into `lines`.
+///
+/// When neither is present (trimmed fixture), `lines` is empty — callers fall
+/// back to the global "all tube lines" list.
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Station {
     pub id: String,
@@ -132,9 +141,64 @@ pub struct Station {
     pub modes: Vec<String>,
     pub lat: f64,
     pub lon: f64,
-    /// Lines served by this station (absent in trimmed fixtures → empty vec).
-    #[serde(default)]
     pub lines: Vec<LineRef>,
+}
+
+impl<'de> Deserialize<'de> for Station {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        #[derive(Deserialize)]
+        #[serde(rename_all = "camelCase")]
+        struct LineModeGroup {
+            #[serde(default)]
+            mode_name: String,
+            #[serde(default)]
+            line_identifier: Vec<String>,
+        }
+
+        #[derive(Deserialize)]
+        #[serde(rename_all = "camelCase")]
+        struct RawStation {
+            id: String,
+            common_name: String,
+            #[serde(default)]
+            modes: Vec<String>,
+            #[serde(default)]
+            lat: f64,
+            #[serde(default)]
+            lon: f64,
+            #[serde(default)]
+            lines: Vec<LineRef>,
+            #[serde(default)]
+            line_mode_groups: Vec<LineModeGroup>,
+        }
+
+        let raw = RawStation::deserialize(deserializer)?;
+        let lines = if !raw.lines.is_empty() {
+            raw.lines
+        } else {
+            raw.line_mode_groups
+                .into_iter()
+                // Accept explicit tube entries, and accept entries with an
+                // absent/empty modeName (our trimmed fixture drops the field
+                // to save space — the parent Station's `modes` already
+                // constrains us to tube stations upstream).
+                .filter(|g| g.mode_name.is_empty() || g.mode_name == "tube")
+                .flat_map(|g| g.line_identifier.into_iter())
+                .map(|id| {
+                    let name = pretty_line_name(&id).to_string();
+                    LineRef { id, name }
+                })
+                .collect()
+        };
+        Ok(Station {
+            id: raw.id,
+            common_name: raw.common_name,
+            modes: raw.modes,
+            lat: raw.lat,
+            lon: raw.lon,
+            lines,
+        })
+    }
 }
 
 /// Thin reference to a line (id + name) used inside `Station`.
@@ -142,6 +206,26 @@ pub struct Station {
 pub struct LineRef {
     pub id: String,
     pub name: String,
+}
+
+/// Map a TfL line id (kebab-case) to a human display name. Unknown ids fall
+/// back to the id itself so the UI still renders something useful.
+pub fn pretty_line_name(id: &str) -> &str {
+    match id {
+        "bakerloo" => "Bakerloo",
+        "central" => "Central",
+        "circle" => "Circle",
+        "district" => "District",
+        "elizabeth" | "elizabeth-line" => "Elizabeth",
+        "hammersmith-city" => "Hammersmith & City",
+        "jubilee" => "Jubilee",
+        "metropolitan" => "Metropolitan",
+        "northern" => "Northern",
+        "piccadilly" => "Piccadilly",
+        "victoria" => "Victoria",
+        "waterloo-city" => "Waterloo & City",
+        other => other,
+    }
 }
 
 // ---------------------------------------------------------------------------
