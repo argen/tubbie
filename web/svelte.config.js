@@ -6,8 +6,10 @@ const config = {
   preprocess: vitePreprocess(),
 
   kit: {
+    // Tauri loads from tauri://localhost — SPA mode with index.html fallback.
+    // All client-side routing is handled by SvelteKit's router in the webview.
     adapter: adapter({
-      fallback: undefined,
+      fallback: 'index.html',
     }),
   },
 };

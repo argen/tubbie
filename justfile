@@ -48,3 +48,11 @@ verify-live:
 # Record TfL API fixtures to fixtures/ (hits live API — run once per milestone)
 record-fixtures:
     cargo run -p fixture-recorder --release
+
+# Build the release .app bundle (macOS).
+# Prerequisites: Node 24, Rust stable, cargo-tauri v2 (cargo install tauri-cli@^2),
+#                Xcode Command Line Tools (xcode-select --install).
+# Produces an UNSIGNED bundle at target/release/bundle/macos/Tubbie.app.
+# Sign + notarize steps are deferred to M8 — see docs/ADR/distribution-roadmap.md.
+build:
+    . "$HOME/.cargo/env" && cargo tauri build
