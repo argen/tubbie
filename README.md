@@ -1,110 +1,95 @@
-# tubbie
+# Tubbie
 
-TfL tube arrivals dot-matrix board — Tauri v2 + SvelteKit + Rust.
+A desktop dot-matrix arrivals board for the London Underground, powered by [TfL's Unified API](https://api.tfl.gov.uk). Built with Tauri v2, SvelteKit, and Rust.
 
-## Prerequisites
+<!-- TODO: screenshot -->
 
-- [Rust](https://rustup.rs/) (stable, via `rust-toolchain.toml`)
-- Node.js v24 (see `web/.nvmrc`)
-- [just](https://github.com/casey/just) — task runner
-- [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/) for your platform
+## What it is
 
-## Self-verify
+Tubbie replicates the classic amber LED dot-matrix boards found on Underground platforms. Pick any tube station, filter by line and direction, and watch real-time arrival predictions scroll in. Four built-in themes — classic amber, classic orange, modern white, and high-contrast — match the visual character of different eras of board hardware.
+
+## Features
+
+- Real-time arrivals for any London Underground station, grouped by platform
+- Line and direction filters
+- Four visual themes (classic-amber, classic-orange, modern-white, high-contrast)
+- Dot-matrix typography with animated row entry, character-reveal, marquee ticker, and "Due" flash
+- Settings persisted across restarts via Tauri's secure store
+- Anonymous TfL API access by default (50 req/min); optionally supply your own app key
+- Stale-data fallback: last-known arrivals shown when offline, with a visible badge
+
+## Requirements
+
+| Requirement | Version |
+|---|---|
+| macOS | 11 (Big Sur) or later |
+| Node.js | 24 (see `web/.nvmrc`) |
+| Rust | stable (see `rust-toolchain.toml`) |
+| just | 1.x |
+| Xcode Command Line Tools | any recent |
+
+Install Rust via [rustup](https://rustup.rs/). Install `just` via `cargo install just` or `brew install just`.
+
+## Install
 
 ```sh
-cd web && npm install
-cd ..
-just verify
+git clone git@github.com:argen/tubbie.git
+cd tubbie
+cd web && npm install && cd ..
 ```
 
-Both the Rust gate (`cargo fmt --check`, `cargo clippy`, `cargo test`) and the
-web gate (`lint`, `format:check`, `typecheck`, `test`) must be green.
-
-### Running live tests
-
-Live integration tests hit `api.tfl.gov.uk` and are **not run in CI**. To run
-them locally:
-
-```sh
-# Optional but recommended: set your TfL app key to avoid rate-limits.
-export TFL_APP_KEY=your_key_here
-
-just verify-live
-```
-
-This runs `cargo test --workspace --features tfl-client/live`. Tests
-automatically skip (and pass) when network connectivity is unavailable, so
-they never cause unexpected failures on offline machines.
-
-## Dev server
+## Local dev
 
 ```sh
 just dev
 ```
 
-> **Note:** `just dev` is a placeholder until M5/M6 when the Tauri shell and
-> SvelteKit frontend are wired together.
+Starts the SvelteKit dev server at `http://localhost:5173` and the Tauri shell concurrently. Hot-reload is active for both the frontend and backend.
 
-## Regenerating fixtures
+## Commands
 
-Fixtures are committed TfL API responses used for offline, deterministic tests.
-They live in `fixtures/{endpoint}/{id}.json` alongside a `{id}.meta.json` sidecar
-recording when each fixture was captured and from what URL (`app_key` is always
-stripped before writing).
+| Command | What it does |
+|---|---|
+| `just verify` | Full gate: Rust (`fmt`, `clippy`, `test`) + web (`lint`, `format:check`, `typecheck`, `test`) |
+| `just build` | Produce a release `.app` bundle at `target/release/bundle/macos/Tubbie.app` |
+| `just dev` | Start Tauri dev + Vite dev server concurrently |
+| `just verify-live` | Live integration tests against `api.tfl.gov.uk` (not in CI; requires network) |
+| `just record-fixtures` | Refresh committed TfL API fixtures from the live API |
 
-To refresh:
+## Configuration
 
-```sh
-just record-fixtures
-```
+User preferences are stored by Tauri in the platform app-data directory:
 
-This hits the live TfL API (anonymous access, no key needed) for:
-- `arrivals/{id}.json` — 4 representative stations (Belsize Park, King's Cross, Bank, Oxford Circus)
-- `line-status/tube.json` — all tube line statuses
-- `stop-points/tube.json` — searchable station list (~1 MB)
+- **macOS:** `~/Library/Application Support/app.tubbie/`
 
-Refresh before each milestone that touches domain types, and commit the updated
-fixtures alongside the code changes.
+The `config.json` inside that directory holds the current station, line filters, direction filters, and poll interval. You can inspect it, but editing it manually is not necessary — the Settings screen in the app covers all fields.
 
-## Architecture
+### TfL API key (optional)
 
-See [`docs/README.md`](docs/README.md) for conceptual documentation and
-[`docs/ADR/README.md`](docs/ADR/README.md) for architectural decisions.
+Anonymous access works out of the box (TfL allows 50 requests/minute without a key). If you plan to poll frequently or share a network with other anonymous callers, register a free key at [api-portal.tfl.gov.uk](https://api-portal.tfl.gov.uk) and enter it in the app's Settings screen. It is stored securely via `tauri-plugin-store` and never committed or logged.
 
-## Running the desktop app
+Alternatively, set `TFL_APP_KEY=<key>` in your shell environment before launching.
 
-### Prerequisites
+## Distribution (unsigned builds)
 
-- Rust (stable, via `rustup`) — see `rust-toolchain.toml`
-- Node 24 — see `web/.nvmrc`
-- `just` 1.x — `cargo install just`
-- Tauri CLI v2 — `cargo install tauri-cli@^2`
-
-### Development mode
+`just build` produces an unsigned `.app` for local use. macOS Gatekeeper will quarantine it on first launch — right-click the app and choose **Open** to bypass the warning, or run:
 
 ```sh
-cd web && npm install  # first time only
-just dev               # starts Vite at :5173 + tauri dev concurrently
+xattr -dr com.apple.quarantine "target/release/bundle/macos/Tubbie.app"
 ```
 
-`tauri dev` reads `src-tauri/tauri.conf.json`, loads the Vite dev server as
-the webview, and hot-reloads Rust when you change backend code.
+Signed and notarized builds for public distribution are deferred to M8. See [`docs/ADR/distribution-roadmap.md`](docs/ADR/distribution-roadmap.md) for the full plan.
 
-### Running tests (no display required)
+## TfL attribution
 
-```sh
-just verify-rust       # fmt + clippy + cargo test --workspace
-```
+Powered by [TfL Open Data](https://tfl.gov.uk/info-for/open-data-users/). Contains OS data © Crown copyright and database rights 2016. Collated by TfL. Use of TfL data is governed by the [TfL Open Data Licence](https://tfl.gov.uk/corporate/terms-and-conditions/transport-data-service).
 
-All Tauri command tests run headlessly via fixture files — no network, no
-display server, no Tauri runtime required.
+## Licence
 
-### Optional: TfL API key
+MIT — see [`LICENSE`](LICENSE).
 
-Anonymous access is the default (50 requests/min, comfortable for personal
-use). To use your own key:
+## Contributing
 
-1. Register at https://api-portal.tfl.gov.uk
-2. Set `TFL_APP_KEY=<your-key>` in your environment, **or** enter it in the
-   app's Settings screen (persisted via `tauri-plugin-store`; takes effect
-   after a restart).
+See [`docs/README.md`](docs/README.md) for conceptual documentation and [`docs/ADR/README.md`](docs/ADR/README.md) for architectural decisions. All contributions welcome via pull request against `main`.
+
+Before opening a PR, confirm `just verify` is green.
