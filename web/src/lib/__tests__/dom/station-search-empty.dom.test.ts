@@ -95,6 +95,39 @@ describe('StationSearch empty + loading states', () => {
     expect(searchStationsMock).not.toHaveBeenCalled();
   });
 
+  it('does NOT show the empty state after the user picks a result', async () => {
+    // Regression: previously `selectStation` left `searched=true` with
+    // `results=[]` and the query still filled with the selected station
+    // name — so the empty-state branch fired, and the UI showed
+    // "No tube stations match 'Victoria'" *under* a selected Victoria.
+    const victoria = {
+      id: '940GZZLUVIC',
+      common_name: 'Victoria',
+      modes: ['tube'],
+      lat: 51.495,
+      lon: -0.144,
+      lines: [{ id: 'victoria', name: 'Victoria' }],
+    };
+    searchStationsMock.mockResolvedValue([victoria]);
+
+    render(StationSearch, {
+      props: { selectedId: '', onSelect: vi.fn() },
+    });
+    const input = screen.getByRole('combobox');
+
+    await fireEvent.input(input, { target: { value: 'vic' } });
+    vi.advanceTimersByTime(200);
+    await vi.runAllTimersAsync();
+
+    // Dropdown option appears — pick it.
+    const option = screen.getByRole('option', { name: /Victoria/i });
+    await fireEvent.mouseDown(option);
+
+    // After selection, the input carries the station name but the empty-state
+    // must NOT render (even though results is now []).
+    expect(screen.queryByTestId('station-search-empty')).toBeNull();
+  });
+
   it('clears the empty-state message when the query is cleared', async () => {
     searchStationsMock.mockResolvedValue([]);
     render(StationSearch, {

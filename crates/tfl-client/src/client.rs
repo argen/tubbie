@@ -139,9 +139,19 @@ impl<H: TflHttp> TflClient<H> {
         let stations = self.stop_points_cached().await?;
         let q = trimmed.to_lowercase();
 
-        // Filter to tube-mode stations that contain the query substring.
+        // Filter to tube-mode stations whose id is the canonical group parent
+        // (TfL's `940GZZLU{CODE}` prefix). This drops:
+        //   - Platform-level children `9400ZZLU*` — same common name, would
+        //     produce duplicate rows in the dropdown.
+        //   - NaPTAN bus-stop-at-station records `4900ZZLU*` — same location
+        //     but no tube line info.
+        //   - Hub stop-points `HUB*` — multi-mode aggregators mixing bus and
+        //     national-rail services with no stable tube id for arrivals.
+        // ~272 canonical entries remain (one per London Underground station),
+        // which is the shape the user expects in the dropdown.
         let mut matches: Vec<Station> = stations
             .into_iter()
+            .filter(|s| s.id.starts_with("940GZZLU"))
             .filter(|s| s.modes.iter().any(|m| m == "tube"))
             .filter(|s| s.common_name.to_lowercase().contains(&q))
             .collect();

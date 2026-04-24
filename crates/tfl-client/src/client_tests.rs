@@ -219,9 +219,9 @@ mod tests {
         let fixture = serde_json::json!({
             "total": 3,
             "stopPoints": [
-                { "id": "A", "commonName": "bank road underground", "modes": ["tube"], "lat": 51.5, "lon": -0.1 },
-                { "id": "B", "commonName": "bank underground station", "modes": ["tube"], "lat": 51.5, "lon": -0.1 },
-                { "id": "C", "commonName": "old bank junction", "modes": ["tube"], "lat": 51.5, "lon": -0.1 }
+                { "id": "940GZZLUAAA", "commonName": "bank road underground", "modes": ["tube"], "lat": 51.5, "lon": -0.1 },
+                { "id": "940GZZLUBBB", "commonName": "bank underground station", "modes": ["tube"], "lat": 51.5, "lon": -0.1 },
+                { "id": "940GZZLUCCC", "commonName": "old bank junction", "modes": ["tube"], "lat": 51.5, "lon": -0.1 }
             ]
         });
         fs::write(
@@ -231,23 +231,21 @@ mod tests {
         .unwrap();
 
         let synthetic = TflClient::new(FixtureTflHttp::new(dir.path()));
-        // Query "bank underground station" — exact match is B (tier 0),
-        // "bank road underground" contains it? No — "bank road underground" doesn't
-        // contain "bank underground station". "bank underground station" == B exactly.
-        // "old bank junction" doesn't contain "bank underground station".
-        // So only B matches. Let's use "bank" instead:
+        // All three use the canonical `940GZZLU*` id prefix so search_stations'
+        // dedupe filter lets them through; their common names put them into
+        // tier 1 / tier 2 for relevance-order assertions.
         let results2 = synthetic
             .search_stations("bank")
             .await
             .expect("synthetic search should succeed");
         assert_eq!(results2.len(), 3, "all 3 contain 'bank'");
-        // B: "bank underground station" starts_with "bank" → tier 1
-        // A: "bank road underground" starts_with "bank" → tier 1
-        // C: "old bank junction" contains "bank" → tier 2
-        // Within tier 1: alphabetical → A before B
-        assert_eq!(results2[0].id, "A", "tier1 alpha first: A < B");
-        assert_eq!(results2[1].id, "B", "tier1 alpha second");
-        assert_eq!(results2[2].id, "C", "tier2 last");
+        // 940GZZLUBBB: "bank underground station" starts_with "bank" → tier 1
+        // 940GZZLUAAA: "bank road underground" starts_with "bank" → tier 1
+        // 940GZZLUCCC: "old bank junction" contains "bank" → tier 2
+        // Within tier 1: alphabetical by common_name → A ("bank road…") then B.
+        assert_eq!(results2[0].id, "940GZZLUAAA");
+        assert_eq!(results2[1].id, "940GZZLUBBB");
+        assert_eq!(results2[2].id, "940GZZLUCCC");
     }
 
     #[tokio::test]
@@ -289,9 +287,9 @@ mod tests {
         let fixture = serde_json::json!({
             "total": 3,
             "stopPoints": [
-                { "id": "TUBE1", "commonName": "Victoria Underground Station", "modes": ["tube"], "lat": 51.5, "lon": -0.14 },
-                { "id": "BUS1",  "commonName": "Victoria Bus Stop",             "modes": ["bus"],  "lat": 51.5, "lon": -0.14 },
-                { "id": "BOTH1", "commonName": "Victoria Coach Terminal",        "modes": ["tube", "bus"], "lat": 51.5, "lon": -0.14 }
+                { "id": "940GZZLUVIC", "commonName": "Victoria Underground Station", "modes": ["tube"], "lat": 51.5, "lon": -0.14 },
+                { "id": "490BUSVIC",   "commonName": "Victoria Bus Stop",             "modes": ["bus"],  "lat": 51.5, "lon": -0.14 },
+                { "id": "940GZZLUVCX", "commonName": "Victoria Coach Terminal",       "modes": ["tube", "bus"], "lat": 51.5, "lon": -0.14 }
             ]
         });
         fs::write(
@@ -306,19 +304,20 @@ mod tests {
             .await
             .expect("search should succeed");
 
-        // BUS1 must be excluded (no tube mode).
+        // Bus-only stop must be excluded (fails both the mode filter and the
+        // canonical-id filter).
         let ids: Vec<&str> = results.iter().map(|s| s.id.as_str()).collect();
         assert!(
-            !ids.contains(&"BUS1"),
+            !ids.contains(&"490BUSVIC"),
             "bus-only stop must be excluded; got: {ids:?}"
         );
         assert!(
-            ids.contains(&"TUBE1"),
+            ids.contains(&"940GZZLUVIC"),
             "tube stop must be included; got: {ids:?}"
         );
         assert!(
-            ids.contains(&"BOTH1"),
-            "tube+bus stop must be included (has tube mode); got: {ids:?}"
+            ids.contains(&"940GZZLUVCX"),
+            "tube+bus stop must be included (has tube mode + canonical id); got: {ids:?}"
         );
     }
 
@@ -450,7 +449,7 @@ mod tests {
             serde_json::json!({
                 "total": 1,
                 "stopPoints": [{
-                    "id": "940ZZMIXED",
+                    "id": "940GZZLUMXD",
                     "commonName": "Mixed Bus And Tube",
                     "modes": ["tube", "bus"],
                     "lat": 51.5,
@@ -486,7 +485,7 @@ mod tests {
             serde_json::json!({
                 "total": 1,
                 "stopPoints": [{
-                    "id": "940ZZBARE",
+                    "id": "940GZZLUBRE",
                     "commonName": "Bare Station Underground Station",
                     "modes": ["tube"],
                     "lat": 51.5,
@@ -520,7 +519,7 @@ mod tests {
             serde_json::json!({
                 "total": 1,
                 "stopPoints": [{
-                    "id": "940ZZTRIMMED",
+                    "id": "940GZZLUTRM",
                     "commonName": "Trimmed Fixture Station",
                     "modes": ["tube"],
                     "lat": 51.5,
@@ -551,7 +550,7 @@ mod tests {
             serde_json::json!({
                 "total": 1,
                 "stopPoints": [{
-                    "id": "940ZZEXPLICIT",
+                    "id": "940GZZLUEXP",
                     "commonName": "Explicit Lines Underground",
                     "modes": ["tube"],
                     "lat": 51.5,
@@ -767,6 +766,26 @@ mod tests {
             !results.is_empty(),
             "expected at least one match for 'victoria' in the shipped fixture"
         );
+
+        // User-reported bug: searching "victoria" used to return 5+ rows
+        // (hub, two platforms, two 4900* bus stops) all labelled "Victoria"
+        // or "Victoria Station" with no way to tell which one is canonical.
+        // The dropdown must now show exactly the 940G* parent — at most one
+        // result per canonical station common-name.
+        let mut seen_names = std::collections::BTreeSet::new();
+        for r in &results {
+            assert!(
+                r.id.starts_with("940GZZLU"),
+                "non-canonical id made it into results: {:?} ({:?})",
+                r.id,
+                r.common_name
+            );
+            assert!(
+                seen_names.insert(r.common_name.to_lowercase()),
+                "duplicate station name in results: {:?}",
+                r.common_name
+            );
+        }
 
         let victoria_tube = results
             .iter()

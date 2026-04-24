@@ -96,6 +96,14 @@
     query = station.common_name;
     listboxOpen = false;
     results = [];
+    searching = false;
+    searchError = null;
+    // Without this the empty-state branch would fire immediately: `searched`
+    // would stay true from the preceding search, `query` would still be the
+    // selected station name, `results` would have just been cleared — so the
+    // UI would render "No tube stations match 'Victoria'" right under a
+    // station the user just picked.
+    searched = false;
     onSelect(station);
   }
 
