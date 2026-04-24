@@ -153,9 +153,7 @@ mod tests {
         let result = apply_filters(arrivals, &cfg);
         // Both Northbound variants should match, even with different `via` values
         assert_eq!(result.len(), 2, "both Northbound variants should match");
-        assert!(result
-            .iter()
-            .all(|a| a.direction == Direction::Northbound));
+        assert!(result.iter().all(|a| a.direction == Direction::Northbound));
     }
 
     #[test]
