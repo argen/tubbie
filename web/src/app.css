@@ -31,14 +31,6 @@
   font-display: block;
 }
 
-@font-face {
-  font-family: 'DSEG14Classic';
-  src: url('/src/lib/fonts/DSEG14Classic-Regular.woff2') format('woff2');
-  font-weight: 400;
-  font-style: normal;
-  font-display: block;
-}
-
 /* ------------------------------------------------------------
    Typography tokens
    --font-board — primary dot-matrix face used everywhere VT323

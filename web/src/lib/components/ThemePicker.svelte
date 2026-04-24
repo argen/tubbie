@@ -114,7 +114,7 @@
   }
 
   .theme-picker__swatch-preview {
-    font-family: 'DSEG14Classic', 'VT323', monospace;
+    font-family: var(--font-board);
     font-size: 1.1rem;
     letter-spacing: 0.05em;
   }

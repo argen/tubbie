@@ -166,7 +166,7 @@
   }
 
   .board__station-name {
-    font-family: 'DSEG14Classic', 'VT323', monospace;
+    font-family: var(--font-board);
     font-size: 1.4rem;
     margin: 0;
     letter-spacing: 0.1em;
@@ -216,7 +216,7 @@
   }
 
   .board__clock {
-    font-family: 'DSEG14Classic', 'VT323', monospace;
+    font-family: var(--font-board);
     font-size: 1.2rem;
     color: var(--fg);
     letter-spacing: 0.05em;

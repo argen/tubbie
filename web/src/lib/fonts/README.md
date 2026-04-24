@@ -25,15 +25,6 @@ and loaded via `@font-face` with `font-display: block` in `app.css`.
   Retained for one release as a safety net for any codepoint Geist Pixel
   does not cover.
 
-## DSEG14 Classic
-
-- **File**: `DSEG14Classic-Regular.woff2`
-- **Authors**: Keshikan (https://www.keshikan.net)
-- **Source**: https://github.com/keshikan/DSEG (v0.46)
-- **Licence**: SIL Open Font Licence 1.1 — https://openfontlicense.org/open-font-license-official-text/
-- **Use in tubbie**: station name header, platform number labels, and the
-  clock readout — the digital-segment display aesthetic for numerics.
-
 ## SIL OFL 1.1 Summary
 
 Permission is granted to use, study, copy, merge, embed, modify, redistribute,

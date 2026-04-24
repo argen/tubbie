@@ -448,7 +448,7 @@
   }
 
   .settings__title {
-    font-family: 'DSEG14Classic', 'VT323', monospace;
+    font-family: var(--font-board);
     font-size: 1.3rem;
     color: var(--accent);
     margin: 0;
@@ -542,7 +542,7 @@
   }
 
   .settings__range-label {
-    font-family: 'DSEG14Classic', 'VT323', monospace;
+    font-family: var(--font-board);
     font-size: 1rem;
     color: var(--fg);
     letter-spacing: 0.05em;
