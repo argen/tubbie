@@ -133,8 +133,14 @@ impl<'de> Deserialize<'de> for Arrival {
 ///
 /// When neither is present (trimmed fixture), `lines` is empty — callers fall
 /// back to the global "all tube lines" list.
+///
+/// ## Serialization is snake_case (deliberate)
+///
+/// `Serialize` emits `common_name`, matching the TypeScript `Station` interface
+/// at `web/src/lib/ipc/types.ts:84`. The Deserialize impl below reads the
+/// TfL wire format (camelCase `commonName`, `lineModeGroups`) via an internal
+/// `RawStation` — the two directions don't share a rename rule.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
 pub struct Station {
     pub id: String,
     pub common_name: String,
