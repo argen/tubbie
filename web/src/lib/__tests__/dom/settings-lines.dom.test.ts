@@ -65,7 +65,7 @@ describe('Settings — station-scoped line chips', () => {
     vi.clearAllMocks();
   });
 
-  it('renders ONLY chips for the selected station', async () => {
+  it('enables only the chips for the selected station; disables the rest', async () => {
     render(SettingsPage);
 
     const oxc = makeStation('940GZZLUOXC', 'Oxford Circus', [
@@ -75,24 +75,42 @@ describe('Settings — station-scoped line chips', () => {
     ]);
     await pickStation(oxc);
 
-    // Only the 3 Oxford Circus chips, not all 12 tube lines.
+    // All 12 chips always render; only the three OXC lines are enabled.
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /toggle bakerloo line/i })).toBeTruthy();
-      expect(screen.getByRole('button', { name: /toggle central line/i })).toBeTruthy();
-      expect(screen.getByRole('button', { name: /toggle victoria line/i })).toBeTruthy();
     });
-    expect(screen.queryByRole('button', { name: /toggle circle line/i })).toBeNull();
-    expect(screen.queryByRole('button', { name: /toggle northern line/i })).toBeNull();
-    expect(screen.queryByRole('button', { name: /toggle jubilee line/i })).toBeNull();
+    const enabled = ['bakerloo', 'central', 'victoria'];
+    const disabled = [
+      'circle',
+      'district',
+      'elizabeth',
+      'hammersmith & city',
+      'jubilee',
+      'metropolitan',
+      'northern',
+      'piccadilly',
+      'waterloo & city',
+    ];
+    for (const name of enabled) {
+      const chip = screen.getByRole('button', { name: new RegExp(`toggle ${name} line`, 'i') });
+      expect(chip.getAttribute('aria-disabled')).toBe('false');
+      expect((chip as HTMLButtonElement).disabled).toBe(false);
+    }
+    for (const name of disabled) {
+      const chip = screen.getByRole('button', {
+        name: new RegExp(`${name} line is not served by this station`, 'i'),
+      });
+      expect(chip.getAttribute('aria-disabled')).toBe('true');
+      expect((chip as HTMLButtonElement).disabled).toBe(true);
+    }
   });
 
-  it('falls back to all 12 Tube lines when the station has no line info', async () => {
+  it('keeps all 12 chips enabled when the station has no line metadata (fail open)', async () => {
     render(SettingsPage);
 
     const bare = makeStation('940GZZLUBARE', 'Bare Station', []);
     await pickStation(bare);
 
-    // Fallback: all 12 chips should be present.
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /toggle bakerloo line/i })).toBeTruthy();
     });
@@ -110,12 +128,39 @@ describe('Settings — station-scoped line chips', () => {
       'victoria',
       'waterloo & city',
     ]) {
-      expect(
-        screen.queryByRole('button', {
-          name: new RegExp(`toggle ${lineName} line`, 'i'),
-        }),
-      ).not.toBeNull();
+      const chip = screen.getByRole('button', {
+        name: new RegExp(`toggle ${lineName} line`, 'i'),
+      });
+      expect(chip.getAttribute('aria-disabled')).toBe('false');
+      expect((chip as HTMLButtonElement).disabled).toBe(false);
     }
+  });
+
+  it('clicking a disabled chip does not add it to line_ids', async () => {
+    render(SettingsPage);
+
+    const bzp = makeStation('940GZZLUBZP', 'Belsize Park', [{ id: 'northern', name: 'Northern' }]);
+    await pickStation(bzp);
+
+    let savedCfg: BoardConfig | null = null;
+    setMockHandler('save_config', (args) => {
+      savedCfg = (args as { cfg: BoardConfig }).cfg;
+      return null;
+    });
+
+    // The central chip must be disabled at Belsize Park.
+    const centralChip = await waitFor(() =>
+      screen.getByRole('button', { name: /central line is not served by this station/i }),
+    );
+    await fireEvent.click(centralChip);
+
+    const saveBtn = await waitFor(() => screen.getByRole('button', { name: /save settings/i }));
+    await fireEvent.click(saveBtn);
+
+    await waitFor(() => {
+      expect(savedCfg).not.toBeNull();
+    });
+    expect(savedCfg!.line_ids).toEqual([]);
   });
 
   it('prunes line_ids on station switch: saved set becomes intersection with new station lines', async () => {

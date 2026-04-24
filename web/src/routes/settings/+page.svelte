@@ -91,15 +91,20 @@
   }
 
   /**
-   * Chip list shown to the user: the currently-selected station's lines when
-   * available, or the full tube-network list as a fallback (first mount, or
-   * stations whose fixture/API response omits line info).
+   * Lines the selected station actually serves, or `null` when unknown
+   * (first mount, or stations whose metadata is empty). `null` fails open:
+   * every chip is interactive. A non-null set disables everything outside it.
    */
-  const chipLines = $derived<{ id: string; label: string }[]>(
-    stationLines.length > 0 ? stationLines.map((l) => ({ id: l.id, label: l.name })) : KNOWN_LINES,
+  const availableLineIds = $derived<Set<string> | null>(
+    stationLines.length > 0 ? new Set(stationLines.map((l) => l.id)) : null,
   );
 
+  function isLineAvailable(lineId: string): boolean {
+    return availableLineIds === null || availableLineIds.has(lineId);
+  }
+
   function toggleLine(lineId: string): void {
+    if (!isLineAvailable(lineId)) return;
     if (lineIds.includes(lineId)) {
       lineIds = lineIds.filter((id) => id !== lineId);
     } else {
@@ -232,16 +237,23 @@
         <span class="settings__section-hint">(empty = all lines)</span>
       </h2>
       <div class="settings__chips" role="group" aria-label="Select lines to filter">
-        {#each chipLines as line (line.id)}
+        {#each KNOWN_LINES as line (line.id)}
+          {@const available = isLineAvailable(line.id)}
           <button
             type="button"
             class="settings__chip"
             class:settings__chip--selected={lineIds.includes(line.id)}
+            class:settings__chip--unavailable={!available}
+            disabled={!available}
             onclick={() => {
               toggleLine(line.id);
             }}
             aria-pressed={lineIds.includes(line.id)}
-            aria-label="Toggle {line.label} line"
+            aria-disabled={!available}
+            aria-label={available
+              ? `Toggle ${line.label} line`
+              : `${line.label} line is not served by this station`}
+            title={available ? undefined : `Not served by ${stationName || 'this station'}`}
           >
             {line.label}
           </button>
@@ -544,6 +556,17 @@
     color: var(--chip-selected-fg);
     border-color: var(--chip-selected-bg);
     opacity: 1;
+  }
+
+  .settings__chip--unavailable {
+    opacity: 0.3;
+    cursor: not-allowed;
+    border-style: dashed;
+  }
+
+  .settings__chip--unavailable:hover {
+    opacity: 0.3;
+    border-color: var(--input-border);
   }
 
   /* Range slider */

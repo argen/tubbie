@@ -17,6 +17,9 @@
   let listboxOpen = $state(false);
   let inputEl: HTMLInputElement | undefined = $state();
   let activeIdx = $state(-1);
+  // Flipped true after the first completed search for the current query; lets
+  // us tell "still typing / still loading" apart from "search ran, no results".
+  let searched = $state(false);
 
   // Debounced search — 200ms, latest-wins
   const debouncedSearch = debounceAsync(
@@ -31,14 +34,16 @@
     200,
     (res: Station[]) => {
       results = res;
-      listboxOpen = results.length > 0;
       searching = false;
       searchError = null;
       activeIdx = -1;
+      searched = true;
+      listboxOpen = query.trim().length > 0;
     },
     (err: unknown) => {
       searchError = err instanceof Error ? err.message : String(err);
       searching = false;
+      searched = true;
     },
   );
 
@@ -48,7 +53,10 @@
       results = [];
       listboxOpen = false;
       searching = false;
+      searched = false;
     } else {
+      // Reset "no results" state until the new search resolves.
+      searched = false;
       debouncedSearch(query);
     }
   }
@@ -149,6 +157,15 @@
         </li>
       {/each}
     </ul>
+  {:else if searched && !searching && query.trim().length > 0 && results.length === 0 && !searchError}
+    <p
+      class="station-search__empty"
+      role="status"
+      aria-live="polite"
+      data-testid="station-search-empty"
+    >
+      No tube stations match “{query.trim()}”.
+    </p>
   {/if}
 </div>
 
@@ -215,6 +232,14 @@
     color: var(--stale-accent);
     font-family: var(--font-board);
     font-size: 0.9rem;
+    margin: 0.3rem 0 0;
+  }
+
+  .station-search__empty {
+    font-family: var(--font-board);
+    font-size: 0.9rem;
+    color: var(--platform-label);
+    opacity: 0.75;
     margin: 0.3rem 0 0;
   }
 
