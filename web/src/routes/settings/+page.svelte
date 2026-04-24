@@ -135,12 +135,16 @@
         poll_seconds: Math.min(300, Math.max(5, pollSeconds)),
         theme,
       });
-      // configError is managed by updateConfig: cleared on success, set on failure.
-      // We only set saveSuccess=true here; the UI banner is driven by $configError.
-      saveSuccess = true;
-      setTimeout(() => {
-        saveSuccess = false;
-      }, 2000);
+      // updateConfig succeeded. Route back to the board so the user sees
+      // the new config take effect (the stream watcher in Rust will emit a
+      // fresh board). On failure we stay here and surface $configError.
+      if ($configError === null) {
+        await goto('/');
+        return;
+      }
+      // Soft failure: updateConfig wrote configError but didn't throw — keep
+      // the user on-page so they can see/dismiss the banner.
+      saveSuccess = false;
     } catch (err: unknown) {
       saveError = err instanceof Error ? err.message : String(err);
     } finally {
