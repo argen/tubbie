@@ -74,9 +74,14 @@ export async function startBoardSubscription(): Promise<() => void> {
   try {
     const seedBoard = await getBoard();
     applyBoard(seedBoard);
-  } catch {
-    // Seed failure is non-fatal — the stream will populate the board on the
-    // next tick. We just leave isLoading=true until that happens.
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    // Only surface if we still have no board — don't overwrite a real board
+    // if (extremely unlikely) the stream beat us to it.
+    if (get(board) === null) {
+      boardError.set(`Couldn't load arrivals: ${msg}. Retrying…`);
+      isLoading.set(false);
+    }
   }
 
   return () => {
