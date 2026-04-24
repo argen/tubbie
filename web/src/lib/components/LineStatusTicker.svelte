@@ -109,7 +109,7 @@
   }
 
   .ticker__label {
-    font-family: 'VT323', monospace;
+    font-family: var(--font-board);
     font-size: 0.7rem;
     color: var(--platform-label);
     letter-spacing: 0.1em;
@@ -133,7 +133,7 @@
   }
 
   .ticker__inner {
-    font-family: 'VT323', monospace;
+    font-family: var(--font-board);
     font-size: 1rem;
     color: var(--ticker-fg);
     white-space: nowrap;

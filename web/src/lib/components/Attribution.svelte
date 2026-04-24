@@ -34,7 +34,7 @@
   }
 
   .attribution__text {
-    font-family: 'VT323', monospace;
+    font-family: var(--font-board);
     font-size: 13px;
     color: var(--platform-label);
     letter-spacing: 0.05em;

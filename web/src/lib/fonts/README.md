@@ -1,8 +1,19 @@
 # Bundled Fonts — Licence Attribution
 
-Both fonts are self-hosted under the **SIL Open Font Licence (OFL) 1.1**.
+All fonts are self-hosted under the **SIL Open Font Licence (OFL) 1.1**.
 They must never be served from a CDN; they are bundled in this directory
 and loaded via `@font-face` with `font-display: block` in `app.css`.
+
+## Geist Pixel Square / Circle
+
+- **Files**: `GeistPixel-Square.woff2`, `GeistPixel-Circle.woff2`
+- **Licence text**: `GeistPixel-OFL.txt`
+- **Authors**: Vercel
+- **Source**: https://github.com/vercel/geist-font (v1.8.0)
+- **Licence**: SIL Open Font Licence 1.1 — https://openfontlicense.org/open-font-license-official-text/
+- **Use in tubbie**: primary dot-matrix display font. `Square` is the default
+  (exposed as `--font-board`); `Circle` is bundled for future per-theme
+  variant switching and is not currently referenced by any stylesheet.
 
 ## VT323
 
@@ -10,16 +21,9 @@ and loaded via `@font-face` with `font-display: block` in `app.css`.
 - **Authors**: Peter Hull
 - **Source**: https://fonts.google.com/specimen/VT323
 - **Licence**: SIL Open Font Licence 1.1 — https://openfontlicense.org/open-font-license-official-text/
-- **Use in tubbie**: primary dot-matrix display font for all arrivals-board text.
-
-## DSEG14 Classic
-
-- **File**: `DSEG14Classic-Regular.woff2`
-- **Authors**: Keshikan (https://www.keshikan.net)
-- **Source**: https://github.com/keshikan/DSEG (v0.46)
-- **Licence**: SIL Open Font Licence 1.1 — https://openfontlicense.org/open-font-license-official-text/
-- **Use in tubbie**: station name header and line-status ticker where a
-  digital-segment display aesthetic is desired.
+- **Use in tubbie**: fallback behind Geist Pixel Square in `--font-board`.
+  Retained for one release as a safety net for any codepoint Geist Pixel
+  does not cover.
 
 ## SIL OFL 1.1 Summary
 

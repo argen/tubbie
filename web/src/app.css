@@ -8,6 +8,22 @@
    ------------------------------------------------------------ */
 
 @font-face {
+  font-family: 'Geist Pixel Square';
+  src: url('/src/lib/fonts/GeistPixel-Square.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+
+@font-face {
+  font-family: 'Geist Pixel Circle';
+  src: url('/src/lib/fonts/GeistPixel-Circle.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+
+@font-face {
   font-family: 'VT323';
   src: url('/src/lib/fonts/VT323.woff2') format('woff2');
   font-weight: 400;
@@ -15,12 +31,16 @@
   font-display: block;
 }
 
-@font-face {
-  font-family: 'DSEG14Classic';
-  src: url('/src/lib/fonts/DSEG14Classic-Regular.woff2') format('woff2');
-  font-weight: 400;
-  font-style: normal;
-  font-display: block;
+/* ------------------------------------------------------------
+   Typography tokens
+   --font-board — primary dot-matrix face used everywhere VT323
+   was used before. VT323 is retained as a fallback for one release
+   in case a Geist Pixel glyph is missing for a specific codepoint.
+   ------------------------------------------------------------ */
+
+:root {
+  --font-board:
+    'Geist Pixel Square', 'VT323', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
 }
 
 /* ------------------------------------------------------------
@@ -139,7 +159,7 @@
 html {
   background: var(--bg);
   color: var(--fg);
-  font-family: 'VT323', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  font-family: var(--font-board);
   font-size: 18px;
   height: 100%;
   /* Apply default theme */

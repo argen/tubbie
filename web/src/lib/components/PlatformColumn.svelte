@@ -16,12 +16,17 @@
 </script>
 
 <section class="platform-col" aria-label="Platform: {displayName}">
-  <header class="platform-col__header">
-    <span class="platform-col__label" aria-hidden="true">
-      {displayName}
-    </span>
-    <span class="platform-col__dest-header" aria-hidden="true">Destination</span>
-    <span class="platform-col__time-header" aria-hidden="true">Time</span>
+  <header class="platform-col__header" aria-hidden="true">
+    <div class="platform-col__row platform-col__row--label">
+      <span></span>
+      <span class="platform-col__label">{displayName}</span>
+    </div>
+    <div class="platform-col__row platform-col__row--subheader">
+      <span></span>
+      <span class="platform-col__dest-header">Destination</span>
+      <span></span>
+      <span class="platform-col__time-header">Time</span>
+    </div>
   </header>
 
   {#if arrivals.length === 0}
@@ -47,16 +52,26 @@
   }
 
   .platform-col__header {
-    display: grid;
-    grid-template-columns: 1fr auto auto;
-    column-gap: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
     padding: 0.4rem 0.5rem 0.3rem;
     border-bottom: 1px solid var(--row-divider);
     background: var(--settings-bg);
   }
 
+  /* Both header rows share ArrivalRow's grid so NORTHBOUND, "Destination",
+     and the destination text below all line up at the same x-position. */
+  .platform-col__row {
+    display: grid;
+    grid-template-columns: 1.2rem 1fr auto auto;
+    column-gap: 0.5rem;
+    align-items: center;
+  }
+
   .platform-col__label {
-    font-family: 'DSEG14Classic', 'VT323', monospace;
+    grid-column: 2 / -1;
+    font-family: var(--font-board);
     font-size: 0.9rem;
     color: var(--platform-label);
     text-transform: uppercase;
@@ -68,13 +83,22 @@
 
   .platform-col__dest-header,
   .platform-col__time-header {
-    font-family: 'VT323', monospace;
+    font-family: var(--font-board);
     font-size: 0.75rem;
     color: var(--platform-label);
     opacity: 0.5;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    align-self: end;
+  }
+
+  .platform-col__dest-header {
+    grid-column: 2;
+  }
+
+  .platform-col__time-header {
+    grid-column: 4;
+    text-align: right;
+    min-width: 4.5rem;
   }
 
   .platform-col__list {
@@ -88,7 +112,7 @@
     padding: 1rem 0.5rem;
     color: var(--platform-label);
     opacity: 0.5;
-    font-family: 'VT323', monospace;
+    font-family: var(--font-board);
     font-size: 1rem;
     text-align: center;
   }

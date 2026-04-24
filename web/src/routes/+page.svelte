@@ -2,12 +2,47 @@
   import { board, boardError, isLoading } from '$lib/stores/board.js';
   import { configError } from '$lib/stores/config.js';
   import Board from '$lib/components/Board.svelte';
-  import type { LineStatus } from '$lib/ipc/types.js';
+  import { getLineStatus } from '$lib/ipc/commands.js';
+  import type { Board as BoardT, LineStatus } from '$lib/ipc/types.js';
 
-  // Line statuses are fetched lazily and cached here.
-  // For M6 scope they start empty; the ticker shows "Good service on all lines".
-  // A future milestone can wire getLineStatus calls per board.platforms line_ids.
   let statuses = $state<LineStatus[]>([]);
+
+  function uniqueLineIds(b: BoardT | null): string[] {
+    if (b === null) return [];
+    const ids: string[] = [];
+    for (const p of b.platforms) {
+      for (const a of p.arrivals) {
+        if (a.line_id.length > 0 && !ids.includes(a.line_id)) ids.push(a.line_id);
+      }
+    }
+    return ids.sort();
+  }
+
+  async function fetchStatuses(ids: string[]): Promise<void> {
+    if (ids.length === 0) {
+      statuses = [];
+      return;
+    }
+    const results = await Promise.allSettled(ids.map((id) => getLineStatus(id)));
+    statuses = results.flatMap((r) => (r.status === 'fulfilled' ? [r.value] : []));
+  }
+
+  // Refresh on line-id set change and every 60s so a live disruption lands in
+  // the ticker without a full board reload. The $derived key means we don't
+  // tear down the interval on every 10-second board poll.
+  const REFRESH_MS = 60_000;
+  const lineIdsKey = $derived(uniqueLineIds($board).join(','));
+
+  $effect(() => {
+    const ids = lineIdsKey.length > 0 ? lineIdsKey.split(',') : [];
+    void fetchStatuses(ids);
+    const t = setInterval((): void => {
+      void fetchStatuses(ids);
+    }, REFRESH_MS);
+    return (): void => {
+      clearInterval(t);
+    };
+  });
 </script>
 
 <svelte:head>
@@ -58,7 +93,7 @@
   }
 
   .loading__text {
-    font-family: 'VT323', monospace;
+    font-family: var(--font-board);
     font-size: 1.5rem;
     color: var(--fg);
     opacity: 0.6;
@@ -96,14 +131,14 @@
   }
 
   .error__message {
-    font-family: 'VT323', monospace;
+    font-family: var(--font-board);
     font-size: 1.2rem;
     color: var(--stale-accent);
     margin: 0;
   }
 
   .error__hint {
-    font-family: 'VT323', monospace;
+    font-family: var(--font-board);
     font-size: 1rem;
     color: var(--platform-label);
     margin: 0;
@@ -111,7 +146,7 @@
   }
 
   .error__settings-link {
-    font-family: 'VT323', monospace;
+    font-family: var(--font-board);
     font-size: 1rem;
     color: var(--fg);
     border: 1px solid var(--fg);
@@ -142,14 +177,14 @@
   }
 
   .config-error__message {
-    font-family: 'VT323', monospace;
+    font-family: var(--font-board);
     font-size: 1rem;
     color: var(--stale-accent);
     margin: 0;
   }
 
   .config-error__hint {
-    font-family: 'VT323', monospace;
+    font-family: var(--font-board);
     font-size: 0.85rem;
     color: var(--platform-label);
     margin: 0;
