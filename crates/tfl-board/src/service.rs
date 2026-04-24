@@ -283,7 +283,10 @@ mod tests {
         tokio::time::advance(Duration::from_secs(2)).await;
 
         // Second item: fetch succeeded — must yield Ok(Board), NOT None.
-        let second = stream.next().await.expect("stream must continue after error");
+        let second = stream
+            .next()
+            .await
+            .expect("stream must continue after error");
         assert!(
             second.is_ok(),
             "second item must be Ok after recovery, got: {second:?}"
@@ -333,7 +336,10 @@ mod tests {
         // First item: success.
         let first = stream.next().await.expect("stream must not terminate");
         let ok_board = first.expect("first item must be Ok");
-        assert!(ok_board.stale_since.is_none(), "fresh board must not be stale");
+        assert!(
+            ok_board.stale_since.is_none(),
+            "fresh board must not be stale"
+        );
 
         // Advance so the next tick fires.
         tokio::time::advance(Duration::from_secs(2)).await;
