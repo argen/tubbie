@@ -10,11 +10,12 @@
   import StationSearch from '$lib/components/StationSearch.svelte';
   import ThemePicker from '$lib/components/ThemePicker.svelte';
   import { hasAppKey, saveAppKey } from '$lib/ipc/commands.js';
+  import { debounce } from '$lib/utils/debounce.js';
   import type { Direction, LineRef, Station } from '$lib/ipc/types.js';
   import { onMount } from 'svelte';
 
   // ---------------------------------------------------------------------------
-  // Local form state (mirrors config; saved explicitly on submit)
+  // Local form state (mirrors config; auto-persisted on change)
   // ---------------------------------------------------------------------------
 
   let stationId = $state($config.station_id);
@@ -35,7 +36,9 @@
   let appKeyVisible = $state(false);
   let appKeyStatus = $state<string | null>(null);
   let appKeySaving = $state(false);
-  let saving = $state(false);
+  /** Transient "saved X seconds ago" chip next to the header. */
+  let saveState = $state<'idle' | 'saving' | 'saved'>('idle');
+  let saveStateTimer: ReturnType<typeof setTimeout> | null = null;
 
   const DIRECTIONS: { id: Direction; label: string }[] = [
     { id: 'Northbound', label: 'Northbound' },
@@ -75,19 +78,54 @@
     }
   });
 
+  /**
+   * Persist the current form state. `updateConfig` catches its own errors
+   * and drives `$configError`, so callers never need to try/catch.
+   *
+   * The backend's `save_config` aborts the current stream; the watcher loop
+   * in `src-tauri/src/lib.rs` restarts it with the new config. No explicit
+   * navigation needed — the board page subscribes to the same `$config`
+   * store and updates in place.
+   */
+  async function persist(): Promise<void> {
+    if (saveStateTimer !== null) {
+      clearTimeout(saveStateTimer);
+      saveStateTimer = null;
+    }
+    saveState = 'saving';
+    await updateConfig({
+      station_id: stationId,
+      line_ids: lineIds,
+      directions: selectedDirections,
+      poll_seconds: Math.min(300, Math.max(5, pollSeconds)),
+      theme,
+    });
+    if ($configError !== null) {
+      saveState = 'idle';
+      return;
+    }
+    saveState = 'saved';
+    saveStateTimer = setTimeout(() => {
+      saveState = 'idle';
+      saveStateTimer = null;
+    }, 1500);
+  }
+
+  // Slider events fire on every tick of the drag; each persist round-trips
+  // through save_config + stream-restart, so debounce to the trailing edge.
+  const persistDebounced = debounce(persist, 400);
+
   function handleStationSelect(station: Station): void {
     stationId = station.id;
     stationName = station.common_name;
     stationLines = station.lines;
     // Prune line_ids to those the new station actually serves so we never
-    // persist a filter the station can't honour. If the new station has no
-    // line metadata (empty `lines`), keep the current selection unchanged —
-    // the chip list falls back to the global list and the user stays in
-    // control.
+    // persist a filter the station can't honour.
     if (station.lines.length > 0) {
       const allowed = new Set(station.lines.map((l) => l.id));
       lineIds = lineIds.filter((id) => allowed.has(id));
     }
+    void persist();
   }
 
   /**
@@ -110,6 +148,7 @@
     } else {
       lineIds = [...lineIds, lineId];
     }
+    void persist();
   }
 
   function toggleDirection(dir: Direction): void {
@@ -118,31 +157,20 @@
     } else {
       selectedDirections = [...selectedDirections, dir];
     }
+    void persist();
   }
 
   function handleThemeSelect(newTheme: ThemeId): void {
     theme = newTheme;
-    // Live preview — apply to DOM immediately
+    // Live preview — apply to DOM immediately, then persist.
     applyTheme(newTheme);
+    void persist();
   }
 
-  async function handleSave(): Promise<void> {
-    saving = true;
-    // `updateConfig` catches its own errors and drives the `$configError`
-    // store (setting it on failure, clearing it on success) — it never
-    // throws. Route back to the board on success; stay on-page when the
-    // store holds an error banner.
-    await updateConfig({
-      station_id: stationId,
-      line_ids: lineIds,
-      directions: selectedDirections,
-      poll_seconds: Math.min(300, Math.max(5, pollSeconds)),
-      theme,
-    });
-    saving = false;
-    if ($configError === null) {
-      await goto('/');
-    }
+  function handlePollInput(): void {
+    // Fires on every slider tick; the debounced persist coalesces the drag
+    // so we don't slam save_config → stream-restart 295 times on a full sweep.
+    persistDebounced();
   }
 
   async function handleSaveAppKey(): Promise<void> {
@@ -212,6 +240,20 @@
       ← Back
     </button>
     <h1 class="settings__title">Settings</h1>
+    <span
+      class="settings__save-state"
+      class:settings__save-state--saving={saveState === 'saving'}
+      class:settings__save-state--saved={saveState === 'saved'}
+      role="status"
+      aria-live="polite"
+      data-testid="settings-save-state"
+    >
+      {#if saveState === 'saving'}
+        Saving…
+      {:else if saveState === 'saved'}
+        Saved
+      {/if}
+    </span>
   </header>
 
   <div class="settings__body">
@@ -299,6 +341,7 @@
           max="300"
           step="5"
           bind:value={pollSeconds}
+          oninput={handlePollInput}
           class="settings__range"
           aria-label="Poll interval in seconds: {pollSeconds}"
           aria-valuemin={5}
@@ -385,19 +428,6 @@
         Key is stored securely in the system app-data folder. Restart required to apply.
       </p>
     </section>
-
-    <!-- Save button -->
-    <div class="settings__actions">
-      <button
-        type="button"
-        class="settings__btn settings__btn--primary"
-        onclick={handleSave}
-        disabled={saving}
-        aria-label="Save settings and return to board"
-      >
-        {saving ? 'Saving…' : 'Save Settings'}
-      </button>
-    </div>
   </div>
 </div>
 
@@ -690,16 +720,6 @@
     cursor: not-allowed;
   }
 
-  .settings__btn--primary {
-    background: var(--button-bg);
-    color: var(--button-fg);
-  }
-
-  .settings__btn--primary:hover:not(:disabled),
-  .settings__btn--primary:focus:not(:disabled) {
-    filter: brightness(1.1);
-  }
-
   .settings__btn--secondary {
     background: transparent;
     color: var(--fg);
@@ -711,13 +731,26 @@
     border-color: var(--fg);
   }
 
-  /* Actions */
-  .settings__actions {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--row-divider);
-    padding-bottom: 2rem;
+  .settings__save-state {
+    font-family: var(--font-board);
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0;
+    transition: opacity 200ms ease-out;
+    color: var(--platform-label);
+    min-width: 4.5rem;
+    text-align: right;
+    margin-left: auto;
+  }
+
+  .settings__save-state--saving {
+    opacity: 0.9;
+    color: var(--platform-label);
+  }
+
+  .settings__save-state--saved {
+    opacity: 0.9;
+    color: var(--accent);
   }
 </style>

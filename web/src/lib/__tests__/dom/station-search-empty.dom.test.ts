@@ -57,15 +57,20 @@ describe('StationSearch empty + loading states', () => {
     const input = screen.getByRole('combobox');
 
     await fireEvent.input(input, { target: { value: 'vic' } });
-    vi.advanceTimersByTime(200);
-    await vi.runAllTimersAsync();
+    // Just enough to fire the 200 ms debounce timer — do NOT advance enough
+    // to trip the 12 s search timeout, or we'd end up asserting the error
+    // path instead of the pending path.
+    await vi.advanceTimersByTimeAsync(210);
 
     // At this point, the IPC call has been dispatched but not resolved.
     // The spinner should be visible, and the empty-state message hidden.
     expect(screen.queryByTestId('station-search-empty')).toBeNull();
 
     deferred.resolve?.([]);
-    await vi.runAllTimersAsync();
+    // Drain microtasks without advancing wall-clock time far enough to hit
+    // the 12 s timeout. A handful of microtask checkpoints is plenty — the
+    // resolve -> debounceAsync.then -> Svelte reactivity chain is shallow.
+    for (let i = 0; i < 5; i++) await Promise.resolve();
 
     // Now the search completed with zero results — the empty state appears.
     expect(screen.getByTestId('station-search-empty')).toBeTruthy();

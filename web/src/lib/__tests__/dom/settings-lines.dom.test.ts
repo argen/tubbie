@@ -136,11 +136,42 @@ describe('Settings — station-scoped line chips', () => {
     }
   });
 
-  it('clicking a disabled chip does not add it to line_ids', async () => {
+  it('autosaves after clicking a disabled chip: line_ids stays empty', async () => {
+    let savedCfg: BoardConfig | null = null;
+    setMockHandler('save_config', (args) => {
+      savedCfg = (args as { cfg: BoardConfig }).cfg;
+      return null;
+    });
+
     render(SettingsPage);
 
     const bzp = makeStation('940GZZLUBZP', 'Belsize Park', [{ id: 'northern', name: 'Northern' }]);
     await pickStation(bzp);
+
+    // Picking the station already autosaved once.
+    await waitFor(() => {
+      expect(savedCfg).not.toBeNull();
+    });
+    savedCfg = null;
+
+    // The central chip must be disabled at Belsize Park — clicking it is a no-op
+    // and so must not trigger a save.
+    const centralChip = await waitFor(() =>
+      screen.getByRole('button', { name: /central line is not served by this station/i }),
+    );
+    await fireEvent.click(centralChip);
+
+    // Give any erroneous autosave a chance to land, then confirm none did.
+    await new Promise((r) => setTimeout(r, 50));
+    expect(savedCfg).toBeNull();
+  });
+
+  it('autosaves on station switch with line_ids pruned to the intersection', async () => {
+    config.set({
+      ...sampleConfig,
+      station_id: '940GZZLUOXC',
+      line_ids: ['central', 'northern'],
+    });
 
     let savedCfg: BoardConfig | null = null;
     setMockHandler('save_config', (args) => {
@@ -148,27 +179,6 @@ describe('Settings — station-scoped line chips', () => {
       return null;
     });
 
-    // The central chip must be disabled at Belsize Park.
-    const centralChip = await waitFor(() =>
-      screen.getByRole('button', { name: /central line is not served by this station/i }),
-    );
-    await fireEvent.click(centralChip);
-
-    const saveBtn = await waitFor(() => screen.getByRole('button', { name: /save settings/i }));
-    await fireEvent.click(saveBtn);
-
-    await waitFor(() => {
-      expect(savedCfg).not.toBeNull();
-    });
-    expect(savedCfg!.line_ids).toEqual([]);
-  });
-
-  it('prunes line_ids on station switch: saved set becomes intersection with new station lines', async () => {
-    config.set({
-      ...sampleConfig,
-      station_id: '940GZZLUOXC',
-      line_ids: ['central', 'northern'],
-    });
     render(SettingsPage);
 
     // Now pick a station that serves only Bakerloo.
@@ -177,16 +187,6 @@ describe('Settings — station-scoped line chips', () => {
     ]);
     await pickStation(baker);
 
-    // Capture what save_config receives.
-    let savedCfg: BoardConfig | null = null;
-    setMockHandler('save_config', (args) => {
-      savedCfg = (args as { cfg: BoardConfig }).cfg;
-      return null;
-    });
-
-    const saveBtn = await waitFor(() => screen.getByRole('button', { name: /save settings/i }));
-    await fireEvent.click(saveBtn);
-
     await waitFor(() => {
       expect(savedCfg).not.toBeNull();
     });
@@ -194,21 +194,12 @@ describe('Settings — station-scoped line chips', () => {
     expect(savedCfg!.station_id).toBe('940GZZLUBKE');
   });
 
-  it('keeps line_ids that still appear in the new station lines', async () => {
+  it('autosaves on station switch, keeping line_ids present in the new station', async () => {
     config.set({
       ...sampleConfig,
       station_id: '940GZZLUOXC',
       line_ids: ['central', 'victoria'],
     });
-    render(SettingsPage);
-
-    // New station serves Victoria (a subset of current selection).
-    const newStation = makeStation('940GZZLUVIC', 'Victoria', [
-      { id: 'victoria', name: 'Victoria' },
-      { id: 'district', name: 'District' },
-      { id: 'circle', name: 'Circle' },
-    ]);
-    await pickStation(newStation);
 
     let savedCfg: BoardConfig | null = null;
     setMockHandler('save_config', (args) => {
@@ -216,12 +207,51 @@ describe('Settings — station-scoped line chips', () => {
       return null;
     });
 
-    const saveBtn = await waitFor(() => screen.getByRole('button', { name: /save settings/i }));
-    await fireEvent.click(saveBtn);
+    render(SettingsPage);
+
+    const newStation = makeStation('940GZZLUVIC', 'Victoria', [
+      { id: 'victoria', name: 'Victoria' },
+      { id: 'district', name: 'District' },
+      { id: 'circle', name: 'Circle' },
+    ]);
+    await pickStation(newStation);
 
     await waitFor(() => {
       expect(savedCfg).not.toBeNull();
     });
     expect(savedCfg!.line_ids).toEqual(['victoria']);
+  });
+
+  it('autosaves when toggling a line chip', async () => {
+    let savedCfg: BoardConfig | null = null;
+    setMockHandler('save_config', (args) => {
+      savedCfg = (args as { cfg: BoardConfig }).cfg;
+      return null;
+    });
+
+    render(SettingsPage);
+
+    const oxc = makeStation('940GZZLUOXC', 'Oxford Circus', [
+      { id: 'bakerloo', name: 'Bakerloo' },
+      { id: 'central', name: 'Central' },
+      { id: 'victoria', name: 'Victoria' },
+    ]);
+    await pickStation(oxc);
+
+    // Clear the station-select save so we can observe the chip-toggle save.
+    await waitFor(() => {
+      expect(savedCfg).not.toBeNull();
+    });
+    savedCfg = null;
+
+    const central = await waitFor(() =>
+      screen.getByRole('button', { name: /toggle central line/i }),
+    );
+    await fireEvent.click(central);
+
+    await waitFor(() => {
+      expect(savedCfg).not.toBeNull();
+    });
+    expect(savedCfg!.line_ids).toEqual(['central']);
   });
 });

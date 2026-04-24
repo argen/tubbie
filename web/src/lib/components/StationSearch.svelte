@@ -21,6 +21,30 @@
   // us tell "still typing / still loading" apart from "search ran, no results".
   let searched = $state(false);
 
+  /** Safety net so a stuck IPC call never leaves the user staring at a spinner. */
+  const SEARCH_TIMEOUT_MS = 12_000;
+
+  function searchWithTimeout(q: string): Promise<Station[]> {
+    return new Promise<Station[]>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        reject(
+          new Error(
+            `Search timed out after ${String(SEARCH_TIMEOUT_MS / 1000)}s — check your network and TfL API access.`,
+          ),
+        );
+      }, SEARCH_TIMEOUT_MS);
+      searchStations(q)
+        .then((stations) => {
+          clearTimeout(timer);
+          resolve(stations);
+        })
+        .catch((err: unknown) => {
+          clearTimeout(timer);
+          reject(err instanceof Error ? err : new Error(String(err)));
+        });
+    });
+  }
+
   // Debounced search — 200 ms, latest-wins. `handleInput` bumps the debounce
   // generation on every keystroke (including clears), so stale resolutions
   // from the previous query are discarded by `debounceAsync`.
@@ -29,7 +53,7 @@
       // Skip the backend round-trip for an empty query; `onResult` still
       // fires so we can re-settle local UI state.
       if (q.trim().length === 0) return [];
-      return searchStations(q);
+      return searchWithTimeout(q);
     },
     200,
     (res: Station[]) => {
