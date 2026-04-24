@@ -12,7 +12,7 @@
 //! directly to TfL's camelCase JSON, and a hand-written `Deserialize` impl
 //! for `Arrival` that converts `RawArrival → Arrival` via `infer_direction`.
 
-use crate::direction::{infer_direction, Direction};
+use crate::direction::{infer_direction, Direction, NorthernBranch};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Deserializer, Serialize};
 
@@ -44,6 +44,13 @@ pub struct Arrival {
 
     /// Compass direction, enriched from platform name + towards during deserialization.
     pub direction: Direction,
+
+    /// Northern-line branch (via Bank vs via Charing Cross). Populated for
+    /// Northern-line arrivals whose `towards` string carries a `"via …"`
+    /// suffix; `None` for every other line and for ambiguous Northern
+    /// services (e.g. short workings).
+    #[serde(default)]
+    pub northern_branch: Option<NorthernBranch>,
 
     /// Destination station name, e.g. `"Edgware Underground Station"`.
     pub destination_name: String,
@@ -93,7 +100,7 @@ struct RawArrival {
 impl<'de> Deserialize<'de> for Arrival {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let raw = RawArrival::deserialize(deserializer)?;
-        let direction = infer_direction(
+        let (direction, northern_branch) = infer_direction(
             &raw.platform_name,
             &raw.direction,
             &raw.line_id,
@@ -106,6 +113,7 @@ impl<'de> Deserialize<'de> for Arrival {
             line_id: raw.line_id,
             line_name: raw.line_name,
             direction,
+            northern_branch,
             destination_name: raw.destination_name,
             towards: raw.towards,
             current_location: raw.current_location,

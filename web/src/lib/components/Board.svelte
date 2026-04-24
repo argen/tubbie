@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
   import type { Board, LineStatus } from '$lib/ipc/types.js';
-  import { formatTime, shortStationName } from '$lib/utils/format.js';
+  import { formatTime, prettyLineName, shortStationName } from '$lib/utils/format.js';
   import { lastUpdateTs } from '$lib/stores/board.js';
   import { reducedMotion } from '$lib/stores/reducedMotion.js';
   import PlatformColumn from './PlatformColumn.svelte';
@@ -18,30 +18,14 @@
   const { board, statuses = [], stationName = '', lineIds = [] }: Props = $props();
 
   // Pretty-print a line id for the filter badge, preferring a matching
-  // arrival's line_name (already in the board data) and falling back to a
-  // small hand-rolled map for unusual ids.
-  const LINE_LABELS: Record<string, string> = {
-    bakerloo: 'Bakerloo',
-    central: 'Central',
-    circle: 'Circle',
-    district: 'District',
-    'elizabeth-line': 'Elizabeth',
-    elizabeth: 'Elizabeth',
-    'hammersmith-city': 'Hammersmith & City',
-    jubilee: 'Jubilee',
-    metropolitan: 'Metropolitan',
-    northern: 'Northern',
-    piccadilly: 'Piccadilly',
-    victoria: 'Victoria',
-    'waterloo-city': 'Waterloo & City',
-  };
-
+  // arrival's line_name (already in the board data) and falling back to the
+  // shared prettyLineName map for lines not present on the current board.
   const filterLabels = $derived(
     lineIds.map((id) => {
       const fromBoard = board.platforms
         .flatMap((p) => p.arrivals)
         .find((a) => a.line_id === id)?.line_name;
-      return fromBoard ?? LINE_LABELS[id] ?? id;
+      return fromBoard ?? prettyLineName(id);
     }),
   );
 

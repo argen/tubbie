@@ -133,7 +133,7 @@ fn board_with_stale_since_round_trips() {
 #[test]
 fn direction_unknown_round_trips() {
     let d = Direction::Unknown;
-    let v = serde_json::to_value(&d).expect("Direction::Unknown must serialize");
+    let v = serde_json::to_value(d).expect("Direction::Unknown must serialize");
     let back: Direction =
         serde_json::from_value(v).expect("Direction::Unknown must re-deserialize");
     assert_eq!(d, back);

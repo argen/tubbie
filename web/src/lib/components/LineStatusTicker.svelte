@@ -1,6 +1,7 @@
 <script lang="ts">
   import { reducedMotion } from '$lib/stores/reducedMotion.js';
   import type { LineStatus } from '$lib/ipc/types.js';
+  import { prettyLineName } from '$lib/utils/format.js';
 
   interface Props {
     statuses: LineStatus[];
@@ -8,17 +9,23 @@
 
   const { statuses }: Props = $props();
 
-  /** Build the ticker text from all disruptions (plain text only — no @html). */
+  /**
+   * Build the ticker text as one segment per line in scope. Lines with a
+   * disruption contribute `"{Line}: {disruption}"`; good-service lines
+   * contribute `"{Line}: Good service"`, so the user can see at a glance
+   * which of their lines are healthy alongside any that aren't.
+   */
   const tickerText = $derived((): string => {
-    const disruptions = statuses.flatMap((s) =>
-      s.disruption_text !== null && s.disruption_text.length > 0 ? [s.disruption_text] : [],
-    );
-
-    if (disruptions.length === 0) {
-      return 'Good service on all lines';
+    if (statuses.length === 0) {
+      return 'Good service';
     }
-
-    return disruptions.join('  •  ');
+    return statuses
+      .map((s) => {
+        const name = prettyLineName(s.line_id);
+        const disruption = s.disruption_text ?? '';
+        return disruption.length > 0 ? `${name}: ${disruption}` : `${name}: Good service`;
+      })
+      .join('  •  ');
   });
 
   const hasDisruptions = $derived(
