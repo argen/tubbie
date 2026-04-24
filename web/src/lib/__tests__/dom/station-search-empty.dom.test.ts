@@ -71,6 +71,25 @@ describe('StationSearch empty + loading states', () => {
     expect(screen.getByTestId('station-search-empty')).toBeTruthy();
   });
 
+  it('shows the spinner during the debounce window, before the IPC call fires', async () => {
+    // searchStations returns immediately; we only care about the 200 ms debounce gap.
+    searchStationsMock.mockResolvedValue([]);
+    render(StationSearch, {
+      props: { selectedId: '', onSelect: vi.fn() },
+    });
+    const input = screen.getByRole('combobox');
+
+    await fireEvent.input(input, { target: { value: 'v' } });
+
+    // Before advancing timers: the spinner should already be visible so the
+    // user sees the 200 ms debounce as "still searching", not dead UI.
+    const search = screen.getByRole('search');
+    expect(search.textContent).toContain('⠿');
+
+    // searchStations should not yet have been called.
+    expect(searchStationsMock).not.toHaveBeenCalled();
+  });
+
   it('clears the empty-state message when the query is cleared', async () => {
     searchStationsMock.mockResolvedValue([]);
     render(StationSearch, {

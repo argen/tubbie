@@ -189,18 +189,36 @@ impl<H: TflHttp> TflClient<H> {
         let stop_points_value = value.get("stopPoints").unwrap_or(&value).clone();
         let stations: Vec<Station> = serde_json::from_value(stop_points_value)?;
 
-        if let Ok(mut guard) = self.stop_points_cache.lock() {
-            *guard = Some(StopPointsCacheEntry {
-                fetched_at: Instant::now(),
-                stations: stations.clone(),
-            });
+        match self.stop_points_cache.lock() {
+            Ok(mut guard) => {
+                *guard = Some(StopPointsCacheEntry {
+                    fetched_at: Instant::now(),
+                    stations: stations.clone(),
+                });
+            }
+            Err(poison) => {
+                // A previous panic poisoned the mutex. Surface it so the bug
+                // is observable rather than silently refetching 16 MB forever.
+                eprintln!("[tfl-client] stop-points cache mutex poisoned; recovering: {poison}");
+                let mut guard = poison.into_inner();
+                *guard = Some(StopPointsCacheEntry {
+                    fetched_at: Instant::now(),
+                    stations: stations.clone(),
+                });
+            }
         }
 
         Ok(stations)
     }
 
     fn read_fresh_cache(&self) -> Option<Vec<Station>> {
-        let guard = self.stop_points_cache.lock().ok()?;
+        let guard = match self.stop_points_cache.lock() {
+            Ok(g) => g,
+            Err(poison) => {
+                eprintln!("[tfl-client] stop-points cache mutex poisoned on read; recovering");
+                poison.into_inner()
+            }
+        };
         let entry = guard.as_ref()?;
         if entry.fetched_at.elapsed() < STOP_POINTS_TTL {
             Some(entry.stations.clone())

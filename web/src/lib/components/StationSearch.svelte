@@ -21,14 +21,14 @@
   // us tell "still typing / still loading" apart from "search ran, no results".
   let searched = $state(false);
 
-  // Debounced search — 200ms, latest-wins
+  // Debounced search — 200 ms, latest-wins. `handleInput` bumps the debounce
+  // generation on every keystroke (including clears), so stale resolutions
+  // from the previous query are discarded by `debounceAsync`.
   const debouncedSearch = debounceAsync(
-    async (q: string) => {
-      if (q.trim().length === 0) {
-        searching = false;
-        return [];
-      }
-      searching = true;
+    async (q: string): Promise<Station[]> => {
+      // Skip the backend round-trip for an empty query; `onResult` still
+      // fires so we can re-settle local UI state.
+      if (q.trim().length === 0) return [];
       return searchStations(q);
     },
     200,
@@ -37,8 +37,10 @@
       searching = false;
       searchError = null;
       activeIdx = -1;
-      searched = true;
-      listboxOpen = query.trim().length > 0;
+      // If the user cleared the input, treat this as "not searched"; the
+      // listbox stays closed and the empty-state hint stays hidden.
+      searched = query.trim().length > 0;
+      listboxOpen = searched && results.length > 0;
     },
     (err: unknown) => {
       searchError = err instanceof Error ? err.message : String(err);
@@ -54,11 +56,16 @@
       listboxOpen = false;
       searching = false;
       searched = false;
-    } else {
-      // Reset "no results" state until the new search resolves.
-      searched = false;
-      debouncedSearch(query);
+      // Bump the debounce generation so any in-flight call discards its result.
+      debouncedSearch('');
+      return;
     }
+    // Reset "no results" state until the new search resolves, and turn the
+    // spinner on immediately so the user sees the 200 ms debounce window as
+    // "still searching" rather than "broken".
+    searched = false;
+    searching = true;
+    debouncedSearch(query);
   }
 
   function selectStation(station: Station): void {
