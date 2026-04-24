@@ -375,6 +375,210 @@ mod tests {
     }
 
     // -------------------------------------------------------------------------
+    // Station.lines projection from TfL `lineModeGroups`
+    // -------------------------------------------------------------------------
+    //
+    // TfL's /StopPoint/Mode/{mode} response includes `lineModeGroups`:
+    //   "lineModeGroups": [
+    //     { "modeName": "tube", "lineIdentifier": ["bakerloo", "central"] },
+    //     { "modeName": "bus",  "lineIdentifier": ["24", "29"] }
+    //   ]
+    // The `lines` field on Station is what the UI consumes. search_stations
+    // must project the tube entry of `lineModeGroups` into Station.lines so
+    // the Settings UI can show station-scoped line chips.
+
+    fn write_stop_points_fixture(dir: &std::path::Path, body: serde_json::Value) {
+        let ep_dir = dir.join("stop-points");
+        std::fs::create_dir_all(&ep_dir).unwrap();
+        std::fs::write(
+            ep_dir.join("tube.json"),
+            serde_json::to_string(&body).unwrap(),
+        )
+        .unwrap();
+    }
+
+    #[tokio::test]
+    async fn search_stations_populates_lines_from_line_mode_groups() {
+        let dir = tempfile::tempdir().unwrap();
+        write_stop_points_fixture(
+            dir.path(),
+            serde_json::json!({
+                "total": 1,
+                "stopPoints": [{
+                    "id": "940GZZLUOXC",
+                    "commonName": "Oxford Circus Underground Station",
+                    "modes": ["tube"],
+                    "lat": 51.515,
+                    "lon": -0.1418,
+                    "lineModeGroups": [
+                        { "modeName": "tube", "lineIdentifier": ["bakerloo", "central", "victoria"] }
+                    ]
+                }]
+            }),
+        );
+
+        let client = TflClient::new(FixtureTflHttp::new(dir.path()));
+        let results = client
+            .search_stations("oxford")
+            .await
+            .expect("search should succeed");
+
+        assert_eq!(results.len(), 1);
+        let oxc = &results[0];
+        let line_ids: Vec<&str> = oxc.lines.iter().map(|l| l.id.as_str()).collect();
+        assert_eq!(
+            line_ids,
+            vec!["bakerloo", "central", "victoria"],
+            "Station.lines should contain exactly the tube lineIdentifier entries"
+        );
+
+        // Names must be human-readable, not the raw id.
+        let names: Vec<&str> = oxc.lines.iter().map(|l| l.name.as_str()).collect();
+        assert!(
+            names.contains(&"Bakerloo")
+                && names.contains(&"Central")
+                && names.contains(&"Victoria"),
+            "line names should be pretty-printed, got {names:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn search_stations_ignores_non_tube_line_mode_groups() {
+        let dir = tempfile::tempdir().unwrap();
+        write_stop_points_fixture(
+            dir.path(),
+            serde_json::json!({
+                "total": 1,
+                "stopPoints": [{
+                    "id": "940ZZMIXED",
+                    "commonName": "Mixed Bus And Tube",
+                    "modes": ["tube", "bus"],
+                    "lat": 51.5,
+                    "lon": -0.1,
+                    "lineModeGroups": [
+                        { "modeName": "tube", "lineIdentifier": ["northern"] },
+                        { "modeName": "bus",  "lineIdentifier": ["24", "29"] }
+                    ]
+                }]
+            }),
+        );
+
+        let client = TflClient::new(FixtureTflHttp::new(dir.path()));
+        let results = client
+            .search_stations("mixed")
+            .await
+            .expect("search should succeed");
+
+        assert_eq!(results.len(), 1);
+        let line_ids: Vec<&str> = results[0].lines.iter().map(|l| l.id.as_str()).collect();
+        assert_eq!(
+            line_ids,
+            vec!["northern"],
+            "only tube lineModeGroups entries should populate Station.lines"
+        );
+    }
+
+    #[tokio::test]
+    async fn search_stations_empty_lines_when_no_line_mode_groups() {
+        let dir = tempfile::tempdir().unwrap();
+        write_stop_points_fixture(
+            dir.path(),
+            serde_json::json!({
+                "total": 1,
+                "stopPoints": [{
+                    "id": "940ZZBARE",
+                    "commonName": "Bare Station Underground Station",
+                    "modes": ["tube"],
+                    "lat": 51.5,
+                    "lon": -0.1,
+                    "lineModeGroups": []
+                }]
+            }),
+        );
+
+        let client = TflClient::new(FixtureTflHttp::new(dir.path()));
+        let results = client
+            .search_stations("bare")
+            .await
+            .expect("search should succeed");
+
+        assert_eq!(results.len(), 1);
+        assert!(
+            results[0].lines.is_empty(),
+            "station without lineModeGroups must have empty Station.lines (fall back to global chip list)"
+        );
+    }
+
+    #[tokio::test]
+    async fn search_stations_accepts_trimmed_line_mode_groups_without_mode_name() {
+        // Our bundled fixture drops the `modeName` field to save space (the
+        // parent Station's `modes` already constrains us to tube stations).
+        // An entry without modeName must still populate Station.lines.
+        let dir = tempfile::tempdir().unwrap();
+        write_stop_points_fixture(
+            dir.path(),
+            serde_json::json!({
+                "total": 1,
+                "stopPoints": [{
+                    "id": "940ZZTRIMMED",
+                    "commonName": "Trimmed Fixture Station",
+                    "modes": ["tube"],
+                    "lat": 51.5,
+                    "lon": -0.1,
+                    "lineModeGroups": [ { "lineIdentifier": ["jubilee", "metropolitan"] } ]
+                }]
+            }),
+        );
+
+        let client = TflClient::new(FixtureTflHttp::new(dir.path()));
+        let results = client
+            .search_stations("trimmed")
+            .await
+            .expect("search should succeed");
+
+        let line_ids: Vec<&str> = results[0].lines.iter().map(|l| l.id.as_str()).collect();
+        assert_eq!(line_ids, vec!["jubilee", "metropolitan"]);
+    }
+
+    #[tokio::test]
+    async fn search_stations_prefers_explicit_lines_field_over_line_mode_groups() {
+        // Backward-compat: if a fixture (or future API) already supplies the
+        // processed `lines` field, honour it verbatim and do NOT overwrite with
+        // lineModeGroups. This keeps existing inline-JSON tests stable.
+        let dir = tempfile::tempdir().unwrap();
+        write_stop_points_fixture(
+            dir.path(),
+            serde_json::json!({
+                "total": 1,
+                "stopPoints": [{
+                    "id": "940ZZEXPLICIT",
+                    "commonName": "Explicit Lines Underground",
+                    "modes": ["tube"],
+                    "lat": 51.5,
+                    "lon": -0.1,
+                    "lines": [ { "id": "jubilee", "name": "Jubilee" } ],
+                    "lineModeGroups": [
+                        { "modeName": "tube", "lineIdentifier": ["northern", "central"] }
+                    ]
+                }]
+            }),
+        );
+
+        let client = TflClient::new(FixtureTflHttp::new(dir.path()));
+        let results = client
+            .search_stations("explicit")
+            .await
+            .expect("search should succeed");
+
+        let line_ids: Vec<&str> = results[0].lines.iter().map(|l| l.id.as_str()).collect();
+        assert_eq!(
+            line_ids,
+            vec!["jubilee"],
+            "explicit `lines` field must take precedence over lineModeGroups"
+        );
+    }
+
+    // -------------------------------------------------------------------------
     // Error-variant mapping — deliberate coverage of each M2-scope variant
     // -------------------------------------------------------------------------
 
