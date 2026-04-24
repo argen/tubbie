@@ -64,6 +64,12 @@ impl<H: TflHttp + 'static, C: Clock + 'static> BoardService<H, C> {
         Ok(self.client.search_stations(query).await?)
     }
 
+    /// Pre-fetch the tube stop-points list so the first settings-search is
+    /// instant. Fire-and-forget from app startup; safe to call repeatedly.
+    pub async fn warm_stop_points_cache(&self) -> Result<usize, BoardError> {
+        Ok(self.client.warm_stop_points_cache().await?)
+    }
+
     /// Fetch the current status for a single TfL line.
     ///
     /// Delegates to `TflClient::get_line_status`.

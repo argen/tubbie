@@ -161,6 +161,17 @@ pub fn run() {
                 spawn_stream_task(ah, cs, sa).await;
             });
 
+            // Pre-warm the stop-points cache so the first settings search is
+            // instant rather than paying ~1-2s for the 16 MB /StopPoint/Mode/tube
+            // fetch. Fire-and-forget — failure here must never block startup.
+            let bs = Arc::clone(&board_service);
+            tauri::async_runtime::spawn(async move {
+                match bs.warm_stop_points_cache().await {
+                    Ok(n) => eprintln!("[tubbie] stop-points cache warmed ({n} stations)"),
+                    Err(e) => eprintln!("[tubbie] stop-points cache warm failed: {e}"),
+                }
+            });
+
             // Watcher loop: restarts the stream when the abort handle is
             // cleared (e.g. after save_config cancels the previous task).
             let cs2 = Arc::clone(&config_store);

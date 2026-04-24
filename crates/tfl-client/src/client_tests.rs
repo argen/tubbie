@@ -646,4 +646,176 @@ mod tests {
             "expected TflError::ParseAt, got: {err:?}"
         );
     }
+
+    // -------------------------------------------------------------------------
+    // stop-points cache (search_stations + warm_stop_points_cache)
+    // -------------------------------------------------------------------------
+    //
+    // Any call that needs the full tube stop-points list should hit the
+    // transport at most once per TTL window. Re-fetching 16 MB on every
+    // keystroke made the typeahead feel broken; the cache makes the second
+    // keystroke instant.
+
+    use crate::http::TflHttp;
+    use serde_json::Value;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
+
+    /// Wraps any `TflHttp` and counts calls per (endpoint, id) pair.
+    struct CountingTflHttp<H: TflHttp> {
+        inner: H,
+        count: Arc<AtomicUsize>,
+    }
+
+    impl<H: TflHttp> CountingTflHttp<H> {
+        fn new(inner: H) -> (Self, Arc<AtomicUsize>) {
+            let count = Arc::new(AtomicUsize::new(0));
+            (
+                Self {
+                    inner,
+                    count: count.clone(),
+                },
+                count,
+            )
+        }
+    }
+
+    impl<H: TflHttp> TflHttp for CountingTflHttp<H> {
+        fn fetch(
+            &self,
+            endpoint: &str,
+            id: &str,
+        ) -> impl std::future::Future<Output = Result<Value, TflError>> + Send {
+            self.count.fetch_add(1, Ordering::SeqCst);
+            self.inner.fetch(endpoint, id)
+        }
+    }
+
+    #[tokio::test]
+    async fn search_stations_uses_cached_stations_on_second_call() {
+        let (http, count) = CountingTflHttp::new(FixtureTflHttp::new(workspace_fixtures_dir()));
+        let client = TflClient::new(http);
+
+        let first = client.search_stations("belsize").await.unwrap();
+        let second = client.search_stations("king").await.unwrap();
+
+        assert!(
+            !first.is_empty() && !second.is_empty(),
+            "both searches should return results"
+        );
+        assert_eq!(
+            count.load(Ordering::SeqCst),
+            1,
+            "two search_stations calls should result in exactly one fetch",
+        );
+    }
+
+    #[tokio::test]
+    async fn search_stations_refetches_after_cache_invalidated() {
+        let (http, count) = CountingTflHttp::new(FixtureTflHttp::new(workspace_fixtures_dir()));
+        let client = TflClient::new(http);
+
+        client.search_stations("belsize").await.unwrap();
+        client.invalidate_stop_points_cache();
+        client.search_stations("belsize").await.unwrap();
+
+        assert_eq!(
+            count.load(Ordering::SeqCst),
+            2,
+            "invalidating the cache should force a refetch",
+        );
+    }
+
+    #[tokio::test]
+    async fn warm_stop_points_cache_populates_cache_for_zero_extra_fetches() {
+        let (http, count) = CountingTflHttp::new(FixtureTflHttp::new(workspace_fixtures_dir()));
+        let client = TflClient::new(http);
+
+        let warmed = client.warm_stop_points_cache().await.unwrap();
+        assert!(warmed > 100, "fixture should contain many tube stations");
+
+        // Subsequent searches must not trigger any further fetches.
+        let _ = client.search_stations("victoria").await.unwrap();
+        let _ = client.search_stations("king").await.unwrap();
+
+        assert_eq!(
+            count.load(Ordering::SeqCst),
+            1,
+            "warm + two searches should total one fetch",
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // Live-shape integration: searching the real fixtures/stop-points/tube.json
+    // -------------------------------------------------------------------------
+    //
+    // This is the check PR #11 missed. Earlier tests asserted behaviour on
+    // trimmed per-test fixtures; a user reported the live search still showed
+    // no dropdown. We exercise the full stack (deserialization, cache, filter,
+    // relevance ordering) against the same 1 682-station fixture the app ships.
+
+    #[tokio::test]
+    async fn search_stations_finds_victoria_in_full_fixture() {
+        let client = real_client();
+
+        let results = client
+            .search_stations("victoria")
+            .await
+            .expect("victoria search should succeed");
+
+        assert!(
+            !results.is_empty(),
+            "expected at least one match for 'victoria' in the shipped fixture"
+        );
+
+        let victoria_tube = results
+            .iter()
+            .find(|s| s.id == "940GZZLUVIC" && s.modes.iter().any(|m| m == "tube"))
+            .expect("Victoria Underground Station (id 940GZZLUVIC) should be in results");
+
+        // The settings UI keys its per-station line chips off Station.lines.
+        // The fixture encodes Victoria with lineIdentifier [district, circle,
+        // victoria] — all three must survive deserialization.
+        let line_ids: Vec<&str> = victoria_tube.lines.iter().map(|l| l.id.as_str()).collect();
+        assert!(
+            line_ids.contains(&"victoria"),
+            "expected victoria line in Station.lines, got {line_ids:?}"
+        );
+        assert!(
+            line_ids.contains(&"district") || line_ids.contains(&"circle"),
+            "expected at least one of district/circle in Station.lines, got {line_ids:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn search_stations_victoria_second_call_hits_cache() {
+        let (http, count) = CountingTflHttp::new(FixtureTflHttp::new(workspace_fixtures_dir()));
+        let client = TflClient::new(http);
+
+        let _ = client.search_stations("victoria").await.unwrap();
+        let _ = client.search_stations("victoria").await.unwrap();
+        let _ = client.search_stations("oxford").await.unwrap();
+
+        assert_eq!(
+            count.load(Ordering::SeqCst),
+            1,
+            "three searches against the full fixture should share one fetch"
+        );
+    }
+
+    #[tokio::test]
+    async fn warm_stop_points_cache_is_idempotent() {
+        let (http, count) = CountingTflHttp::new(FixtureTflHttp::new(workspace_fixtures_dir()));
+        let client = TflClient::new(http);
+
+        client.warm_stop_points_cache().await.unwrap();
+        client.warm_stop_points_cache().await.unwrap();
+        client.warm_stop_points_cache().await.unwrap();
+
+        assert_eq!(
+            count.load(Ordering::SeqCst),
+            1,
+            "repeated warm calls within the TTL should not refetch",
+        );
+    }
 }
