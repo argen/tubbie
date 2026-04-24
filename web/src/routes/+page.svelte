@@ -1,6 +1,6 @@
 <script lang="ts">
   import { board, boardError, isLoading } from '$lib/stores/board.js';
-  import { configError } from '$lib/stores/config.js';
+  import { config, configError } from '$lib/stores/config.js';
   import Board from '$lib/components/Board.svelte';
   import { getLineStatus } from '$lib/ipc/commands.js';
   import type { Board as BoardT, LineStatus } from '$lib/ipc/types.js';
@@ -75,6 +75,7 @@
     board={$board}
     {statuses}
     stationName={$board.platforms[0]?.arrivals[0]?.station_name ?? $board.station_id}
+    lineIds={$config.line_ids}
   />
 {:else}
   <!-- No board yet, show waiting state -->

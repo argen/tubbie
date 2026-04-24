@@ -11,9 +11,39 @@
     board: Board;
     statuses?: LineStatus[];
     stationName?: string;
+    /** Active line filter — when non-empty, the Board shows a "filtering" badge. */
+    lineIds?: string[];
   }
 
-  const { board, statuses = [], stationName = '' }: Props = $props();
+  const { board, statuses = [], stationName = '', lineIds = [] }: Props = $props();
+
+  // Pretty-print a line id for the filter badge, preferring a matching
+  // arrival's line_name (already in the board data) and falling back to a
+  // small hand-rolled map for unusual ids.
+  const LINE_LABELS: Record<string, string> = {
+    bakerloo: 'Bakerloo',
+    central: 'Central',
+    circle: 'Circle',
+    district: 'District',
+    'elizabeth-line': 'Elizabeth',
+    elizabeth: 'Elizabeth',
+    'hammersmith-city': 'Hammersmith & City',
+    jubilee: 'Jubilee',
+    metropolitan: 'Metropolitan',
+    northern: 'Northern',
+    piccadilly: 'Piccadilly',
+    victoria: 'Victoria',
+    'waterloo-city': 'Waterloo & City',
+  };
+
+  const filterLabels = $derived(
+    lineIds.map((id) => {
+      const fromBoard = board.platforms
+        .flatMap((p) => p.arrivals)
+        .find((a) => a.line_id === id)?.line_name;
+      return fromBoard ?? LINE_LABELS[id] ?? id;
+    }),
+  );
 
   // ---------------------------------------------------------------------------
   // Clock
@@ -88,9 +118,22 @@
     class:board__header--stale={isStale}
     aria-label="Station header"
   >
-    <h1 class="board__station-name led-accent">
-      {displayName}
-    </h1>
+    <div class="board__station-block">
+      <h1 class="board__station-name led-accent">
+        {displayName}
+      </h1>
+      {#if filterLabels.length > 0}
+        <p
+          class="board__line-filter"
+          data-testid="board-line-filter"
+          role="status"
+          aria-label="Filtering by lines: {filterLabels.join(', ')}"
+        >
+          <span class="board__line-filter-label">Filtering:</span>
+          {filterLabels.join(' · ')}
+        </p>
+      {/if}
+    </div>
 
     <div class="board__header-right">
       {#if isStale}
@@ -165,6 +208,14 @@
     border-bottom-color: var(--stale-accent);
   }
 
+  .board__station-block {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    max-width: 70%;
+    min-width: 0;
+  }
+
   .board__station-name {
     font-family: var(--font-board);
     font-size: 1.4rem;
@@ -178,7 +229,25 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 60%;
+  }
+
+  .board__line-filter {
+    font-family: var(--font-board);
+    font-size: 0.75rem;
+    margin: 0;
+    color: var(--platform-label);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    opacity: 0.75;
+  }
+
+  .board__line-filter-label {
+    color: var(--platform-label);
+    opacity: 0.6;
+    margin-right: 0.3rem;
   }
 
   .board__header-right {
