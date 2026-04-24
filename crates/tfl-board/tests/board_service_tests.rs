@@ -741,7 +741,7 @@ async fn stream_stale_transition_atomic() {
 }
 
 // ---------------------------------------------------------------------------
-// Test 10a: stream_terminates_after_fatal_error_no_last_ok
+// Test 10a: stream_keeps_polling_after_fatal_error_no_last_ok
 // ---------------------------------------------------------------------------
 
 /// A `TflHttp` mock that always returns an error.
@@ -754,10 +754,13 @@ impl TflHttp for AlwaysErrorHttp {
     }
 }
 
-/// Verify FIX 1 (blocking, async-safety): when the very first fetch fails (no
+/// Verify the corrected behaviour: when the very first fetch fails (no
 /// `last_ok` to fall back on), the stream must:
 /// 1. emit `Some(Err(_))` on the first poll, AND
-/// 2. emit `None` on the next poll (stream terminates — NOT another `Err` forever).
+/// 2. keep polling — emit `Some(Err(_))` again on the next tick, NOT `None`.
+///
+/// A network hiccup at app launch must not kill the polling stream forever.
+/// The `poll_seconds` interval provides rate-limiting between retries.
 #[tokio::test(start_paused = true)]
 async fn stream_terminates_after_fatal_error_no_last_ok() {
     let http = AlwaysErrorHttp;
@@ -784,14 +787,13 @@ async fn stream_terminates_after_fatal_error_no_last_ok() {
         "first item should be Some(Err(..)) when initial fetch fails, got: {first:?}"
     );
 
-    // Second poll — stream should terminate (None), NOT emit another error.
-    // Advance time past the interval to ensure the second tick would fire if
-    // the stream were still alive.
+    // Second poll — stream must NOT terminate; it must keep retrying.
+    // Advance time past the interval so the second tick fires.
     tokio::time::advance(std::time::Duration::from_secs(3)).await;
     let second = stream.next().await;
     assert!(
-        second.is_none(),
-        "stream must terminate (None) after fatal error with no last_ok, got: {second:?}"
+        matches!(second, Some(Err(_))),
+        "stream must keep polling (Some(Err(..))) after error with no last_ok, got: {second:?}"
     );
 }
 

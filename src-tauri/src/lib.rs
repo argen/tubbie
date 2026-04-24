@@ -82,6 +82,9 @@ async fn spawn_stream_task(
     let service = BoardService::new(client, SystemClock);
     let mut stream = Box::pin(service.stream(cfg));
 
+    // Clone the Arc so the spawned task can clear its own handle when it ends.
+    let stream_abort_clone = Arc::clone(&stream_abort);
+
     // Use tokio::task::spawn so we get a JoinHandle with abort_handle().
     let join_handle = tokio::task::spawn(async move {
         loop {
@@ -105,6 +108,11 @@ async fn spawn_stream_task(
                 }
             }
         }
+        // Clear the abort handle so the watcher loop detects the task has
+        // ended and schedules a restart — covers natural termination, panics,
+        // and any future code path that lets the task die.
+        eprintln!("[tubbie] stream task ended; scheduling restart");
+        *stream_abort_clone.write().await = None;
     });
 
     let abort = join_handle.abort_handle();
@@ -161,10 +169,26 @@ pub fn run() {
             tauri::async_runtime::spawn(async move {
                 loop {
                     tokio::time::sleep(std::time::Duration::from_secs(2)).await;
-                    let has_task = sa2.read().await.is_some();
-                    if !has_task {
-                        // Task was aborted (config change or fatal stream error).
-                        // Restart with the current store config.
+                    // Detect both: handle is None (explicitly cleared), or handle
+                    // is still Some but the task has already finished (belt-and-
+                    // braces against any code path that lets the task die without
+                    // clearing its own handle).
+                    let needs_restart = {
+                        let mut guard = sa2.write().await;
+                        match guard.as_ref() {
+                            None => true,
+                            Some(h) if h.is_finished() => {
+                                // Task finished but handle was not cleared — take
+                                // it now so spawn_stream_task sees a clean slate.
+                                guard.take();
+                                true
+                            }
+                            _ => false,
+                        }
+                    };
+                    if needs_restart {
+                        // Task was aborted or ended (config change or fatal stream
+                        // error). Restart with the current store config.
                         spawn_stream_task(ah2.clone(), Arc::clone(&cs2), Arc::clone(&sa2)).await;
                     }
                 }
