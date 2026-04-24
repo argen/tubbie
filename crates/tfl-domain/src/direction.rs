@@ -39,20 +39,16 @@
 
 use serde::{Deserialize, Serialize};
 
-/// Compass direction of a train, capturing Northern-line branch where relevant.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "type", content = "via")]
+/// Compass direction of a train.
+///
+/// Serialises as a bare string (`"Northbound"`, `"Eastbound"`, …) so the
+/// TypeScript `Direction` union in `web/src/lib/ipc/types.ts` is a faithful
+/// mirror and `save_config` can accept the same string form it emits.
+/// Northern-line branch information lives separately on `Arrival.northern_branch`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Direction {
-    /// Northbound service.
-    /// `via` is populated for Northern line trains where the branch is known.
-    Northbound {
-        via: Option<NorthernBranch>,
-    },
-    /// Southbound service.
-    /// `via` is populated for Northern line trains where the branch is known.
-    Southbound {
-        via: Option<NorthernBranch>,
-    },
+    Northbound,
+    Southbound,
     Eastbound,
     Westbound,
     /// Inbound on a circular / terminal line (Circle, H&C, District terminus, etc.)
@@ -63,8 +59,8 @@ pub enum Direction {
     Unknown,
 }
 
-/// Northern line branch identifier.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+/// Northern line branch identifier. Lives on `Arrival.northern_branch`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum NorthernBranch {
     /// Via Bank / City branch.
     Bank,
@@ -76,56 +72,50 @@ pub enum NorthernBranch {
 // Inference helpers
 // ---------------------------------------------------------------------------
 
-/// Infer a `Direction` from a TfL arrival's `platform_name`, `direction` field,
-/// and `line_id` / `towards` values.
+/// Infer a `(Direction, Option<NorthernBranch>)` from a TfL arrival's
+/// `platform_name`, `direction` field, and `line_id` / `towards` values.
 ///
-/// Priority:
+/// Priority for the direction:
 /// 1. `platform_name` prefix (most reliable — TfL sets it explicitly).
-/// 2. Northern-line branch from `towards` suffix when `line_id == "northern"`.
-/// 3. Raw `direction` field (`"inbound"` / `"outbound"`) as a fallback.
-/// 4. `Direction::Unknown` if nothing matches.
+/// 2. Raw `direction` field (`"inbound"` / `"outbound"`) as a fallback.
+/// 3. `Direction::Unknown` if nothing matches.
 ///
-/// Exposed for integration tests and future M2 enrichment; normally invoked via
+/// The branch is always derived from the `towards` suffix (Northern line only)
+/// — returned alongside so callers can persist it on `Arrival.northern_branch`.
+///
+/// Exposed for integration tests and arrival enrichment; normally invoked via
 /// the `Deserialize` impl on `Arrival`.
 pub fn infer_direction(
     platform_name: &str,
     direction: &str,
     line_id: &str,
     towards: &str,
-) -> Direction {
-    // Platform name prefix is authoritative.
+) -> (Direction, Option<NorthernBranch>) {
     let platform_lower = platform_name.to_ascii_lowercase();
 
-    // For Northern line, read branch from the `towards` suffix before anything else.
     let northern_branch = if line_id == "northern" {
         infer_northern_branch(towards)
     } else {
         None
     };
 
-    if platform_lower.starts_with("northbound") {
-        return Direction::Northbound {
-            via: northern_branch,
-        };
-    }
-    if platform_lower.starts_with("southbound") {
-        return Direction::Southbound {
-            via: northern_branch,
-        };
-    }
-    if platform_lower.starts_with("eastbound") {
-        return Direction::Eastbound;
-    }
-    if platform_lower.starts_with("westbound") {
-        return Direction::Westbound;
-    }
+    let dir = if platform_lower.starts_with("northbound") {
+        Direction::Northbound
+    } else if platform_lower.starts_with("southbound") {
+        Direction::Southbound
+    } else if platform_lower.starts_with("eastbound") {
+        Direction::Eastbound
+    } else if platform_lower.starts_with("westbound") {
+        Direction::Westbound
+    } else {
+        match direction {
+            "inbound" => Direction::Inbound,
+            "outbound" => Direction::Outbound,
+            _ => Direction::Unknown,
+        }
+    };
 
-    // Fall back to TfL's raw `direction` field.
-    match direction {
-        "inbound" => Direction::Inbound,
-        "outbound" => Direction::Outbound,
-        _ => Direction::Unknown,
-    }
+    (dir, northern_branch)
 }
 
 /// Infer the Northern line branch from the `towards` label.

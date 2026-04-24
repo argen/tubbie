@@ -75,6 +75,31 @@ export function isDue(seconds: number): boolean {
   return seconds < 30;
 }
 
+/** Human-readable labels for the TfL tube line ids we surface in the UI. */
+const LINE_LABELS: Record<string, string> = {
+  bakerloo: 'Bakerloo',
+  central: 'Central',
+  circle: 'Circle',
+  district: 'District',
+  'elizabeth-line': 'Elizabeth',
+  elizabeth: 'Elizabeth',
+  'hammersmith-city': 'Hammersmith & City',
+  jubilee: 'Jubilee',
+  metropolitan: 'Metropolitan',
+  northern: 'Northern',
+  piccadilly: 'Piccadilly',
+  victoria: 'Victoria',
+  'waterloo-city': 'Waterloo & City',
+};
+
+/**
+ * Map a TfL line id (e.g. `"northern"`, `"elizabeth-line"`) to its display
+ * name. Unknown ids are returned unchanged so the UI always renders something.
+ */
+export function prettyLineName(lineId: string): string {
+  return LINE_LABELS[lineId] ?? lineId;
+}
+
 /**
  * Compute the char-by-char reveal duration for a string.
  *

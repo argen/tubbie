@@ -30,7 +30,7 @@ use futures::stream::{self, Stream};
 use tokio::time::{interval, MissedTickBehavior};
 
 use tfl_client::{clock::Clock, http::TflHttp, TflClient};
-use tfl_domain::{Arrival, Board, LineStatus, Platform, Station};
+use tfl_domain::{Arrival, Board, Direction, LineStatus, Platform, Station};
 
 use crate::config::BoardConfig;
 use crate::error::BoardError;
@@ -157,32 +157,54 @@ impl<H: TflHttp + 'static, C: Clock + 'static> BoardService<H, C> {
 // Helpers
 // ---------------------------------------------------------------------------
 
-/// Group filtered arrivals by platform name and build a `Board`.
+/// Group filtered arrivals by compass direction and build a `Board`.
 ///
-/// Platforms are sorted by name for deterministic output.
-/// Arrivals within each platform are sorted by `time_to_station` ascending.
+/// At multi-line stations (e.g. Tottenham Court Road serves Central, Northern
+/// and Elizabeth), the TfL `platform_name` string carries a per-line platform
+/// suffix like `"Westbound - Platform 3"` vs `"Westbound - Platform 5"`. If we
+/// grouped on that raw string we'd render two "Westbound" columns for the same
+/// compass direction. Instead, each column represents one `Direction` and
+/// merges arrivals from every line serving that direction, interleaved by
+/// `time_to_station`.
+///
+/// Directions appear in a fixed reading order; any direction with zero
+/// arrivals after filtering is omitted. Arrivals within a column are sorted
+/// ascending by `time_to_station`.
 fn build_board(
     station_id: &str,
     arrivals: Vec<Arrival>,
     generated_at: chrono::DateTime<chrono::Utc>,
     stale_since: Option<chrono::DateTime<chrono::Utc>>,
 ) -> Board {
-    // Group by platform_name.
-    let mut platform_map: std::collections::BTreeMap<String, Vec<Arrival>> =
-        std::collections::BTreeMap::new();
+    const DISPLAY_ORDER: [Direction; 7] = [
+        Direction::Northbound,
+        Direction::Southbound,
+        Direction::Eastbound,
+        Direction::Westbound,
+        Direction::Inbound,
+        Direction::Outbound,
+        Direction::Unknown,
+    ];
+
+    let mut by_direction: std::collections::HashMap<Direction, Vec<Arrival>> =
+        std::collections::HashMap::new();
     for arrival in arrivals {
-        platform_map
-            .entry(arrival.platform_name.clone())
+        by_direction
+            .entry(arrival.direction)
             .or_default()
             .push(arrival);
     }
 
-    // Sort each platform's arrivals by time_to_station ascending.
-    let platforms: Vec<Platform> = platform_map
+    let platforms: Vec<Platform> = DISPLAY_ORDER
         .into_iter()
-        .map(|(name, mut arrivals)| {
-            arrivals.sort_by_key(|a| a.time_to_station);
-            Platform { name, arrivals }
+        .filter_map(|dir| {
+            by_direction.remove(&dir).map(|mut arrivals| {
+                arrivals.sort_by_key(|a| a.time_to_station);
+                Platform {
+                    name: direction_label(dir).to_string(),
+                    arrivals,
+                }
+            })
         })
         .collect();
 
@@ -191,6 +213,19 @@ fn build_board(
         platforms,
         generated_at,
         stale_since,
+    }
+}
+
+/// Human-readable column label for a `Direction`.
+fn direction_label(d: Direction) -> &'static str {
+    match d {
+        Direction::Northbound => "Northbound",
+        Direction::Southbound => "Southbound",
+        Direction::Eastbound => "Eastbound",
+        Direction::Westbound => "Westbound",
+        Direction::Inbound => "Inbound",
+        Direction::Outbound => "Outbound",
+        Direction::Unknown => "Other",
     }
 }
 

@@ -15,11 +15,12 @@ vi.mock('$lib/stores/reducedMotion.js', () => ({
 }));
 
 describe('LineStatusTicker', () => {
-  it('shows "Good service on all lines" when no disruptions', () => {
+  it('shows per-line "Good service" when the single line in scope is healthy', () => {
     render(LineStatusTicker, {
       props: { statuses: [sampleLineStatus] },
     });
-    expect(screen.getByText(/Good service on all lines/)).toBeTruthy();
+    // sampleLineStatus uses line_id "northern" → prettyLineName returns "Northern".
+    expect(screen.getByText(/Northern: Good service/)).toBeTruthy();
   });
 
   it('shows disruption text when a disruption exists', () => {
@@ -56,7 +57,8 @@ describe('LineStatusTicker', () => {
 
   it('handles empty statuses array', () => {
     render(LineStatusTicker, { props: { statuses: [] } });
-    expect(screen.getByText(/Good service on all lines/)).toBeTruthy();
+    // No lines in scope → fall back to the generic message.
+    expect(screen.getByText(/Good service/)).toBeTruthy();
   });
 
   it('handles multiple disruptions joined by bullet', () => {

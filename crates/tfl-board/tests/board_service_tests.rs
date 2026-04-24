@@ -39,7 +39,7 @@ async fn refresh_returns_filtered_board() {
     let cfg = BoardConfig {
         station_id: "940GZZLUBZP".to_string(),
         line_ids: vec!["northern".to_string()],
-        directions: vec![Direction::Northbound { via: None }],
+        directions: vec![Direction::Northbound],
         poll_seconds: 20,
         theme: "classic-amber".to_string(),
     };
@@ -53,8 +53,9 @@ async fn refresh_returns_filtered_board() {
                 arrival.line_id, "northern",
                 "should only have northern arrivals"
             );
-            assert!(
-                matches!(arrival.direction, Direction::Northbound { .. }),
+            assert_eq!(
+                arrival.direction,
+                Direction::Northbound,
                 "should only have northbound arrivals, got: {:?}",
                 arrival.direction
             );
@@ -69,21 +70,159 @@ async fn refresh_returns_filtered_board() {
 }
 
 // ---------------------------------------------------------------------------
-// Test 2: refresh_groups_by_platform (KSX — 4+ lines, multi-platform)
+// Station-agnostic invariants: hold for every arrivals fixture we carry.
+// ---------------------------------------------------------------------------
+
+/// Every `.json` under `fixtures/arrivals/` (single-line BZP, multi-line KSX,
+/// OXC, BNK, …). `build_board` must uphold the same invariants for each —
+/// there is no per-station logic and nothing hardcoded to a particular naptan.
+fn every_arrivals_fixture() -> Vec<String> {
+    let mut ids: Vec<String> = std::fs::read_dir(fixtures_dir().join("arrivals"))
+        .expect("fixtures/arrivals must exist")
+        .filter_map(Result::ok)
+        .filter_map(|entry| {
+            let path = entry.path();
+            if path.extension().and_then(|e| e.to_str()) != Some("json") {
+                return None;
+            }
+            let stem = path.file_stem()?.to_str()?.to_string();
+            // Skip the `.meta.json` sidecars, whose stem still ends in `.meta`.
+            if stem.ends_with(".meta") {
+                return None;
+            }
+            Some(stem)
+        })
+        .collect();
+    ids.sort();
+    assert!(
+        ids.len() >= 2,
+        "expected multiple fixture stations to prove station-agnostic behaviour"
+    );
+    ids
+}
+
+/// For every station fixture: each compass direction appears at most once,
+/// column labels are direction strings (not TfL `platform_name` strings),
+/// and arrivals inside each column are time-sorted ascending. These are
+/// the properties the Tottenham-Court-Road duplicate-column bug violated
+/// and the properties the new `build_board` must satisfy everywhere.
+#[tokio::test]
+async fn build_board_invariants_hold_for_every_station_fixture() {
+    const KNOWN_DIRECTION_LABELS: &[&str] = &[
+        "Northbound",
+        "Southbound",
+        "Eastbound",
+        "Westbound",
+        "Inbound",
+        "Outbound",
+        "Other",
+    ];
+
+    for station_id in every_arrivals_fixture() {
+        let svc = fixture_service("2026-04-23T16:31:00Z");
+        let cfg = BoardConfig::new(&station_id);
+
+        let board = svc
+            .refresh(&cfg)
+            .await
+            .unwrap_or_else(|e| panic!("refresh failed for {station_id}: {e}"));
+
+        // 1. Column name is a direction label — never a raw TfL platform_name.
+        for p in &board.platforms {
+            assert!(
+                KNOWN_DIRECTION_LABELS.contains(&p.name.as_str()),
+                "station {station_id}: column name {:?} is not a compass direction — \
+                 build_board must not leak platform_name strings",
+                p.name
+            );
+            assert!(
+                !p.name.contains(" - "),
+                "station {station_id}: column name {:?} still looks like a TfL \
+                 platform_name (contains ' - ')",
+                p.name
+            );
+        }
+
+        // 2. No duplicate direction columns — the Tottenham-Court-Road bug.
+        let mut seen: std::collections::HashSet<&str> = std::collections::HashSet::new();
+        for p in &board.platforms {
+            assert!(
+                seen.insert(p.name.as_str()),
+                "station {station_id}: direction {:?} appears more than once \
+                 — multi-line platforms must merge into a single column",
+                p.name
+            );
+        }
+
+        // 3. Arrivals sorted by time_to_station ascending within each column.
+        for p in &board.platforms {
+            let times: Vec<i64> = p.arrivals.iter().map(|a| a.time_to_station).collect();
+            let mut sorted = times.clone();
+            sorted.sort();
+            assert_eq!(
+                times, sorted,
+                "station {station_id}: arrivals in {:?} are not time-sorted",
+                p.name
+            );
+            // Every arrival on this column must agree with the column label.
+            for a in &p.arrivals {
+                let expected_label = match a.direction {
+                    Direction::Northbound => "Northbound",
+                    Direction::Southbound => "Southbound",
+                    Direction::Eastbound => "Eastbound",
+                    Direction::Westbound => "Westbound",
+                    Direction::Inbound => "Inbound",
+                    Direction::Outbound => "Outbound",
+                    Direction::Unknown => "Other",
+                };
+                assert_eq!(
+                    p.name, expected_label,
+                    "station {station_id}: arrival with direction {:?} placed in column {:?}",
+                    a.direction, p.name
+                );
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Test 2: refresh_groups_by_direction (KSX — 4+ lines merged per compass direction)
 // ---------------------------------------------------------------------------
 
 #[tokio::test]
-async fn refresh_groups_by_platform() {
+async fn refresh_groups_by_direction() {
     let svc = fixture_service("2026-04-23T16:31:00Z");
     let cfg = BoardConfig::new("940GZZLUKSX"); // no filters — show everything
 
     let board = svc.refresh(&cfg).await.expect("refresh should succeed");
 
-    // KSX fixture has 6 distinct platforms (northern, victoria, piccadilly, metropolitan, hammersmith-city).
+    // KSX mixes N/S (northern, victoria) with E/W (piccadilly, circle, met, H&C).
+    // Direction grouping merges lines per compass direction → at least 2 columns.
     assert!(
-        board.platforms.len() >= 4,
-        "KSX should have at least 4 platforms, got: {}",
+        board.platforms.len() >= 2,
+        "KSX should have at least 2 direction columns, got: {}",
         board.platforms.len()
+    );
+
+    // Column names should be compass directions, not TfL platform strings.
+    for platform in &board.platforms {
+        assert!(
+            !platform.name.contains(" - "),
+            "platform name should be a compass direction, got: {:?}",
+            platform.name
+        );
+    }
+
+    // A multi-line station should have at least one column whose arrivals
+    // span more than one line (the whole point of merging).
+    let mixed_line_column = board.platforms.iter().any(|p| {
+        let lines: std::collections::HashSet<&str> =
+            p.arrivals.iter().map(|a| a.line_id.as_str()).collect();
+        lines.len() > 1
+    });
+    assert!(
+        mixed_line_column,
+        "expected at least one direction column to merge arrivals from multiple lines at KSX"
     );
 
     // Verify that arrivals within each platform are sorted ascending by time_to_station.
@@ -172,12 +311,12 @@ async fn filter_by_directions_empty_matches_all_integration() {
     let has_northbound = board.platforms.iter().any(|p| {
         p.arrivals
             .iter()
-            .any(|a| matches!(a.direction, Direction::Northbound { .. }))
+            .any(|a| a.direction == Direction::Northbound)
     });
     let has_southbound = board.platforms.iter().any(|p| {
         p.arrivals
             .iter()
-            .any(|a| matches!(a.direction, Direction::Southbound { .. }))
+            .any(|a| a.direction == Direction::Southbound)
     });
     assert!(
         has_northbound,

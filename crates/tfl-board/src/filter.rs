@@ -10,14 +10,11 @@ use tfl_domain::{Arrival, Direction};
 /// - If `cfg.line_ids` is empty, no line filter is applied.
 /// - If `cfg.directions` is empty, no direction filter is applied.
 /// - Both filters are AND-ed together.
-///
-/// Direction matching uses [`direction_matches`], which compares only the
-/// variant discriminant (ignoring the `via` branch on Northern line).
 pub fn apply_filters(arrivals: Vec<Arrival>, cfg: &BoardConfig) -> Vec<Arrival> {
     arrivals
         .into_iter()
         .filter(|a| line_matches(&a.line_id, &cfg.line_ids))
-        .filter(|a| direction_matches(&a.direction, &cfg.directions))
+        .filter(|a| direction_matches(a.direction, &cfg.directions))
         .collect()
 }
 
@@ -33,28 +30,11 @@ fn line_matches(line_id: &str, filter: &[String]) -> bool {
 
 /// Returns `true` if `direction` matches any entry in `filter`.
 /// Returns `true` unconditionally when `filter` is empty.
-///
-/// Matching is by variant discriminant only — a `Northbound { via: Some(Bank) }`
-/// arrival matches a `Northbound { via: None }` filter entry.
-fn direction_matches(direction: &Direction, filter: &[Direction]) -> bool {
+fn direction_matches(direction: Direction, filter: &[Direction]) -> bool {
     if filter.is_empty() {
         return true;
     }
-    filter.iter().any(|f| direction_variant_eq(direction, f))
-}
-
-/// Compare two `Direction` values by variant only, ignoring the `via` field.
-fn direction_variant_eq(a: &Direction, b: &Direction) -> bool {
-    matches!(
-        (a, b),
-        (Direction::Northbound { .. }, Direction::Northbound { .. })
-            | (Direction::Southbound { .. }, Direction::Southbound { .. })
-            | (Direction::Eastbound, Direction::Eastbound)
-            | (Direction::Westbound, Direction::Westbound)
-            | (Direction::Inbound, Direction::Inbound)
-            | (Direction::Outbound, Direction::Outbound)
-            | (Direction::Unknown, Direction::Unknown)
-    )
+    filter.iter().any(|f| *f == direction)
 }
 
 // ---------------------------------------------------------------------------
@@ -74,6 +54,7 @@ mod tests {
             line_id: line_id.to_string(),
             line_name: line_id.to_string(),
             direction,
+            northern_branch: None,
             destination_name: "Destination".to_string(),
             towards: "Destination".to_string(),
             current_location: "At station".to_string(),
@@ -86,8 +67,8 @@ mod tests {
     #[test]
     fn filter_by_line_ids_empty_matches_all() {
         let arrivals = vec![
-            make_arrival("northern", Direction::Northbound { via: None }),
-            make_arrival("victoria", Direction::Northbound { via: None }),
+            make_arrival("northern", Direction::Northbound),
+            make_arrival("victoria", Direction::Northbound),
             make_arrival("piccadilly", Direction::Westbound),
         ];
         let cfg = BoardConfig {
@@ -104,8 +85,8 @@ mod tests {
     #[test]
     fn filter_by_directions_empty_matches_all() {
         let arrivals = vec![
-            make_arrival("northern", Direction::Northbound { via: None }),
-            make_arrival("northern", Direction::Southbound { via: None }),
+            make_arrival("northern", Direction::Northbound),
+            make_arrival("northern", Direction::Southbound),
         ];
         let cfg = BoardConfig {
             station_id: "TEST".to_string(),
@@ -121,9 +102,9 @@ mod tests {
     #[test]
     fn filter_single_line_id() {
         let arrivals = vec![
-            make_arrival("northern", Direction::Northbound { via: None }),
-            make_arrival("victoria", Direction::Northbound { via: None }),
-            make_arrival("northern", Direction::Southbound { via: None }),
+            make_arrival("northern", Direction::Northbound),
+            make_arrival("victoria", Direction::Northbound),
+            make_arrival("northern", Direction::Southbound),
         ];
         let cfg = BoardConfig {
             station_id: "TEST".to_string(),
@@ -140,8 +121,8 @@ mod tests {
     #[test]
     fn filter_line_id_case_insensitive() {
         let arrivals = vec![
-            make_arrival("northern", Direction::Northbound { via: None }),
-            make_arrival("victoria", Direction::Northbound { via: None }),
+            make_arrival("northern", Direction::Northbound),
+            make_arrival("victoria", Direction::Northbound),
         ];
         let cfg = BoardConfig {
             station_id: "TEST".to_string(),
@@ -158,19 +139,14 @@ mod tests {
     #[test]
     fn filter_by_direction_northbound() {
         let arrivals = vec![
-            make_arrival("northern", Direction::Northbound { via: None }),
-            make_arrival("northern", Direction::Southbound { via: None }),
-            make_arrival(
-                "northern",
-                Direction::Northbound {
-                    via: Some(tfl_domain::direction::NorthernBranch::CharingCross),
-                },
-            ),
+            make_arrival("northern", Direction::Northbound),
+            make_arrival("northern", Direction::Southbound),
+            make_arrival("northern", Direction::Northbound),
         ];
         let cfg = BoardConfig {
             station_id: "TEST".to_string(),
             line_ids: vec![],
-            directions: vec![Direction::Northbound { via: None }],
+            directions: vec![Direction::Northbound],
             poll_seconds: 20,
             theme: "classic-amber".to_string(),
         };
@@ -179,27 +155,27 @@ mod tests {
         assert_eq!(result.len(), 2, "both Northbound variants should match");
         assert!(result
             .iter()
-            .all(|a| matches!(a.direction, Direction::Northbound { .. })));
+            .all(|a| a.direction == Direction::Northbound));
     }
 
     #[test]
     fn filter_combined_line_and_direction() {
         let arrivals = vec![
-            make_arrival("northern", Direction::Northbound { via: None }),
-            make_arrival("northern", Direction::Southbound { via: None }),
-            make_arrival("victoria", Direction::Northbound { via: None }),
+            make_arrival("northern", Direction::Northbound),
+            make_arrival("northern", Direction::Southbound),
+            make_arrival("victoria", Direction::Northbound),
         ];
         let cfg = BoardConfig {
             station_id: "TEST".to_string(),
             line_ids: vec!["northern".to_string()],
-            directions: vec![Direction::Northbound { via: None }],
+            directions: vec![Direction::Northbound],
             poll_seconds: 20,
             theme: "classic-amber".to_string(),
         };
         let result = apply_filters(arrivals, &cfg);
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].line_id, "northern");
-        assert!(matches!(result[0].direction, Direction::Northbound { .. }));
+        assert!(result[0].direction == Direction::Northbound);
     }
 
     #[test]
