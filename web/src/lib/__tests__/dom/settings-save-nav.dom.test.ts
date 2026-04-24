@@ -6,6 +6,7 @@
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/svelte';
+import { get } from 'svelte/store';
 import { mockInvoke, setMockHandler, resetMockHandlers, sampleConfig } from '$lib/ipc/mock.js';
 import { config, configError } from '$lib/stores/config.js';
 import { goto } from '$app/navigation';
@@ -53,10 +54,11 @@ describe('Settings — save navigates back to /', () => {
     const saveBtn = await waitFor(() => screen.getByRole('button', { name: /save settings/i }));
     await fireEvent.click(saveBtn);
 
-    // Give any pending microtasks a chance to resolve.
+    // The configError store receives the wrapped message from updateConfig.
     await waitFor(() => {
-      // configError is set by the store on failure — asserts the save path ran.
-      expect(screen.queryAllByRole('alert').length).toBeGreaterThan(0);
+      const err = get(configError);
+      expect(err).not.toBeNull();
+      expect(err).toContain('station_id invalid');
     });
 
     expect(goto).not.toHaveBeenCalledWith('/');

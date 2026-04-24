@@ -36,8 +36,6 @@
   let appKeyStatus = $state<string | null>(null);
   let appKeySaving = $state(false);
   let saving = $state(false);
-  let saveError = $state<string | null>(null);
-  let saveSuccess = $state(false);
 
   const DIRECTIONS: { id: Direction; label: string }[] = [
     { id: 'Northbound', label: 'Northbound' },
@@ -125,30 +123,20 @@
 
   async function handleSave(): Promise<void> {
     saving = true;
-    saveError = null;
-    saveSuccess = false;
-    try {
-      await updateConfig({
-        station_id: stationId,
-        line_ids: lineIds,
-        directions: selectedDirections,
-        poll_seconds: Math.min(300, Math.max(5, pollSeconds)),
-        theme,
-      });
-      // updateConfig succeeded. Route back to the board so the user sees
-      // the new config take effect (the stream watcher in Rust will emit a
-      // fresh board). On failure we stay here and surface $configError.
-      if ($configError === null) {
-        await goto('/');
-        return;
-      }
-      // Soft failure: updateConfig wrote configError but didn't throw — keep
-      // the user on-page so they can see/dismiss the banner.
-      saveSuccess = false;
-    } catch (err: unknown) {
-      saveError = err instanceof Error ? err.message : String(err);
-    } finally {
-      saving = false;
+    // `updateConfig` catches its own errors and drives the `$configError`
+    // store (setting it on failure, clearing it on success) — it never
+    // throws. Route back to the board on success; stay on-page when the
+    // store holds an error banner.
+    await updateConfig({
+      station_id: stationId,
+      line_ids: lineIds,
+      directions: selectedDirections,
+      poll_seconds: Math.min(300, Math.max(5, pollSeconds)),
+      theme,
+    });
+    saving = false;
+    if ($configError === null) {
+      await goto('/');
     }
   }
 
@@ -388,12 +376,6 @@
 
     <!-- Save button -->
     <div class="settings__actions">
-      {#if saveError}
-        <p class="settings__save-error" role="alert">{saveError}</p>
-      {/if}
-      {#if saveSuccess}
-        <p class="settings__save-success" role="status" aria-live="polite">Saved!</p>
-      {/if}
       <button
         type="button"
         class="settings__btn settings__btn--primary"
@@ -714,19 +696,5 @@
     padding-top: 1rem;
     border-top: 1px solid var(--row-divider);
     padding-bottom: 2rem;
-  }
-
-  .settings__save-error {
-    font-family: var(--font-board);
-    font-size: 0.95rem;
-    color: var(--stale-accent);
-    margin: 0;
-  }
-
-  .settings__save-success {
-    font-family: var(--font-board);
-    font-size: 0.95rem;
-    color: var(--accent);
-    margin: 0;
   }
 </style>
