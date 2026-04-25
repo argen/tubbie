@@ -27,6 +27,13 @@ jobs:
       - name: Install dependencies
         run: npm ci --ignore-scripts
 
+      # `--ignore-scripts` blocks the `prepare` hook (svelte-kit sync),
+      # which generates `.svelte-kit/` types ESLint and svelte-check
+      # need. Re-run it explicitly here so the install-time RCE class
+      # stays neutralised but our build still works.
+      - name: SvelteKit sync (regenerate types)
+        run: npx --no-install svelte-kit sync
+
       - name: Assert cookie >= 0.7 (GHSA-pxg6-pf52-xh8x)
         run: |
           npm ls cookie --json --all \
