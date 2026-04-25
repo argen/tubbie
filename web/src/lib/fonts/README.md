@@ -4,16 +4,17 @@ All fonts are self-hosted under the **SIL Open Font Licence (OFL) 1.1**.
 They must never be served from a CDN; they are bundled in this directory
 and loaded via `@font-face` with `font-display: block` in `app.css`.
 
-## Geist Pixel Square / Circle
+## Geist Pixel Grid / Square / Circle
 
-- **Files**: `GeistPixel-Square.woff2`, `GeistPixel-Circle.woff2`
+- **Files**: `GeistPixel-Grid.woff2`, `GeistPixel-Square.woff2`, `GeistPixel-Circle.woff2`
 - **Licence text**: `GeistPixel-OFL.txt`
 - **Authors**: Vercel
-- **Source**: https://github.com/vercel/geist-font (v1.8.0)
+- **Source**: https://github.com/vercel/geist-font (main branch)
 - **Licence**: SIL Open Font Licence 1.1 — https://openfontlicense.org/open-font-license-official-text/
-- **Use in tubbie**: primary dot-matrix display font. `Square` is the default
-  (exposed as `--font-board`); `Circle` is bundled for future per-theme
-  variant switching and is not currently referenced by any stylesheet.
+- **Use in tubbie**: `Grid` is the primary dot-matrix display font (exposed first in
+  `--font-board`); its per-glyph grid of squares with visible separator lines gives the
+  closest match to a real dot-matrix transit display. `Square` and `Circle` are retained
+  as fallbacks so any codepoint missing from Grid degrades gracefully without layout shift.
 
 ## VT323
 
@@ -21,9 +22,8 @@ and loaded via `@font-face` with `font-display: block` in `app.css`.
 - **Authors**: Peter Hull
 - **Source**: https://fonts.google.com/specimen/VT323
 - **Licence**: SIL Open Font Licence 1.1 — https://openfontlicense.org/open-font-license-official-text/
-- **Use in tubbie**: fallback behind Geist Pixel Square in `--font-board`.
-  Retained for one release as a safety net for any codepoint Geist Pixel
-  does not cover.
+- **Use in tubbie**: fallback behind Geist Pixel Grid / Square / Circle in `--font-board`.
+  Retained as a safety net for any codepoint Geist Pixel does not cover.
 
 ## SIL OFL 1.1 Summary
 
