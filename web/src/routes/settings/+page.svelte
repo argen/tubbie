@@ -15,7 +15,7 @@
   import { debounce } from '$lib/utils/debounce.js';
   import { shortStationName } from '$lib/utils/format.js';
   import type { Direction, LineRef, Station } from '$lib/ipc/types.js';
-  import { onMount } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
 
   // ---------------------------------------------------------------------------
   // Local form state (mirrors config; auto-persisted on change)
@@ -177,7 +177,11 @@
     } else {
       lineIds = [...lineIds, lineId];
     }
-    void persist();
+    // Debounce: a 12-chip toggle burst becomes one save_config carrying
+    // the final state, instead of 12 disk writes + 12 cfg_tx.send round
+    // trips. The flushPending hook in onDestroy / beforeunload makes
+    // sure a click made just before closing Settings still saves.
+    persistDebounced();
   }
 
   function toggleDirection(dir: Direction): void {
@@ -186,14 +190,16 @@
     } else {
       selectedDirections = [...selectedDirections, dir];
     }
-    void persist();
+    persistDebounced();
   }
 
   function handleThemeSelect(newTheme: ThemeId): void {
     theme = newTheme;
-    // Live preview — apply to DOM immediately, then persist.
+    // Live preview — apply to DOM immediately, then debounce the persist.
+    // The user sees the theme change instantly; the disk write coalesces
+    // if they tap through several themes in quick succession.
     applyTheme(newTheme);
-    void persist();
+    persistDebounced();
   }
 
   function handlePollInput(): void {
@@ -201,6 +207,30 @@
     // so we don't slam save_config → stream-restart 295 times on a full sweep.
     persistDebounced();
   }
+
+  /**
+   * Run any pending debounced persist immediately. Called on
+   * `onDestroy` (settings unmount) and `beforeunload` (window close)
+   * so a click made just inside the debounce window isn't lost.
+   */
+  function flushPending(): void {
+    persistDebounced.flush();
+  }
+
+  // beforeunload fires when the window/tab closes or the user navigates
+  // away via the browser. In Tauri windowed mode this is the only signal
+  // we get before the renderer tears down — `onDestroy` covers SPA route
+  // changes back to "/", but a hard close goes through here.
+  if (typeof window !== 'undefined') {
+    window.addEventListener('beforeunload', flushPending);
+  }
+
+  onDestroy(() => {
+    flushPending();
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('beforeunload', flushPending);
+    }
+  });
 
   async function handleDisplayModeChange(next: DisplayMode): Promise<void> {
     pendingDisplayMode = next;
