@@ -8,6 +8,14 @@
    ------------------------------------------------------------ */
 
 @font-face {
+  font-family: 'Geist Pixel Grid';
+  src: url('/src/lib/fonts/GeistPixel-Grid.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+
+@font-face {
   font-family: 'Geist Pixel Square';
   src: url('/src/lib/fonts/GeistPixel-Square.woff2') format('woff2');
   font-weight: 400;
@@ -39,8 +47,7 @@
    ------------------------------------------------------------ */
 
 :root {
-  --font-board:
-    'Geist Pixel Square', 'VT323', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  --font-board: 'Geist Pixel Grid', 'Geist Pixel Square', 'Geist Pixel Circle', 'VT323', monospace;
 
   /* ------------------------------------------------------------
      TfL official line colours. Theme-agnostic — rendered as a
