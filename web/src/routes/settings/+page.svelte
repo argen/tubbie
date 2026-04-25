@@ -15,7 +15,7 @@
   import { debounce } from '$lib/utils/debounce.js';
   import { shortStationName } from '$lib/utils/format.js';
   import type { Direction, LineRef, Station } from '$lib/ipc/types.js';
-  import { onMount } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
 
   // ---------------------------------------------------------------------------
   // Local form state (mirrors config; auto-persisted on change)
@@ -92,10 +92,11 @@
    * Persist the current form state. `updateConfig` catches its own errors
    * and drives `$configError`, so callers never need to try/catch.
    *
-   * The backend's `save_config` aborts the current stream; the watcher loop
-   * in `src-tauri/src/lib.rs` restarts it with the new config. No explicit
-   * navigation needed — the board page subscribes to the same `$config`
-   * store and updates in place.
+   * The backend's `save_config` publishes the new config to a watch channel
+   * the running stream observes; the stream applies the change on its next
+   * tick (or immediately for `poll_seconds`/`station_id`) without
+   * restarting. The board page subscribes to the same `$config` store and
+   * updates in place — no explicit navigation needed.
    */
   async function persist(): Promise<void> {
     if (saveStateTimer !== null) {
@@ -121,8 +122,9 @@
     }, 1500);
   }
 
-  // Slider events fire on every tick of the drag; each persist round-trips
-  // through save_config + stream-restart, so debounce to the trailing edge.
+  // Slider events fire on every tick of the drag, and chip / direction /
+  // theme toggles can come in bursts. Debounce to the trailing edge so a
+  // burst becomes one disk write and one watch-channel publish.
   const persistDebounced = debounce(persist, 400);
 
   function handleStationSelect(station: Station): void {
@@ -177,7 +179,11 @@
     } else {
       lineIds = [...lineIds, lineId];
     }
-    void persist();
+    // Debounce: a 12-chip toggle burst becomes one save_config carrying
+    // the final state, instead of 12 disk writes + 12 cfg_tx.send round
+    // trips. The flushPending hook in onDestroy / beforeunload makes
+    // sure a click made just before closing Settings still saves.
+    persistDebounced();
   }
 
   function toggleDirection(dir: Direction): void {
@@ -186,14 +192,16 @@
     } else {
       selectedDirections = [...selectedDirections, dir];
     }
-    void persist();
+    persistDebounced();
   }
 
   function handleThemeSelect(newTheme: ThemeId): void {
     theme = newTheme;
-    // Live preview — apply to DOM immediately, then persist.
+    // Live preview — apply to DOM immediately, then debounce the persist.
+    // The user sees the theme change instantly; the disk write coalesces
+    // if they tap through several themes in quick succession.
     applyTheme(newTheme);
-    void persist();
+    persistDebounced();
   }
 
   function handlePollInput(): void {
@@ -201,6 +209,30 @@
     // so we don't slam save_config → stream-restart 295 times on a full sweep.
     persistDebounced();
   }
+
+  /**
+   * Run any pending debounced persist immediately. Called on
+   * `onDestroy` (settings unmount) and `beforeunload` (window close)
+   * so a click made just inside the debounce window isn't lost.
+   */
+  function flushPending(): void {
+    persistDebounced.flush();
+  }
+
+  // beforeunload fires when the window/tab closes or the user navigates
+  // away via the browser. In Tauri windowed mode this is the only signal
+  // we get before the renderer tears down — `onDestroy` covers SPA route
+  // changes back to "/", but a hard close goes through here.
+  if (typeof window !== 'undefined') {
+    window.addEventListener('beforeunload', flushPending);
+  }
+
+  onDestroy(() => {
+    flushPending();
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('beforeunload', flushPending);
+    }
+  });
 
   async function handleDisplayModeChange(next: DisplayMode): Promise<void> {
     pendingDisplayMode = next;

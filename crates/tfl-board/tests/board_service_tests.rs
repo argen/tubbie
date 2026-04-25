@@ -14,6 +14,20 @@ use tfl_client::fixture::FixtureTflHttp;
 use tfl_client::http::TflHttp;
 use tfl_client::TflClient;
 use tfl_domain::Direction;
+use tokio::sync::watch;
+
+/// Build a `watch::Receiver<BoardConfig>` from a single owned config.
+/// Mirrors the production wiring where `AppState` holds the sender and the
+/// stream task takes a clone of the receiver.
+fn cfg_rx_from(cfg: BoardConfig) -> watch::Receiver<BoardConfig> {
+    let (tx, rx) = watch::channel(cfg);
+    // Keep the sender alive for the test's lifetime by leaking it: stream
+    // tests exercise the receive path, not sender drop semantics. The
+    // alternative — returning the sender as well — would force every existing
+    // call site to thread it through unused.
+    Box::leak(Box::new(tx));
+    rx
+}
 
 /// Path to the workspace fixtures directory, resolved from the crate manifest.
 fn fixtures_dir() -> PathBuf {
@@ -24,7 +38,7 @@ fn fixtures_dir() -> PathBuf {
 /// Build a `BoardService` backed by real fixture files and a pinned clock.
 fn fixture_service(clock_rfc3339: &str) -> BoardService<FixtureTflHttp, FakeClock> {
     let http = FixtureTflHttp::new(fixtures_dir());
-    let client = TflClient::new(http);
+    let client = Arc::new(TflClient::new(http));
     let clock = FakeClock::from_rfc3339(clock_rfc3339).unwrap();
     BoardService::new(client, clock)
 }
@@ -392,7 +406,7 @@ impl TflHttp for CountingHttp {
 #[tokio::test(start_paused = true)]
 async fn stream_emits_on_interval() {
     let (http, count) = CountingHttp::new(fixtures_dir());
-    let client = TflClient::new(http);
+    let client = Arc::new(TflClient::new(http));
     let clock = FakeClock::from_rfc3339("2026-04-23T12:00:00Z").unwrap();
     let svc = BoardService::new(client, clock);
 
@@ -404,7 +418,7 @@ async fn stream_emits_on_interval() {
         theme: "classic-amber".to_string(),
     };
 
-    let mut stream = Box::pin(svc.stream(cfg));
+    let mut stream = Box::pin(svc.stream(cfg_rx_from(cfg)));
 
     // First board emits immediately (first tick fires at t=0).
     let board1 = stream
@@ -488,7 +502,7 @@ async fn stream_backpressure_skips_tick_when_refresh_slow() {
     let fetch_delay = std::time::Duration::from_secs(poll_secs * 2); // 4 seconds
 
     let (http, count) = SlowHttp::new(fixtures_dir(), fetch_delay);
-    let client = TflClient::new(http);
+    let client = Arc::new(TflClient::new(http));
     let clock = FakeClock::from_rfc3339("2026-04-23T12:00:00Z").unwrap();
     let svc = BoardService::new(client, clock);
 
@@ -500,7 +514,7 @@ async fn stream_backpressure_skips_tick_when_refresh_slow() {
         theme: "classic-amber".to_string(),
     };
 
-    let stream = Box::pin(svc.stream(cfg));
+    let stream = Box::pin(svc.stream(cfg_rx_from(cfg)));
 
     // Drive the stream for 14 seconds of fake time.
     // Without backpressure, we'd expect 14/2 = 7 fetches.
@@ -586,7 +600,7 @@ impl TflHttp for FailAfterNHttp {
 #[tokio::test(start_paused = true)]
 async fn stream_on_fetch_failure_emits_stale_board() {
     let http = FailAfterNHttp::new(fixtures_dir(), 3); // first 3 succeed, then fail
-    let client = TflClient::new(http);
+    let client = Arc::new(TflClient::new(http));
 
     let known_time = "2026-04-23T12:00:00Z";
     let clock = FakeClock::from_rfc3339(known_time).unwrap();
@@ -601,7 +615,7 @@ async fn stream_on_fetch_failure_emits_stale_board() {
         theme: "classic-amber".to_string(),
     };
 
-    let mut stream = Box::pin(svc.stream(cfg));
+    let mut stream = Box::pin(svc.stream(cfg_rx_from(cfg)));
 
     // Collect 4 boards: 3 successful + 1 stale.
     let mut boards = Vec::new();
@@ -703,7 +717,7 @@ impl TflHttp for DropSignalHttp {
 async fn stream_cancellation_drops_in_flight() {
     let slow_delay = std::time::Duration::from_secs(30);
     let (http, mut signal_rx) = DropSignalHttp::new(fixtures_dir(), slow_delay);
-    let client = TflClient::new(http);
+    let client = Arc::new(TflClient::new(http));
     let clock = FakeClock::from_rfc3339("2026-04-23T12:00:00Z").unwrap();
     let svc = BoardService::new(client, clock);
 
@@ -715,7 +729,7 @@ async fn stream_cancellation_drops_in_flight() {
         theme: "classic-amber".to_string(),
     };
 
-    let stream = Box::pin(svc.stream(cfg));
+    let stream = Box::pin(svc.stream(cfg_rx_from(cfg)));
 
     // Spawn the stream's first poll as a separate task so we can drive the
     // runtime freely. The task will start the unfold closure: tick fires at
@@ -809,7 +823,7 @@ async fn stream_stale_transition_atomic() {
     // Pattern: success, fail, fail, success, fail
     let pattern = vec![true, false, false, true, false];
     let http = PatternHttp::new(fixtures_dir(), pattern);
-    let client = TflClient::new(http);
+    let client = Arc::new(TflClient::new(http));
     let clock = FakeClock::from_rfc3339("2026-04-23T12:00:00Z").unwrap();
     let svc = BoardService::new(client, clock);
 
@@ -822,7 +836,7 @@ async fn stream_stale_transition_atomic() {
         theme: "classic-amber".to_string(),
     };
 
-    let mut stream = Box::pin(svc.stream(cfg));
+    let mut stream = Box::pin(svc.stream(cfg_rx_from(cfg)));
 
     // Helper to advance time and get next board.
     async fn next_board(
@@ -903,7 +917,7 @@ impl TflHttp for AlwaysErrorHttp {
 #[tokio::test(start_paused = true)]
 async fn stream_terminates_after_fatal_error_no_last_ok() {
     let http = AlwaysErrorHttp;
-    let client = TflClient::new(http);
+    let client = Arc::new(TflClient::new(http));
     let clock = FakeClock::from_rfc3339("2026-04-23T12:00:00Z").unwrap();
     let svc = BoardService::new(client, clock);
 
@@ -916,7 +930,7 @@ async fn stream_terminates_after_fatal_error_no_last_ok() {
         theme: "classic-amber".to_string(),
     };
 
-    let mut stream = Box::pin(svc.stream(cfg));
+    let mut stream = Box::pin(svc.stream(cfg_rx_from(cfg)));
 
     // First poll — first tick fires immediately at t=0, fetch fails, no last_ok.
     // Should emit Some(Err(_)).
@@ -946,7 +960,7 @@ async fn stream_terminates_after_fatal_error_no_last_ok() {
 async fn stream_continues_with_stale_fallback_when_last_ok_exists() {
     // Succeed once, then always fail.
     let http = FailAfterNHttp::new(fixtures_dir(), 1);
-    let client = TflClient::new(http);
+    let client = Arc::new(TflClient::new(http));
     let clock = FakeClock::from_rfc3339("2026-04-23T12:00:00Z").unwrap();
     let svc = BoardService::new(client, clock);
 
@@ -959,7 +973,7 @@ async fn stream_continues_with_stale_fallback_when_last_ok_exists() {
         theme: "classic-amber".to_string(),
     };
 
-    let mut stream = Box::pin(svc.stream(cfg));
+    let mut stream = Box::pin(svc.stream(cfg_rx_from(cfg)));
 
     // First item: successful fetch.
     let first = stream.next().await;
