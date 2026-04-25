@@ -390,7 +390,7 @@ mod tests {
     use super::*;
     use crate::state::MemoryConfigStore;
     use std::sync::Arc;
-    use tfl_board::BoardService;
+    use tfl_board::{BoardService, LifecyclePhase};
     use tfl_client::{clock::FakeClock, fixture::FixtureTflHttp, TflClient};
     use tokio::sync::{watch, RwLock};
 
@@ -423,6 +423,7 @@ mod tests {
             stream_abort: Arc::new(RwLock::new(None)),
             cfg_tx: Arc::new(cfg_tx),
             display_mode: "window".to_string(),
+            lifecycle: Arc::new(LifecyclePhase::always_active()),
         }
     }
 
@@ -461,15 +462,18 @@ mod tests {
         let (cfg_tx, cfg_rx) = watch::channel::<BoardConfig>(seed);
         let cfg_tx = Arc::new(cfg_tx);
 
+        let lifecycle = Arc::new(LifecyclePhase::always_active());
+        let phase_rx = lifecycle.subscribe();
         let state = AppState {
             board_service,
             config_store,
             stream_abort: Arc::new(RwLock::new(None)),
             cfg_tx,
             display_mode: "window".to_string(),
+            lifecycle,
         };
 
-        let stream: BoardStream = Box::pin(stream_svc.stream(cfg_rx));
+        let stream: BoardStream = Box::pin(stream_svc.stream(cfg_rx, phase_rx));
 
         (state, stream)
     }

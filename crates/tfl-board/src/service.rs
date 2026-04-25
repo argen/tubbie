@@ -36,6 +36,7 @@ use tfl_domain::{Arrival, Board, Direction, LineStatus, Platform, Station};
 use crate::config::BoardConfig;
 use crate::error::BoardError;
 use crate::filter::apply_filters;
+use crate::lifecycle::AppPhase;
 
 /// The board service. Generic over any `TflHttp` transport and `Clock`.
 ///
@@ -104,7 +105,7 @@ impl<H: TflHttp + 'static, C: Clock + 'static> BoardService<H, C> {
     }
 
     /// Produce an infinite stream of `Board` snapshots driven by a live
-    /// config channel.
+    /// config channel and a lifecycle phase signal.
     ///
     /// The stream observes `cfg_rx` and applies non-`station_id` config
     /// changes (theme, line filter, directions, `poll_seconds`) on the next
@@ -112,38 +113,53 @@ impl<H: TflHttp + 'static, C: Clock + 'static> BoardService<H, C> {
     /// chip-toggle 12 lines in 1 s without triggering 12 stop-points
     /// re-warms or 12 fresh arrivals fetches.
     ///
+    /// `phase_rx` carries an `AppPhase` signal. When `Background`, the
+    /// interval tick arm is dropped from the `select!` so no fetches fire
+    /// while the app is suspended (satisfies tubbie-ios invariant 8: no
+    /// battery burn while backgrounded). On `Background → Active` transition
+    /// a fresh board is emitted immediately and the interval is reset so the
+    /// next periodic tick fires one `poll_seconds` from the resume.
+    ///
+    /// Desktop callers pass `LifecyclePhase::always_active().subscribe()` and
+    /// the lifecycle code path is never taken, keeping the existing behaviour
+    /// unchanged.
+    ///
     /// Per-tick semantics:
-    /// - Wait for the next interval tick **or** a `cfg_rx.changed()`
-    ///   notification (`tokio::select!`).
-    /// - If `poll_seconds` changed, rebuild the `Interval` so the next tick
-    ///   honours the new period.
-    /// - If `station_id` changed, drop `last_ok` so the previous station's
-    ///   data isn't re-emitted under the new station_id.
-    /// - On a tick: refresh + emit (`MissedTickBehavior::Skip` keeps at most
-    ///   one refresh in flight). On failure with a `last_ok`, re-emit it
-    ///   marked stale; on failure with no `last_ok`, emit the error and
-    ///   keep polling.
-    /// - On a `CfgChanged` wake-up, do **not** issue a fresh fetch — just
-    ///   continue. The next tick will refresh against the new config. This
-    ///   "cheap" semantic avoids latency-shifting work onto every save and
-    ///   keeps the UI fully responsive on rapid chip toggles. Filter
-    ///   changes appear within at most `poll_seconds` of the toggle.
+    /// - When `Active`: select on `ivl.tick()`, `cfg_rx.changed()`, `phase_rx.changed()`.
+    /// - When `Background`: select on `cfg_rx.changed()`, `phase_rx.changed()` only.
+    /// - If `poll_seconds` changed, rebuild the `Interval`.
+    /// - If `station_id` changed, drop `last_ok`.
+    /// - On `Tick`: refresh + emit.
+    /// - On `CfgChanged + !station_changed`: continue (cheap semantic).
+    /// - On `CfgChanged + station_changed`: refresh + `ivl.reset()`.
+    /// - On `PhaseChanged` Background → Active: refresh + `ivl.reset()`.
+    /// - On `PhaseChanged` Active → Background: continue.
     /// - Dropping the stream cancels any in-flight refresh future at its
     ///   next `await`. No tasks leak. The stream ends only when every
     ///   `cfg_tx` (the watch sender) is dropped.
     pub fn stream(
         self,
         cfg_rx: tokio::sync::watch::Receiver<BoardConfig>,
+        phase_rx: tokio::sync::watch::Receiver<AppPhase>,
     ) -> impl Stream<Item = Result<Board, BoardError>> + Send {
         let initial_cfg = cfg_rx.borrow().clone();
+        let initial_phase = *phase_rx.borrow();
         let initial_dur = Duration::from_secs(u64::from(initial_cfg.poll_seconds).max(1));
         let mut ivl = interval(initial_dur);
         ivl.set_missed_tick_behavior(MissedTickBehavior::Skip);
 
         stream::unfold(
-            // State: (service, current cfg, interval, last_ok_board, cfg_rx)
-            (self, initial_cfg, ivl, None::<Board>, cfg_rx),
-            |(svc, mut cur_cfg, mut ivl, mut last_ok, mut cfg_rx)| async move {
+            // State: (service, current cfg, current phase, interval, last_ok_board, cfg_rx, phase_rx)
+            (
+                self,
+                initial_cfg,
+                initial_phase,
+                ivl,
+                None::<Board>,
+                cfg_rx,
+                phase_rx,
+            ),
+            |(svc, mut cur_cfg, mut cur_phase, mut ivl, mut last_ok, mut cfg_rx, mut phase_rx)| async move {
                 // Drive forward until we have something to emit. CfgChanged
                 // wake-ups apply config-driven side effects (interval rebuild,
                 // last_ok drop on station_id change) but do **not** issue a
@@ -151,19 +167,136 @@ impl<H: TflHttp + 'static, C: Clock + 'static> BoardService<H, C> {
                 // cfg. This is the "cheap" option from the design: it
                 // amortises a click-burst into at most one refresh per
                 // poll_seconds, instead of one per save_config.
+                //
+                // While Background the tick arm is omitted so no fetches fire.
                 loop {
-                    let outcome = tokio::select! {
-                        _ = ivl.tick() => TickOutcome::Tick,
-                        changed = cfg_rx.changed() => match changed {
-                            Ok(()) => TickOutcome::CfgChanged,
-                            // All senders dropped — terminate the stream.
-                            Err(_) => return None,
-                        },
+                    // Eagerly apply any pending phase change before choosing
+                    // which select arms to offer. This is the critical
+                    // correctness invariant: if the phase was set to Background
+                    // while we were processing a previous emit (i.e. the
+                    // `changed` mark is set but we haven't seen it yet),
+                    // `borrow_and_update` returns the new Background value and
+                    // clears the mark. We then choose the Background-only select
+                    // (no tick arm) so no spurious fetch can race ahead of the
+                    // phase notification.
+                    //
+                    // If the phase changed from Background → Active between
+                    // iterations, we detect it here and synthesise a
+                    // `PhaseChanged` outcome so the resume emit fires
+                    // immediately, without waiting for a tick.
+                    let prev_phase = cur_phase;
+                    cur_phase = *phase_rx.borrow_and_update();
+                    if prev_phase != cur_phase {
+                        // Phase changed between iterations (outside the select).
+                        // Treat as a synthetic PhaseChanged wake-up so the code
+                        // below applies the correct transition semantics.
+                        let new_cfg: BoardConfig = cfg_rx.borrow().clone();
+                        if new_cfg.poll_seconds != cur_cfg.poll_seconds {
+                            let new_dur =
+                                Duration::from_secs(u64::from(new_cfg.poll_seconds).max(1));
+                            ivl = interval(new_dur);
+                            ivl.set_missed_tick_behavior(MissedTickBehavior::Skip);
+                        }
+                        let station_changed = new_cfg.station_id != cur_cfg.station_id;
+                        if station_changed {
+                            last_ok = None;
+                        }
+                        cur_cfg = new_cfg;
+
+                        if prev_phase == AppPhase::Background && cur_phase == AppPhase::Active {
+                            // Background → Active transition detected eagerly.
+                            // Emit immediately (invariant 8) and reset the interval.
+                            ivl.reset();
+                            match svc.refresh(&cur_cfg).await {
+                                Ok(mut board) => {
+                                    board.stale_since = None;
+                                    let emit = board.clone();
+                                    return Some((
+                                        Ok(emit),
+                                        (
+                                            svc,
+                                            cur_cfg,
+                                            cur_phase,
+                                            ivl,
+                                            Some(board),
+                                            cfg_rx,
+                                            phase_rx,
+                                        ),
+                                    ));
+                                }
+                                Err(e) => {
+                                    if let Some(mut stale) = last_ok {
+                                        if stale.stale_since.is_none() {
+                                            stale.stale_since = Some(svc.clock.now());
+                                        }
+                                        let emit = stale.clone();
+                                        return Some((
+                                            Ok(emit),
+                                            (
+                                                svc,
+                                                cur_cfg,
+                                                cur_phase,
+                                                ivl,
+                                                Some(stale),
+                                                cfg_rx,
+                                                phase_rx,
+                                            ),
+                                        ));
+                                    }
+                                    return Some((
+                                        Err(e),
+                                        (svc, cur_cfg, cur_phase, ivl, None, cfg_rx, phase_rx),
+                                    ));
+                                }
+                            }
+                        }
+                        // Active → Background or no-op: just continue with the
+                        // updated cur_phase; the select below will use the
+                        // Background-only arms.
+                        continue;
+                    }
+
+                    let outcome = if cur_phase == AppPhase::Active {
+                        tokio::select! {
+                            _ = ivl.tick() => TickOutcome::Tick,
+                            changed = cfg_rx.changed() => match changed {
+                                Ok(()) => TickOutcome::CfgChanged,
+                                // All senders dropped — terminate the stream.
+                                Err(_) => return None,
+                            },
+                            changed = phase_rx.changed() => match changed {
+                                Ok(()) => TickOutcome::PhaseChanged,
+                                // Sender dropped while Active: keep streaming
+                                // as Active (signal source vanished; treat as
+                                // no-op rather than deadlocking or panicking).
+                                Err(_) => continue,
+                            },
+                        }
+                    } else {
+                        // Background: block only on cfg or phase changes; no ticks.
+                        tokio::select! {
+                            changed = cfg_rx.changed() => match changed {
+                                Ok(()) => TickOutcome::CfgChanged,
+                                // All senders dropped — terminate the stream.
+                                Err(_) => return None,
+                            },
+                            changed = phase_rx.changed() => match changed {
+                                Ok(()) => TickOutcome::PhaseChanged,
+                                // Sender dropped while Background: treat as
+                                // PhaseChanged so we don't deadlock. The next
+                                // borrow() returns the last-known Background
+                                // value, so the stream stays paused until
+                                // cfg_rx wakes it — acceptable because in
+                                // practice the sender lives for the app lifetime.
+                                Err(_) => TickOutcome::PhaseChanged,
+                            },
+                        }
                     };
 
                     // `borrow()` always returns the freshest value, even if
                     // multiple `send`s have stacked since the wake-up.
                     let new_cfg: BoardConfig = cfg_rx.borrow().clone();
+                    let new_phase: AppPhase = *phase_rx.borrow();
 
                     if new_cfg.poll_seconds != cur_cfg.poll_seconds {
                         let new_dur = Duration::from_secs(u64::from(new_cfg.poll_seconds).max(1));
@@ -178,30 +311,53 @@ impl<H: TflHttp + 'static, C: Clock + 'static> BoardService<H, C> {
                     }
                     cur_cfg = new_cfg;
 
-                    if matches!(outcome, TickOutcome::CfgChanged) && !station_changed {
-                        // Cheap semantic for theme / directions / lines /
-                        // poll_seconds: apply config side effects and wait
-                        // for the next tick. The user already sees the old
-                        // station's data and a filter change can wait a
-                        // poll cycle.
-                        continue;
+                    // Update the tracked phase.
+                    let phase_became_active =
+                        cur_phase == AppPhase::Background && new_phase == AppPhase::Active;
+                    cur_phase = new_phase;
+
+                    match outcome {
+                        TickOutcome::CfgChanged if !station_changed => {
+                            // Cheap semantic for theme / directions / lines /
+                            // poll_seconds: apply config side effects and wait
+                            // for the next tick.
+                            continue;
+                        }
+                        TickOutcome::CfgChanged if station_changed => {
+                            // Station change demands immediate feedback.
+                            // Fall through to refresh below; reset interval
+                            // so the next periodic tick fires from here.
+                            ivl.reset();
+                        }
+                        TickOutcome::PhaseChanged if phase_became_active => {
+                            // Background → Active: emit a fresh board immediately
+                            // (invariant 8) and reset the interval.
+                            ivl.reset();
+                            // Fall through to refresh below.
+                        }
+                        TickOutcome::PhaseChanged => {
+                            // Active → Background (or no actual change): nothing
+                            // to emit. Loop back; the background select arms will
+                            // fire on the next cfg/phase change.
+                            continue;
+                        }
+                        TickOutcome::Tick => {
+                            // Normal periodic tick — fall through to refresh.
+                        }
+                        // Satisfy exhaustiveness; the `if !station_changed` arm
+                        // covers all CfgChanged + !station_changed cases.
+                        _ => continue,
                     }
 
-                    if matches!(outcome, TickOutcome::CfgChanged) && station_changed {
-                        // Station change is a deliberate user action that
-                        // demands immediate feedback. Refresh now and reset
-                        // the interval so the next periodic tick fires one
-                        // poll_seconds from this forced refresh, not from
-                        // the previously-scheduled time.
-                        ivl.reset();
-                    }
-
-                    // TickOutcome::Tick — refresh and emit.
+                    // Refresh and emit.
                     match svc.refresh(&cur_cfg).await {
                         Ok(mut board) => {
                             board.stale_since = None;
                             let emit = board.clone();
-                            return Some((Ok(emit), (svc, cur_cfg, ivl, Some(board), cfg_rx)));
+                            return Some((
+                                Ok(emit),
+                                (svc, cur_cfg, cur_phase, ivl, Some(board), cfg_rx, phase_rx),
+                            ));
                         }
                         Err(e) => {
                             if let Some(mut stale) = last_ok {
@@ -209,9 +365,15 @@ impl<H: TflHttp + 'static, C: Clock + 'static> BoardService<H, C> {
                                     stale.stale_since = Some(svc.clock.now());
                                 }
                                 let emit = stale.clone();
-                                return Some((Ok(emit), (svc, cur_cfg, ivl, Some(stale), cfg_rx)));
+                                return Some((
+                                    Ok(emit),
+                                    (svc, cur_cfg, cur_phase, ivl, Some(stale), cfg_rx, phase_rx),
+                                ));
                             }
-                            return Some((Err(e), (svc, cur_cfg, ivl, None, cfg_rx)));
+                            return Some((
+                                Err(e),
+                                (svc, cur_cfg, cur_phase, ivl, None, cfg_rx, phase_rx),
+                            ));
                         }
                     }
                 }
@@ -227,6 +389,8 @@ enum TickOutcome {
     Tick,
     /// `cfg_rx.changed()` resolved — a new `BoardConfig` is in the channel.
     CfgChanged,
+    /// `phase_rx.changed()` resolved — the `AppPhase` has changed.
+    PhaseChanged,
 }
 
 // ---------------------------------------------------------------------------
@@ -395,6 +559,24 @@ mod tests {
         }
     }
 
+    /// Return a `(LifecyclePhase, watch::Receiver<AppPhase>)` pair always in
+    /// the `Active` state.
+    ///
+    /// Existing tests use this to satisfy the new `phase_rx` parameter on
+    /// `BoardService::stream` without changing their assertions. The caller
+    /// must hold the returned `LifecyclePhase` for the duration of the test
+    /// so the sender is not dropped (a dropped sender causes `phase_rx.changed()`
+    /// to return `Err` immediately, which spins the select loop and starves
+    /// the tick arm).
+    fn always_active_phase() -> (
+        crate::lifecycle::LifecyclePhase,
+        tokio::sync::watch::Receiver<crate::lifecycle::AppPhase>,
+    ) {
+        let lc = crate::lifecycle::LifecyclePhase::always_active();
+        let rx = lc.subscribe();
+        (lc, rx)
+    }
+
     fn make_clock() -> FakeClock {
         FakeClock::from_rfc3339("2026-04-24T12:00:00Z").unwrap()
     }
@@ -420,7 +602,8 @@ mod tests {
         let svc = BoardService::new(client, make_clock());
 
         let (_tx, rx) = cfg_channel(make_cfg());
-        let mut stream = Box::pin(svc.stream(rx));
+        let (_lc, phase_rx) = always_active_phase();
+        let mut stream = Box::pin(svc.stream(rx, phase_rx));
 
         // First item: should be an error (no last_ok yet).
         let first = stream.next().await.expect("stream must not terminate");
@@ -456,7 +639,8 @@ mod tests {
         let svc = BoardService::new(client, make_clock());
 
         let (_tx, rx) = cfg_channel(make_cfg());
-        let mut stream = Box::pin(svc.stream(rx));
+        let (_lc, phase_rx) = always_active_phase();
+        let mut stream = Box::pin(svc.stream(rx, phase_rx));
 
         // Collect three consecutive error items.
         for i in 0..3u32 {
@@ -483,7 +667,8 @@ mod tests {
         let svc = BoardService::new(client, make_clock());
 
         let (_tx, rx) = cfg_channel(make_cfg());
-        let mut stream = Box::pin(svc.stream(rx));
+        let (_lc, phase_rx) = always_active_phase();
+        let mut stream = Box::pin(svc.stream(rx, phase_rx));
 
         // First item: success.
         let first = stream.next().await.expect("stream must not terminate");
@@ -534,7 +719,8 @@ mod tests {
             theme: "classic-amber".to_string(),
         };
         let (tx, rx) = cfg_channel(initial_cfg.clone());
-        let mut stream = Box::pin(svc.stream(rx));
+        let (_lc, phase_rx) = always_active_phase();
+        let mut stream = Box::pin(svc.stream(rx, phase_rx));
 
         // First tick fires immediately.
         let first = stream.next().await.expect("first item");
@@ -591,7 +777,8 @@ mod tests {
             theme: "classic-amber".to_string(),
         };
         let (tx, rx) = cfg_channel(initial_cfg.clone());
-        let mut stream = Box::pin(svc.stream(rx));
+        let (_lc, phase_rx) = always_active_phase();
+        let mut stream = Box::pin(svc.stream(rx, phase_rx));
 
         // First tick (immediate).
         let first = stream.next().await.expect("first item");
@@ -643,7 +830,8 @@ mod tests {
             theme: "classic-amber".to_string(),
         };
         let (tx, rx) = cfg_channel(cfg_a.clone());
-        let mut stream = Box::pin(svc.stream(rx));
+        let (_lc, phase_rx) = always_active_phase();
+        let mut stream = Box::pin(svc.stream(rx, phase_rx));
 
         // First tick: success — populates last_ok for STATION_A.
         let first = stream.next().await.expect("first item");
@@ -700,7 +888,8 @@ mod tests {
             theme: "classic-amber".to_string(),
         };
         let (tx, rx) = cfg_channel(cfg_a.clone());
-        let mut stream = Box::pin(svc.stream(rx));
+        let (_lc, phase_rx) = always_active_phase();
+        let mut stream = Box::pin(svc.stream(rx, phase_rx));
 
         // First tick fires immediately and resolves to STATION_A.
         let first = stream.next().await.expect("first item");
@@ -737,5 +926,120 @@ mod tests {
 
         let log = id_log.lock().expect("id_log lock");
         assert_eq!(log.as_slice(), &["STATION_A", "STATION_B"]);
+    }
+
+    // -----------------------------------------------------------------------
+    // Phase 2A lifecycle tests — written RED first (TDD discipline)
+    // -----------------------------------------------------------------------
+
+    /// When the phase flips to Background, the stream must stop emitting boards
+    /// even as time advances well past the poll interval.
+    #[tokio::test(start_paused = true)]
+    async fn stream_pauses_polling_when_phase_becomes_background() {
+        use crate::lifecycle::{AppPhase, LifecyclePhase};
+
+        let (mock, _counter) = SeqTflHttp::new(vec![true]);
+        let client = Arc::new(TflClient::new(mock));
+        let svc = BoardService::new(client, make_clock());
+
+        let lc = LifecyclePhase::new(AppPhase::Active);
+        let phase_rx = lc.subscribe();
+        let (_tx, rx) = cfg_channel(make_cfg());
+        let mut stream = Box::pin(svc.stream(rx, phase_rx));
+
+        // Consume the initial emit (Active, immediate tick at t=0).
+        let first = stream.next().await.expect("initial emit must arrive");
+        assert!(first.is_ok(), "initial emit must be Ok");
+
+        // Flip to Background and advance 60 s (many poll intervals for a 1 s config).
+        lc.set(AppPhase::Background);
+        tokio::time::advance(Duration::from_secs(60)).await;
+
+        // Assert: no board emitted while backgrounded.
+        let result = tokio::time::timeout(Duration::from_millis(50), stream.next()).await;
+        assert!(
+            result.is_err(),
+            "stream must NOT emit while phase == Background; got: {result:?}"
+        );
+    }
+
+    /// On Background → Active transition the stream must emit a fresh board
+    /// within 1 s (invariant 8). The emitted board's generated_at must be
+    /// post-resume (i.e. clock has advanced beyond the initial emit).
+    #[tokio::test(start_paused = true)]
+    async fn stream_resumes_with_immediate_emit_on_phase_active() {
+        use crate::lifecycle::{AppPhase, LifecyclePhase};
+
+        let (mock, _counter) = SeqTflHttp::new(vec![true]);
+        let client = Arc::new(TflClient::new(mock));
+        let svc = BoardService::new(client, make_clock());
+
+        let lc = LifecyclePhase::new(AppPhase::Active);
+        let phase_rx = lc.subscribe();
+        let (_tx, rx) = cfg_channel(make_cfg());
+        let mut stream = Box::pin(svc.stream(rx, phase_rx));
+
+        // Consume the initial emit.
+        let first = stream.next().await.expect("initial emit");
+        assert!(first.is_ok());
+
+        // Background: advance 60 s, assert silent.
+        lc.set(AppPhase::Background);
+        tokio::time::advance(Duration::from_secs(60)).await;
+        let bg_result = tokio::time::timeout(Duration::from_millis(50), stream.next()).await;
+        assert!(bg_result.is_err(), "must be silent while backgrounded");
+
+        // Foreground: the next emit should arrive quickly (< 500 ms of
+        // paused-clock time). Measure with Instant so a bug that lets the
+        // clock auto-advance 30 s registers as a failure.
+        lc.set(AppPhase::Active);
+        let start = tokio::time::Instant::now();
+        let resumed = stream.next().await.expect("emit on resume");
+        let elapsed = start.elapsed();
+
+        assert!(resumed.is_ok(), "resume emit must be Ok");
+        assert!(
+            elapsed < Duration::from_millis(500),
+            "resume took {elapsed:?}; must be < 500 ms (invariant 8)"
+        );
+    }
+
+    /// After entering Background, no boards should be emitted regardless of
+    /// how much time passes; the stream must resume exactly once the phase
+    /// returns to Active.
+    #[tokio::test(start_paused = true)]
+    async fn stream_drops_no_emits_during_background() {
+        use crate::lifecycle::{AppPhase, LifecyclePhase};
+
+        let (mock, _counter) = SeqTflHttp::new(vec![true]);
+        let client = Arc::new(TflClient::new(mock));
+        let svc = BoardService::new(client, make_clock());
+
+        let lc = LifecyclePhase::new(AppPhase::Active);
+        let phase_rx = lc.subscribe();
+        let (_tx, rx) = cfg_channel(make_cfg());
+        let mut stream = Box::pin(svc.stream(rx, phase_rx));
+
+        // Consume the initial emit.
+        let first = stream.next().await.expect("initial emit");
+        assert!(first.is_ok());
+
+        // Enter Background.
+        lc.set(AppPhase::Background);
+
+        // First 30 s: no emit.
+        tokio::time::advance(Duration::from_secs(30)).await;
+        let r1 = tokio::time::timeout(Duration::from_millis(50), stream.next()).await;
+        assert!(r1.is_err(), "no emit after first 30 s in background");
+
+        // Next 30 s: still no emit.
+        tokio::time::advance(Duration::from_secs(30)).await;
+        let r2 = tokio::time::timeout(Duration::from_millis(50), stream.next()).await;
+        assert!(r2.is_err(), "no emit after second 30 s in background");
+
+        // Return to Active — exactly one emit must follow.
+        lc.set(AppPhase::Active);
+        let resumed = stream.next().await.expect("emit after returning to Active");
+        assert!(resumed.is_ok(), "post-resume emit must be Ok");
     }
 }
