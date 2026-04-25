@@ -170,17 +170,30 @@ impl<H: TflHttp + 'static, C: Clock + 'static> BoardService<H, C> {
                         ivl = interval(new_dur);
                         ivl.set_missed_tick_behavior(MissedTickBehavior::Skip);
                     }
-                    if new_cfg.station_id != cur_cfg.station_id {
+                    let station_changed = new_cfg.station_id != cur_cfg.station_id;
+                    if station_changed {
                         // Drop stale data for the previous station; the next
                         // refresh produces a fresh board for the new station.
                         last_ok = None;
                     }
                     cur_cfg = new_cfg;
 
-                    if matches!(outcome, TickOutcome::CfgChanged) {
-                        // Loop again — wait for either the next tick or a
-                        // further config change. No item emitted yet.
+                    if matches!(outcome, TickOutcome::CfgChanged) && !station_changed {
+                        // Cheap semantic for theme / directions / lines /
+                        // poll_seconds: apply config side effects and wait
+                        // for the next tick. The user already sees the old
+                        // station's data and a filter change can wait a
+                        // poll cycle.
                         continue;
+                    }
+
+                    if matches!(outcome, TickOutcome::CfgChanged) && station_changed {
+                        // Station change is a deliberate user action that
+                        // demands immediate feedback. Refresh now and reset
+                        // the interval so the next periodic tick fires one
+                        // poll_seconds from this forced refresh, not from
+                        // the previously-scheduled time.
+                        ivl.reset();
                     }
 
                     // TickOutcome::Tick — refresh and emit.
