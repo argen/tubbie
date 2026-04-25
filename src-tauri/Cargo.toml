@@ -31,5 +31,9 @@ tauri-build = { version = "2", features = [] }
 objc2 = "0.5"
 
 [dev-dependencies]
-tokio = { workspace = true }
+# `test-util` is required by tests that use `#[tokio::test(start_paused = true)]`
+# and `tokio::time::advance` to drive the watch-channel/stream pipeline under
+# a paused clock. Without it the integration tests in `commands.rs::tests`
+# that exercise `save_config_inner → cfg_tx → stream` will not compile.
+tokio = { workspace = true, features = ["test-util"] }
 tempfile = "3"

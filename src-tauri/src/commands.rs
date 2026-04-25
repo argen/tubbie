@@ -400,6 +400,15 @@ mod tests {
     }
 
     /// Build an `AppState` backed by fixture files + in-memory config.
+    ///
+    /// **IMPORTANT — known limitation.** This helper drops the watch
+    /// `Receiver`, so `state.cfg_tx.send(...)` inside `save_config_inner`
+    /// returns `Err(NoReceivers)` — silently swallowed by `let _ =`. Tests
+    /// that need to assert *anything* about the cfg_tx → stream pipeline
+    /// MUST use [`fixture_state_with_stream`] instead. Using this helper
+    /// for save-then-observe scenarios is what allowed the
+    /// "save_config doesn't reach the stream" class of regressions to slip
+    /// past CI.
     fn fixture_state() -> AppState {
         let clock = FakeClock::from_rfc3339("2025-01-15T10:00:00Z").unwrap();
         let http = FixtureTflHttp::new(fixture_dir());
@@ -415,6 +424,54 @@ mod tests {
             cfg_tx: Arc::new(cfg_tx),
             display_mode: "window".to_string(),
         }
+    }
+
+    /// Build an `AppState` plus a live stream `Receiver` that mirrors the
+    /// production wiring: AppState holds `cfg_tx`, the stream reads from a
+    /// matching `cfg_rx`, and both `BoardService` instances share one
+    /// `TflClient` and one clock — exactly as `lib.rs::run` does.
+    ///
+    /// Returns `(state, stream, fixture_dir_clock)` so tests can:
+    ///   1. Call `save_config_inner(&new_cfg, &state)` to drive the real
+    ///      command path (validation + persist + cfg_tx.send).
+    ///   2. Poll `stream.next().await` to observe what the stream task in
+    ///      production would emit as a `board://updated` event.
+    ///
+    /// Use this helper for any test that asserts an effect of save_config
+    /// on the stream. The dropped-receiver `fixture_state()` will silently
+    /// pass even when the pipeline is broken.
+    /// Boxed `Board` stream returned by [`fixture_state_with_stream`].
+    type BoardStream = std::pin::Pin<
+        Box<dyn futures::Stream<Item = Result<tfl_domain::Board, tfl_board::BoardError>> + Send>,
+    >;
+
+    fn fixture_state_with_stream(seed: BoardConfig) -> (AppState, BoardStream) {
+        let clock = FakeClock::from_rfc3339("2026-01-15T10:00:00Z").unwrap();
+        let http = FixtureTflHttp::new(fixture_dir());
+        let client = Arc::new(TflClient::new(http));
+
+        // Both BoardServices share the same Arc<TflClient> and clock,
+        // mirroring the production wiring where `AppState.board_service`
+        // and `spawn_stream_task` use the same `Arc::clone(&client)`.
+        let board_service = Arc::new(BoardService::new(Arc::clone(&client), clock.clone()))
+            as Arc<dyn crate::state::AnyBoardService>;
+        let stream_svc = BoardService::new(Arc::clone(&client), clock);
+
+        let config_store = Arc::new(MemoryConfigStore::new()) as Arc<dyn crate::state::ConfigStore>;
+        let (cfg_tx, cfg_rx) = watch::channel::<BoardConfig>(seed);
+        let cfg_tx = Arc::new(cfg_tx);
+
+        let state = AppState {
+            board_service,
+            config_store,
+            stream_abort: Arc::new(RwLock::new(None)),
+            cfg_tx,
+            display_mode: "window".to_string(),
+        };
+
+        let stream: BoardStream = Box::pin(stream_svc.stream(cfg_rx));
+
+        (state, stream)
     }
 
     // -----------------------------------------------------------------------
@@ -917,6 +974,218 @@ mod tests {
         assert!(
             seen_lines.contains("northern") || seen_lines.contains("victoria"),
             "expected northern or victoria in filtered board, got: {seen_lines:?}"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // End-to-end save_config → cfg_tx → stream pipeline
+    //
+    // These tests exercise the production wiring: AppState holds the watch
+    // sender, the stream task (or test stand-in) holds a matching receiver,
+    // and `save_config_inner` is the single seam that links them. They are
+    // the only tests that catch regressions in:
+    //
+    //   - `save_config_inner` actually publishing to `cfg_tx`
+    //   - the stream observing `cfg_rx.changed()` and refreshing
+    //   - the immediate-refresh-on-station-change semantic
+    //   - the back-and-forth (A → B → A) settling on the latest value
+    //
+    // Use `fixture_state_with_stream` here, NOT `fixture_state` — the latter
+    // drops the receiver and silently masks any pipeline break.
+    // -----------------------------------------------------------------------
+
+    /// Saving a new `station_id` via `save_config_inner` MUST make the
+    /// running stream re-emit a board for the new station — that is the
+    /// whole point of the watch-channel refactor. A regression here looks
+    /// to the user like "I changed station and the board never updated".
+    #[tokio::test(start_paused = true)]
+    async fn save_config_publishes_station_change_to_running_stream() {
+        use futures::StreamExt;
+        use std::time::Duration;
+
+        let initial_cfg = BoardConfig {
+            station_id: "940GZZLUBZP".to_string(),
+            line_ids: vec![],
+            directions: vec![],
+            poll_seconds: 30,
+            theme: "classic-amber".to_string(),
+        };
+        let (state, mut stream) = fixture_state_with_stream(initial_cfg.clone());
+        // Persist the initial cfg so the store, watch channel, and stream
+        // are all aligned before the user's "station change" save lands.
+        save_config_inner(&initial_cfg, &state)
+            .await
+            .expect("baseline save_config must succeed");
+
+        // 1. First emit: stream's initial tick fires immediately for BZP.
+        let first = stream
+            .next()
+            .await
+            .expect("stream must yield an initial board");
+        let first_board = first.expect("first emit must be Ok");
+        assert_eq!(first_board.station_id, "940GZZLUBZP");
+
+        // 2. User picks King's Cross. Production calls `save_config` IPC →
+        //    `save_config_inner`. We do the same here, no shortcut.
+        let new_cfg = BoardConfig {
+            station_id: "940GZZLUKSX".to_string(),
+            ..initial_cfg
+        };
+        save_config_inner(&new_cfg, &state)
+            .await
+            .expect("station-change save_config must succeed");
+
+        // 3. The stream must emit a board for the NEW station, and it must
+        //    arrive in well under one poll interval — the immediate-refresh
+        //    path is what makes a station change feel responsive.
+        let before = tokio::time::Instant::now();
+        let second = stream
+            .next()
+            .await
+            .expect("stream must yield after station change");
+        let elapsed = before.elapsed();
+        let second_board = second.expect("second emit must be Ok");
+
+        assert_eq!(
+            second_board.station_id, "940GZZLUKSX",
+            "save_config_inner must publish through cfg_tx so the stream \
+             refreshes against the new station; got station_id {:?}",
+            second_board.station_id
+        );
+        assert!(
+            elapsed < Duration::from_secs(5),
+            "station change must trigger an immediate refresh; \
+             took {elapsed:?} (poll_seconds=30, so a missed refresh shows ~30 s)"
+        );
+    }
+
+    /// A→B→A with a real stream tick between each pick must produce three
+    /// emits in order (A, B, A). Models the user who picks the wrong station,
+    /// sees its board, then picks the right one. The intermediate B emit is
+    /// what the user *sees* on screen between the two clicks; without it the
+    /// UI feels frozen.
+    ///
+    /// (The pure-synchronous A→B→A case — both saves before the stream gets a
+    /// chance to refresh — collapses correctly in the watch channel: the
+    /// receiver only ever observes the latest value A, station_changed=false
+    /// against the displayed A, and no new emit fires. That's the correct
+    /// "no-op" behaviour and is covered by `save_config_filter_change_does_not_
+    /// force_immediate_refresh`'s no-emit timeout assertion.)
+    #[tokio::test(start_paused = true)]
+    async fn save_config_a_then_b_then_a_emits_each_in_order() {
+        use futures::StreamExt;
+        use std::time::Duration;
+
+        let cfg_a = BoardConfig {
+            station_id: "940GZZLUBZP".to_string(),
+            line_ids: vec![],
+            directions: vec![],
+            poll_seconds: 30,
+            theme: "classic-amber".to_string(),
+        };
+        let (state, mut stream) = fixture_state_with_stream(cfg_a.clone());
+        save_config_inner(&cfg_a, &state).await.unwrap();
+
+        // Emit 1: A.
+        let e1 = stream.next().await.unwrap().unwrap();
+        assert_eq!(e1.station_id, "940GZZLUBZP", "first emit is A");
+
+        // Pick B and wait for its emit.
+        let cfg_b = BoardConfig {
+            station_id: "940GZZLUKSX".to_string(),
+            ..cfg_a.clone()
+        };
+        save_config_inner(&cfg_b, &state).await.unwrap();
+        let e2 = tokio::time::timeout(Duration::from_secs(5), stream.next())
+            .await
+            .expect("stream must emit after B save")
+            .unwrap()
+            .unwrap();
+        assert_eq!(e2.station_id, "940GZZLUKSX", "second emit is B");
+
+        // Now pick A again and assert we get A back.
+        save_config_inner(&cfg_a, &state).await.unwrap();
+        let e3 = tokio::time::timeout(Duration::from_secs(5), stream.next())
+            .await
+            .expect("stream must emit after returning to A")
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            e3.station_id, "940GZZLUBZP",
+            "third emit must be A (the user came back); got {:?}",
+            e3.station_id
+        );
+    }
+
+    /// Filter changes (line_ids / directions / theme) must NOT cause a
+    /// fresh refresh — the "cheap" cfg-changed semantic is the whole reason
+    /// chip toggles don't burn through the rate limit. If a filter change
+    /// triggers an extra fetch, the user's chip-burst-spam scenario regresses.
+    ///
+    /// We assert this indirectly by checking that the next emit only arrives
+    /// AFTER advancing past the poll interval — not immediately on the cfg
+    /// change.
+    #[tokio::test(start_paused = true)]
+    async fn save_config_filter_change_does_not_force_immediate_refresh() {
+        use futures::StreamExt;
+        use std::time::Duration;
+
+        let initial_cfg = BoardConfig {
+            station_id: "940GZZLUBZP".to_string(),
+            line_ids: vec![],
+            directions: vec![],
+            poll_seconds: 60,
+            theme: "classic-amber".to_string(),
+        };
+        let (state, mut stream) = fixture_state_with_stream(initial_cfg.clone());
+        save_config_inner(&initial_cfg, &state).await.unwrap();
+
+        // First emit (immediate).
+        let _ = stream.next().await.unwrap().unwrap();
+
+        // Toggle a directions filter — same station, just a different filter.
+        let mut filter_change = initial_cfg.clone();
+        filter_change.directions = vec![tfl_domain::Direction::Northbound];
+        save_config_inner(&filter_change, &state).await.unwrap();
+
+        // No time advance — the filter change alone must NOT produce a new
+        // emit. (The stream's CfgChanged path with !station_changed `continue`s
+        // and waits for the next interval tick.)
+        let immediate =
+            tokio::time::timeout(Duration::from_millis(50), stream.next()).await;
+        assert!(
+            immediate.is_err(),
+            "filter change must NOT trigger an immediate emit \
+             (cheap cfg-changed semantic)"
+        );
+
+        // Advance past one poll interval — now the periodic tick should fire.
+        tokio::time::advance(Duration::from_secs(61)).await;
+        let after_tick = tokio::time::timeout(Duration::from_secs(2), stream.next()).await;
+        assert!(
+            matches!(after_tick, Ok(Some(Ok(_)))),
+            "after one poll interval the stream must emit a fresh board; got {after_tick:?}"
+        );
+    }
+
+    /// Regression guard against the test-harness bug itself: the helper
+    /// `fixture_state_with_stream` must wire the receiver to the sender
+    /// such that `save_config_inner` actually delivers to a live receiver.
+    /// If this test fails, every other pipeline test in this module is
+    /// running against a dead channel and silently passing.
+    #[tokio::test]
+    async fn fixture_state_with_stream_keeps_receiver_alive() {
+        let cfg = crate::state::default_board_config();
+        let (state, _stream) = fixture_state_with_stream(cfg.clone());
+
+        // `cfg_tx.send` returns Err only when there are no receivers. The
+        // helper must keep the receiver inside the Stream alive so this
+        // succeeds; the prior `fixture_state()` would fail this assertion.
+        let sent = state.cfg_tx.send(cfg);
+        assert!(
+            sent.is_ok(),
+            "fixture_state_with_stream must hand cfg_tx a live receiver \
+             so save_config_inner has somewhere to publish"
         );
     }
 
