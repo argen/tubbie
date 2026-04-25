@@ -4,6 +4,7 @@
   import { formatTime, prettyLineName, shortStationName } from '$lib/utils/format.js';
   import { lastUpdateTs } from '$lib/stores/board.js';
   import { reducedMotion } from '$lib/stores/reducedMotion.js';
+  import { displayMode } from '$lib/stores/displayMode.js';
   import PlatformColumn from './PlatformColumn.svelte';
   import LineStatusTicker from './LineStatusTicker.svelte';
 
@@ -90,6 +91,11 @@
   const displayName = $derived(
     stationName.length > 0 ? shortStationName(stationName).toUpperCase() : board.station_id,
   );
+
+  // Cap rows per direction tightly in the menubar popover so both
+  // directions fit on the 380×560 surface without scroll. The floating
+  // window has room for a longer list.
+  const rowsPerPlatform = $derived($displayMode === 'menubar' ? 4 : 6);
 </script>
 
 <main class="board" aria-label="Arrivals board for {displayName}">
@@ -153,7 +159,7 @@
   <!-- Platforms grid -->
   <div class="board__platforms" aria-label="Platform arrivals" role="region">
     {#each board.platforms as platform (platform.name)}
-      <PlatformColumn {platform} maxRows={6} />
+      <PlatformColumn {platform} maxRows={rowsPerPlatform} />
     {/each}
 
     {#if board.platforms.length === 0}

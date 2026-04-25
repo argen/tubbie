@@ -52,7 +52,20 @@ pub trait ConfigStore: Send + Sync + 'static {
 
     /// Atomically set and persist the TfL API key (pass `None` to clear).
     async fn save_app_key(&self, key: Option<String>) -> Result<(), String>;
+
+    /// Load the persisted display mode (`"window"` or `"menubar"`).
+    /// Returns `"window"` when nothing has been saved.
+    async fn load_display_mode(&self) -> Result<String, String>;
+
+    /// Atomically set and persist the display mode. The caller is
+    /// responsible for validating the value before invoking this.
+    async fn save_display_mode(&self, mode: &str) -> Result<(), String>;
 }
+
+/// Default display mode used when no value has been persisted.
+/// Mirrors the user's request that Tubbie launch as a normal floating
+/// window unless they have explicitly opted into the menubar UI.
+pub const DEFAULT_DISPLAY_MODE: &str = "window";
 
 // ---------------------------------------------------------------------------
 // In-memory ConfigStore (used in tests)
@@ -132,6 +145,19 @@ impl ConfigStore for MemoryConfigStore {
         self.set_raw("tfl_app_key", value);
         Ok(())
     }
+
+    async fn load_display_mode(&self) -> Result<String, String> {
+        let mode = self
+            .get_raw("display_mode")
+            .and_then(|v| serde_json::from_value::<String>(v).ok())
+            .unwrap_or_else(|| DEFAULT_DISPLAY_MODE.to_string());
+        Ok(mode)
+    }
+
+    async fn save_display_mode(&self, mode: &str) -> Result<(), String> {
+        self.set_raw("display_mode", serde_json::json!(mode));
+        Ok(())
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -189,6 +215,11 @@ pub struct AppState {
     /// the task aborted when `save_config` is called (stream restarts with
     /// new config from `lib.rs`). Also aborted on window close.
     pub stream_abort: Arc<RwLock<Option<AbortHandle>>>,
+
+    /// Display mode resolved at startup (`"window"` or `"menubar"`).
+    /// Captured here so window-event handlers can branch on it without
+    /// re-reading the store on every event. Changes require restart.
+    pub display_mode: String,
 }
 
 impl AppState {

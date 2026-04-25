@@ -178,10 +178,10 @@
    ------------------------------------------------------------ */
 
 html {
-  background: var(--bg);
+  background: transparent;
   color: var(--fg);
   font-family: var(--font-board);
-  font-size: 18px;
+  font-size: 16px;
   height: 100%;
   /* Apply default theme */
   /* Class is set dynamically by applyTheme() */
@@ -191,10 +191,39 @@ body {
   margin: 0;
   padding: 0;
   min-height: 100%;
-  background: var(--bg);
+  background: transparent;
   color: var(--fg);
   -webkit-font-smoothing: none; /* Keep crisp pixel rendering for dot-matrix feel */
   font-smooth: never;
+}
+
+/* ------------------------------------------------------------
+   Popover / window root — the visible "chrome" around the board.
+   In menubar mode the Tauri window is transparent + borderless,
+   so the rounded corners and shadow come from CSS. In window
+   mode the OS provides the window chrome and we render flush.
+   ------------------------------------------------------------ */
+
+.popover-root {
+  position: relative;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+}
+
+.popover-root.mode-menubar {
+  border-radius: 12px;
+  border: 1px solid var(--row-divider);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.popover-root.mode-window {
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
 }
 
 /* LED glow text effect — applied to board text surfaces */
