@@ -39,7 +39,11 @@ pub mod store_impl;
 use std::sync::Arc;
 
 use futures::StreamExt;
-use tauri::{Emitter, Manager};
+use tauri::{
+    menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem},
+    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+    Emitter, Manager, PhysicalPosition, WindowEvent,
+};
 use tfl_board::{BoardConfig, BoardService};
 use tfl_client::{clock::SystemClock, http::ReqwestTflHttp, TflClient};
 use tokio::sync::RwLock;
@@ -119,6 +123,63 @@ async fn spawn_stream_task(
     *stream_abort.write().await = Some(abort);
 }
 
+/// Position the popover window anchored below the given tray icon rectangle.
+///
+/// `tray_rect.position` is the tray icon's top-left in physical screen pixels.
+/// We centre the window horizontally under the icon, put its top just below the
+/// icon (= menu bar), then clamp to the current monitor's work area so the
+/// popover never clips off the right edge.
+fn position_popover_under_tray(
+    window: &tauri::WebviewWindow,
+    tray_rect: tauri::Rect,
+) {
+    let monitor = window
+        .current_monitor()
+        .ok()
+        .flatten()
+        .or_else(|| window.primary_monitor().ok().flatten());
+    let Some(monitor) = monitor else { return };
+    let scale = monitor.scale_factor();
+    let mon_pos = monitor.position();
+    let mon_size = monitor.size();
+
+    let win_size_physical = window
+        .outer_size()
+        .unwrap_or(tauri::PhysicalSize::new(380, 560));
+
+    // `Rect.position` / `.size` are dpi enums; normalise them to physical pixels
+    // so our arithmetic stays in one coordinate space regardless of which
+    // backend delivered the tray event.
+    let tray_pos = tray_rect.position.to_physical::<f64>(scale);
+    let tray_size = tray_rect.size.to_physical::<f64>(scale);
+
+    let tray_cx = tray_pos.x + tray_size.width / 2.0;
+    let tray_bottom = tray_pos.y + tray_size.height;
+
+    let mut x = tray_cx - (win_size_physical.width as f64) / 2.0;
+    let y = tray_bottom + (4.0 * scale);
+
+    // Clamp horizontally to monitor bounds (with a small margin).
+    let margin = 4.0 * scale;
+    let min_x = mon_pos.x as f64 + margin;
+    let max_x = mon_pos.x as f64 + mon_size.width as f64 - win_size_physical.width as f64 - margin;
+    if x < min_x {
+        x = min_x;
+    }
+    if x > max_x {
+        x = max_x;
+    }
+
+    let _ = window.set_position(PhysicalPosition::new(x, y));
+}
+
+/// Show the popover, position it under the tray icon, and focus it.
+fn show_popover(window: &tauri::WebviewWindow, tray_rect: tauri::Rect) {
+    position_popover_under_tray(window, tray_rect);
+    let _ = window.show();
+    let _ = window.set_focus();
+}
+
 /// Application entry point. Called from `main.rs` (and mobile entry point).
 ///
 /// Registers all plugins, builds `AppState` with the live TfL client, and
@@ -128,6 +189,14 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_store::Builder::default().build())
         .setup(|app| {
+            // macOS: hide dock icon and menu so the app behaves as a
+            // menubar-only utility. Info.plist sets LSUIElement for bundled
+            // builds; this call covers `tauri dev`.
+            #[cfg(target_os = "macos")]
+            {
+                app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+            }
+
             // Read saved API key, if any. The client is constructed once at
             // startup. Changing the key requires a restart (Settings UI shows
             // "restart to apply" after save_app_key).
@@ -211,18 +280,85 @@ pub fn run() {
                 stream_abort,
             });
 
+            // --- Menubar tray icon + popover behaviour ---------------------
+            //
+            // Left click on the tray icon toggles the popover window, placing
+            // it anchored under the icon. Right click opens a native menu
+            // (Settings / About / Quit). Losing focus hides the popover —
+            // see the `on_window_event` handler below.
+
+            let settings_item = MenuItemBuilder::with_id("settings", "Settings…").build(app)?;
+            let about_item = PredefinedMenuItem::about(
+                app,
+                Some("About Tubbie"),
+                Some(tauri::menu::AboutMetadata {
+                    name: Some("Tubbie".into()),
+                    copyright: Some("© 2026 Bruno Belcastro".into()),
+                    ..Default::default()
+                }),
+            )?;
+            let quit_item = PredefinedMenuItem::quit(app, Some("Quit Tubbie"))?;
+            let tray_menu = MenuBuilder::new(app)
+                .item(&settings_item)
+                .separator()
+                .item(&about_item)
+                .separator()
+                .item(&quit_item)
+                .build()?;
+
+            let _tray = TrayIconBuilder::with_id("tubbie-tray")
+                .icon(tauri::include_image!("icons/tray-icon.png"))
+                .icon_as_template(true)
+                .menu(&tray_menu)
+                .show_menu_on_left_click(false)
+                .on_menu_event(|app, event| {
+                    if event.id().as_ref() == "settings" {
+                        if let Some(win) = app.get_webview_window("main") {
+                            let _ = win.show();
+                            let _ = win.set_focus();
+                            let _ = app.emit("tray://open-settings", ());
+                        }
+                    }
+                })
+                .on_tray_icon_event(|tray, event| {
+                    if let TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                        rect,
+                        ..
+                    } = event
+                    {
+                        let app = tray.app_handle();
+                        if let Some(win) = app.get_webview_window("main") {
+                            if win.is_visible().unwrap_or(false) {
+                                let _ = win.hide();
+                            } else {
+                                show_popover(&win, rect);
+                            }
+                        }
+                    }
+                })
+                .build(app)?;
+
             Ok(())
         })
         .on_window_event(|window, event| {
-            if let tauri::WindowEvent::Destroyed = event {
-                // Cancel the stream task when the window closes so the
-                // background task does not outlive the Tauri window.
-                let sa = Arc::clone(&window.state::<AppState>().stream_abort);
-                tauri::async_runtime::spawn(async move {
-                    if let Some(handle) = sa.write().await.take() {
-                        handle.abort();
-                    }
-                });
+            match event {
+                WindowEvent::Destroyed => {
+                    // Cancel the stream task when the window closes so the
+                    // background task does not outlive the Tauri window.
+                    let sa = Arc::clone(&window.state::<AppState>().stream_abort);
+                    tauri::async_runtime::spawn(async move {
+                        if let Some(handle) = sa.write().await.take() {
+                            handle.abort();
+                        }
+                    });
+                }
+                WindowEvent::Focused(false) => {
+                    // Click-away hides the popover, matching native menubar apps.
+                    let _ = window.hide();
+                }
+                _ => {}
             }
         })
         .invoke_handler(tauri::generate_handler![

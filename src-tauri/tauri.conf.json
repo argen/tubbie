@@ -6,23 +6,30 @@
   "build": {
     "frontendDist": "../web/build",
     "devUrl": "http://localhost:5173",
-    "beforeBuildCommand": "cd ../web && npm run build",
-    "beforeDevCommand": "cd ../web && npm run dev"
+    "beforeBuildCommand": "sh -c 'cd web 2>/dev/null || cd ../web; npm run build'",
+    "beforeDevCommand": "sh -c 'cd web 2>/dev/null || cd ../web; npm run dev'"
   },
   "app": {
     "windows": [
       {
         "label": "main",
         "title": "Tubbie",
-        "width": 980,
-        "height": 720,
-        "resizable": true,
+        "width": 380,
+        "height": 560,
+        "resizable": false,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "visible": false,
+        "focus": false,
         "fullscreen": false
       }
     ],
     "security": {
       "csp": "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https://api.tfl.gov.uk; img-src 'self' data:; font-src 'self'"
-    }
+    },
+    "macOSPrivateApi": true
   },
   "bundle": {
     "active": true,
@@ -31,6 +38,7 @@
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
+      "icons/icon.png",
       "icons/icon.icns",
       "icons/icon.ico"
     ],
@@ -43,7 +51,8 @@
       "minimumSystemVersion": "11.0",
       "signingIdentity": null,
       "providerShortName": null,
-      "entitlements": null
+      "entitlements": null,
+      "infoPlist": "Info.plist"
     }
   }
 }
