@@ -130,7 +130,7 @@ Before reporting work as complete:
 
 1. `cargo test --workspace` — must be green. Pay special attention to
    the tests in the table above.
-2. `cd web && pnpm test` — must be green.
+2. `cd web && npm test` — must be green.
 3. `cargo clippy --workspace --all-targets -- -D warnings` —
    no new warnings.
 4. **Manual smoke (don't skip this for stream/config changes):**
