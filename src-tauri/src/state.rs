@@ -17,7 +17,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use serde_json::Value;
-use tfl_board::{BoardConfig, BoardError, BoardService};
+use tfl_board::{BoardConfig, BoardError, BoardService, LifecyclePhase};
 use tfl_client::{clock::Clock, http::TflHttp};
 use tfl_domain::{Board, LineStatus, Station};
 use tokio::{
@@ -233,6 +233,13 @@ pub struct AppState {
     /// Captured here so window-event handlers can branch on it without
     /// re-reading the store on every event. Changes require restart.
     pub display_mode: String,
+
+    /// Lifecycle phase signal. Desktop builds always stay `Active`
+    /// (`LifecyclePhase::always_active()`). The iOS shell writes
+    /// `Background` / `Active` from its mobile run-event handler. Placed
+    /// here so both the initial stream spawn and the panic-recovery watcher
+    /// can subscribe a fresh `phase_rx` from the same stable sender.
+    pub lifecycle: Arc<LifecyclePhase>,
 }
 
 impl AppState {

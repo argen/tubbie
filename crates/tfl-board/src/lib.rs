@@ -17,8 +17,10 @@
 pub mod config;
 pub mod error;
 pub mod filter;
+pub mod lifecycle;
 pub mod service;
 
 pub use config::{BoardConfig, VALID_THEME_IDS};
 pub use error::BoardError;
+pub use lifecycle::{AppPhase, LifecyclePhase};
 pub use service::BoardService;

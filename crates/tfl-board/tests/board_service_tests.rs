@@ -7,7 +7,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
 use futures::StreamExt;
-use tfl_board::{BoardConfig, BoardError, BoardService};
+use tfl_board::{BoardConfig, BoardError, BoardService, LifecyclePhase};
 use tfl_client::clock::FakeClock;
 use tfl_client::error::TflError;
 use tfl_client::fixture::FixtureTflHttp;
@@ -27,6 +27,17 @@ fn cfg_rx_from(cfg: BoardConfig) -> watch::Receiver<BoardConfig> {
     // call site to thread it through unused.
     Box::leak(Box::new(tx));
     rx
+}
+
+/// Build an always-Active `watch::Receiver<AppPhase>` for tests that don't
+/// exercise lifecycle transitions. Returns the `LifecyclePhase` sender so the
+/// caller can bind it to a local (`let _lc = …`) — a dropped sender would
+/// make `phase_rx.changed()` immediately return `Err`, which could starve the
+/// tick arm of the select loop.
+fn always_active_phase_rx() -> (LifecyclePhase, watch::Receiver<tfl_board::AppPhase>) {
+    let lc = LifecyclePhase::always_active();
+    let rx = lc.subscribe();
+    (lc, rx)
 }
 
 /// Path to the workspace fixtures directory, resolved from the crate manifest.
@@ -418,7 +429,8 @@ async fn stream_emits_on_interval() {
         theme: "classic-amber".to_string(),
     };
 
-    let mut stream = Box::pin(svc.stream(cfg_rx_from(cfg)));
+    let (_lc, phase_rx) = always_active_phase_rx();
+    let mut stream = Box::pin(svc.stream(cfg_rx_from(cfg), phase_rx));
 
     // First board emits immediately (first tick fires at t=0).
     let board1 = stream
@@ -514,7 +526,8 @@ async fn stream_backpressure_skips_tick_when_refresh_slow() {
         theme: "classic-amber".to_string(),
     };
 
-    let stream = Box::pin(svc.stream(cfg_rx_from(cfg)));
+    let (_lc, phase_rx) = always_active_phase_rx();
+    let stream = Box::pin(svc.stream(cfg_rx_from(cfg), phase_rx));
 
     // Drive the stream for 14 seconds of fake time.
     // Without backpressure, we'd expect 14/2 = 7 fetches.
@@ -615,7 +628,8 @@ async fn stream_on_fetch_failure_emits_stale_board() {
         theme: "classic-amber".to_string(),
     };
 
-    let mut stream = Box::pin(svc.stream(cfg_rx_from(cfg)));
+    let (_lc, phase_rx) = always_active_phase_rx();
+    let mut stream = Box::pin(svc.stream(cfg_rx_from(cfg), phase_rx));
 
     // Collect 4 boards: 3 successful + 1 stale.
     let mut boards = Vec::new();
@@ -729,7 +743,8 @@ async fn stream_cancellation_drops_in_flight() {
         theme: "classic-amber".to_string(),
     };
 
-    let stream = Box::pin(svc.stream(cfg_rx_from(cfg)));
+    let (_lc, phase_rx) = always_active_phase_rx();
+    let stream = Box::pin(svc.stream(cfg_rx_from(cfg), phase_rx));
 
     // Spawn the stream's first poll as a separate task so we can drive the
     // runtime freely. The task will start the unfold closure: tick fires at
@@ -836,7 +851,8 @@ async fn stream_stale_transition_atomic() {
         theme: "classic-amber".to_string(),
     };
 
-    let mut stream = Box::pin(svc.stream(cfg_rx_from(cfg)));
+    let (_lc, phase_rx) = always_active_phase_rx();
+    let mut stream = Box::pin(svc.stream(cfg_rx_from(cfg), phase_rx));
 
     // Helper to advance time and get next board.
     async fn next_board(
@@ -930,7 +946,8 @@ async fn stream_terminates_after_fatal_error_no_last_ok() {
         theme: "classic-amber".to_string(),
     };
 
-    let mut stream = Box::pin(svc.stream(cfg_rx_from(cfg)));
+    let (_lc, phase_rx) = always_active_phase_rx();
+    let mut stream = Box::pin(svc.stream(cfg_rx_from(cfg), phase_rx));
 
     // First poll — first tick fires immediately at t=0, fetch fails, no last_ok.
     // Should emit Some(Err(_)).
@@ -973,7 +990,8 @@ async fn stream_continues_with_stale_fallback_when_last_ok_exists() {
         theme: "classic-amber".to_string(),
     };
 
-    let mut stream = Box::pin(svc.stream(cfg_rx_from(cfg)));
+    let (_lc, phase_rx) = always_active_phase_rx();
+    let mut stream = Box::pin(svc.stream(cfg_rx_from(cfg), phase_rx));
 
     // First item: successful fetch.
     let first = stream.next().await;

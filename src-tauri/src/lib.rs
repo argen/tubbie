@@ -47,7 +47,7 @@ use tauri::{
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     Emitter, LogicalSize, Manager, PhysicalPosition, WindowEvent,
 };
-use tfl_board::{BoardConfig, BoardService};
+use tfl_board::{BoardConfig, BoardService, LifecyclePhase};
 use tfl_client::{clock::SystemClock, http::ReqwestTflHttp, TflClient};
 use tokio::sync::RwLock;
 use tokio::task::AbortHandle;
@@ -74,6 +74,7 @@ async fn spawn_stream_task(
     app_handle: tauri::AppHandle,
     client: Arc<TflClient<ReqwestTflHttp>>,
     cfg_rx: tokio::sync::watch::Receiver<BoardConfig>,
+    phase_rx: tokio::sync::watch::Receiver<tfl_board::AppPhase>,
     stream_abort: Arc<RwLock<Option<AbortHandle>>>,
 ) {
     let app = app_handle.clone();
@@ -82,7 +83,7 @@ async fn spawn_stream_task(
     // is just `Arc<TflClient>` + `Clock`. Construction does no I/O; the
     // shared client's caches are warmed once at startup by AppState.
     let service = BoardService::new(Arc::clone(&client), SystemClock);
-    let mut stream = Box::pin(service.stream(cfg_rx));
+    let mut stream = Box::pin(service.stream(cfg_rx, phase_rx));
 
     // Clone the Arc so the spawned task can clear its own handle when it ends.
     let stream_abort_clone = Arc::clone(&stream_abort);
@@ -312,6 +313,9 @@ pub fn run() {
             let config_store = Arc::new(store) as Arc<dyn state::ConfigStore>;
             let stream_abort: Arc<RwLock<Option<AbortHandle>>> = Arc::new(RwLock::new(None));
 
+            // Desktop always stays Active; iOS swaps this for a real signal.
+            let lifecycle = Arc::new(LifecyclePhase::always_active());
+
             // Seed the watch channel from the persisted config. The channel
             // is the live config source for the stream — `save_config`
             // writes to it after persisting, and the stream observes changes
@@ -338,8 +342,9 @@ pub fn run() {
             let sa = Arc::clone(&stream_abort);
             let ah = app.handle().clone();
             let initial_cfg_rx = cfg_rx.clone();
+            let initial_phase_rx = lifecycle.subscribe();
             tauri::async_runtime::spawn(async move {
-                spawn_stream_task(ah, stream_client, initial_cfg_rx, sa).await;
+                spawn_stream_task(ah, stream_client, initial_cfg_rx, initial_phase_rx, sa).await;
             });
 
             // The stream client now reuses the AppState client, so the saved
@@ -367,6 +372,7 @@ pub fn run() {
             let ah2 = app.handle().clone();
             let watcher_client = Arc::clone(&client);
             let watcher_cfg_rx = cfg_rx.clone();
+            let watcher_lifecycle = Arc::clone(&lifecycle);
             tauri::async_runtime::spawn(async move {
                 loop {
                     tokio::time::sleep(std::time::Duration::from_secs(2)).await;
@@ -396,6 +402,7 @@ pub fn run() {
                             ah2.clone(),
                             Arc::clone(&watcher_client),
                             watcher_cfg_rx.clone(),
+                            watcher_lifecycle.subscribe(),
                             Arc::clone(&sa2),
                         )
                         .await;
@@ -409,6 +416,7 @@ pub fn run() {
                 stream_abort,
                 cfg_tx,
                 display_mode: display_mode.clone(),
+                lifecycle,
             });
 
             if display_mode == "menubar" {
