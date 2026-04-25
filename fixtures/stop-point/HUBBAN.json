@@ -1,0 +1,1 @@
+{"id":"HUBBAN","commonName":"Bank","hubNaptanCode":"HUBBAN","children":[{"id":"940GZZLUBNK","commonName":"Bank Underground Station","modes":["tube"],"lineModeGroups":[{"modeName":"tube","lineIdentifier":["central","waterloo-city","northern"]}]},{"id":"940GZZDLBNK","commonName":"Bank DLR Station","modes":["dlr"],"lineModeGroups":[{"modeName":"dlr","lineIdentifier":["dlr"]}]}]}
