@@ -22,7 +22,7 @@ const DEFAULT_CONFIG: BoardConfig = {
   station_id: '940GZZLUBZP',
   line_ids: [],
   directions: [],
-  poll_seconds: 20,
+  poll_seconds: 30,
   theme: 'classic-amber',
 };
 
