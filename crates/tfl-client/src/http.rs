@@ -80,7 +80,7 @@ impl std::fmt::Debug for AppKey {
 /// ## Connection reuse
 /// The internal `reqwest::Client` is constructed once and shared across all
 /// `fetch` calls — no per-call DNS lookup or TLS handshake after warm-up.
-/// `pool_max_idle_per_host` is set to 4.
+/// `pool_max_idle_per_host` is set to 8.
 ///
 /// ## API-key precedence
 /// 1. Explicit key via [`ReqwestTflHttp::with_app_key`] — highest priority.
@@ -177,7 +177,7 @@ impl ReqwestTflHttp {
         let timeout = timeout.unwrap_or(Duration::from_secs(DEFAULT_TIMEOUT_SECS));
         let client = reqwest::Client::builder()
             .timeout(timeout)
-            .pool_max_idle_per_host(4)
+            .pool_max_idle_per_host(8)
             .user_agent(USER_AGENT)
             .build()
             .expect("reqwest client config is valid");
@@ -323,8 +323,7 @@ impl ReqwestTflHttp {
                 // backoff window.
                 if let Some(dur) = retry_after {
                     if dur.as_secs() > RETRY_AFTER_CAP_SECS {
-                        *self.cooldown_until.write().await =
-                            Some(Instant::now() + dur);
+                        *self.cooldown_until.write().await = Some(Instant::now() + dur);
                         return Err(RetryDecision::Fail(TflError::RateLimited {
                             retry_after: Some(dur),
                         }));

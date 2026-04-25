@@ -373,9 +373,7 @@ impl<H: TflHttp> TflClient<H> {
                     *guard = Some((Instant::now(), fresh.clone()));
                 }
                 Err(poison) => {
-                    eprintln!(
-                        "[tfl-client] line_status_cache mutex poisoned on write; recovering"
-                    );
+                    eprintln!("[tfl-client] line_status_cache mutex poisoned on write; recovering");
                     let mut guard = poison.into_inner();
                     *guard = Some((Instant::now(), fresh.clone()));
                 }

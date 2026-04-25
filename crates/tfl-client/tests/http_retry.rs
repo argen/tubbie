@@ -431,7 +431,7 @@ async fn get_line_status_serves_repeat_calls_from_cache() {
 
     Mock::given(method("GET"))
         .and(path("/Line/Mode/tube/Status"))
-        .respond_with(ResponseTemplate::new(200).set_body_json(&two_line_status_body()))
+        .respond_with(ResponseTemplate::new(200).set_body_json(two_line_status_body()))
         .expect(1) // exactly ONE wire hit for both calls
         .mount(&server)
         .await;
