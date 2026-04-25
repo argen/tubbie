@@ -363,10 +363,7 @@ pub async fn get_line_status(
 /// are decided once at startup, so the renderer must prompt the user to
 /// quit and relaunch before the new mode takes effect.
 #[tauri::command]
-pub async fn save_display_mode(
-    mode: String,
-    state: State<'_, AppState>,
-) -> Result<String, String> {
+pub async fn save_display_mode(mode: String, state: State<'_, AppState>) -> Result<String, String> {
     save_display_mode_inner(&mode, &state).await
 }
 

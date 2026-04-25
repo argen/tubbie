@@ -9,12 +9,7 @@
   } from '$lib/stores/config.js';
   import StationSearch from '$lib/components/StationSearch.svelte';
   import ThemePicker from '$lib/components/ThemePicker.svelte';
-  import {
-    hasAppKey,
-    saveAppKey,
-    saveDisplayMode,
-    type DisplayMode,
-  } from '$lib/ipc/commands.js';
+  import { hasAppKey, saveAppKey, saveDisplayMode, type DisplayMode } from '$lib/ipc/commands.js';
   import { displayMode } from '$lib/stores/displayMode.js';
   import { board } from '$lib/stores/board.js';
   import { debounce } from '$lib/utils/debounce.js';

@@ -129,10 +129,7 @@ async fn spawn_stream_task(
 /// We centre the window horizontally under the icon, put its top just below the
 /// icon (= menu bar), then clamp to the current monitor's work area so the
 /// popover never clips off the right edge.
-fn position_popover_under_tray(
-    window: &tauri::WebviewWindow,
-    tray_rect: tauri::Rect,
-) {
+fn position_popover_under_tray(window: &tauri::WebviewWindow, tray_rect: tauri::Rect) {
     let monitor = window
         .current_monitor()
         .ok()
@@ -298,8 +295,7 @@ pub fn run() {
                 // native menu (Settings / About / Quit). Losing focus hides
                 // the popover — see the `on_window_event` handler below.
 
-                let settings_item =
-                    MenuItemBuilder::with_id("settings", "Settings…").build(app)?;
+                let settings_item = MenuItemBuilder::with_id("settings", "Settings…").build(app)?;
                 let about_item = PredefinedMenuItem::about(
                     app,
                     Some("About Tubbie"),
