@@ -254,4 +254,76 @@ describe('Settings — station-scoped line chips', () => {
     });
     expect(savedCfg!.line_ids).toEqual(['central']);
   });
+
+  it('shows a DLR chip and enables it when Bank (which serves DLR) is selected', async () => {
+    render(SettingsPage);
+
+    const bank = makeStation('940GZZLUBNK', 'Bank Underground Station', [
+      { id: 'central', name: 'Central' },
+      { id: 'northern', name: 'Northern' },
+      { id: 'waterloo-city', name: 'Waterloo & City' },
+      { id: 'dlr', name: 'DLR' },
+    ]);
+    await pickStation(bank);
+
+    // DLR chip must appear (it's not in KNOWN_LINES but is in stationLines).
+    const dlrChip = await waitFor(() => screen.getByRole('button', { name: /toggle dlr line/i }));
+    expect(dlrChip.getAttribute('aria-disabled')).toBe('false');
+    expect((dlrChip as HTMLButtonElement).disabled).toBe(false);
+
+    // Tube lines the station serves must also be enabled.
+    const centralChip = screen.getByRole('button', { name: /toggle central line/i });
+    expect(centralChip.getAttribute('aria-disabled')).toBe('false');
+  });
+
+  it('shows a Mildmay chip and enables it when Whitechapel (which serves Overground) is selected', async () => {
+    render(SettingsPage);
+
+    const whitechapel = makeStation('940GZZLUWPL', 'Whitechapel Underground Station', [
+      { id: 'hammersmith-city', name: 'Hammersmith & City' },
+      { id: 'district', name: 'District' },
+      { id: 'elizabeth-line', name: 'Elizabeth' },
+      { id: 'mildmay', name: 'Mildmay' },
+    ]);
+    await pickStation(whitechapel);
+
+    // Mildmay chip must appear (not in KNOWN_LINES, but in stationLines).
+    const mildmayChip = await waitFor(() =>
+      screen.getByRole('button', { name: /toggle mildmay line/i }),
+    );
+    expect(mildmayChip.getAttribute('aria-disabled')).toBe('false');
+
+    // Elizabeth chip was already in KNOWN_LINES; must be enabled.
+    const elizabethChip = screen.getByRole('button', { name: /toggle elizabeth line/i });
+    expect(elizabethChip.getAttribute('aria-disabled')).toBe('false');
+  });
+
+  it('DLR chip is pruned from line_ids when switching to a tube-only station', async () => {
+    // Start with Bank selected and DLR in line_ids.
+    config.set({
+      ...sampleConfig,
+      station_id: '940GZZLUBNK',
+      line_ids: ['dlr', 'central'],
+    });
+
+    let savedCfg: BoardConfig | null = null;
+    setMockHandler('save_config', (args) => {
+      savedCfg = (args as { cfg: BoardConfig }).cfg;
+      return null;
+    });
+
+    render(SettingsPage);
+
+    // Switch to Belsize Park (Northern-only, no DLR).
+    const belsize = makeStation('940GZZLUBZP', 'Belsize Park Underground Station', [
+      { id: 'northern', name: 'Northern' },
+    ]);
+    await pickStation(belsize);
+
+    await waitFor(() => {
+      expect(savedCfg).not.toBeNull();
+    });
+    // Both 'dlr' and 'central' must be pruned since neither is served.
+    expect(savedCfg!.line_ids).toEqual([]);
+  });
 });

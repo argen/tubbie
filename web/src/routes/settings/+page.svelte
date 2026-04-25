@@ -166,6 +166,23 @@
     stationLines.length > 0 ? new Set(stationLines.map((l) => l.id)) : null,
   );
 
+  /**
+   * Chip list to render. Starts from `KNOWN_LINES` (the 12 tube lines) and
+   * appends any extra lines the selected station serves that aren't already
+   * in that list — e.g. DLR at Bank, Mildmay (Overground) at Whitechapel.
+   *
+   * Falls back to `KNOWN_LINES` alone when no station is selected or when
+   * the station metadata is empty (first-mount fail-open behaviour).
+   */
+  const displayChips = $derived.by<{ id: string; label: string }[]>(() => {
+    if (stationLines.length === 0) return KNOWN_LINES;
+    const knownIds = new Set(KNOWN_LINES.map((l) => l.id));
+    const extra = stationLines
+      .filter((l) => !knownIds.has(l.id))
+      .map((l) => ({ id: l.id, label: l.name }));
+    return extra.length > 0 ? [...KNOWN_LINES, ...extra] : KNOWN_LINES;
+  });
+
   function isLineAvailable(lineId: string): boolean {
     return availableLineIds === null || availableLineIds.has(lineId);
   }
@@ -327,7 +344,7 @@
         <span class="settings__section-hint">(empty = all lines)</span>
       </h2>
       <div class="settings__chips" role="group" aria-label="Select lines to filter">
-        {#each KNOWN_LINES as line (line.id)}
+        {#each displayChips as line (line.id)}
           {@const available = isLineAvailable(line.id)}
           <button
             type="button"
