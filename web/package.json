@@ -61,5 +61,8 @@
   },
   "dependencies": {
     "@tauri-apps/api": "2.10.1"
+  },
+  "overrides": {
+    "cookie": "^0.7.0"
   }
 }
