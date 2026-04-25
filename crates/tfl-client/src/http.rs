@@ -190,6 +190,10 @@ impl ReqwestTflHttp {
             "arrivals" => format!("StopPoint/{}/Arrivals", percent_encode(id)),
             "line-status" => format!("Line/Mode/{}/Status", percent_encode(id)),
             "stop-points" => format!("StopPoint/Mode/{}", percent_encode(id)),
+            // Hub StopPoint detail — `/StopPoint/{hub_id}` returns the hub
+            // record with a `children` array. Used to discover sibling
+            // stop-points (DLR / Overground / Elizabeth) at multi-mode hubs.
+            "stop-point" => format!("StopPoint/{}", percent_encode(id)),
             other => format!("{}/{}", percent_encode(other), percent_encode(id)),
         };
 
@@ -483,6 +487,9 @@ pub fn build_url(base: &str, endpoint: &str, id: &str) -> String {
         "arrivals" => format!("{base}/StopPoint/{id}/Arrivals"),
         "line-status" => format!("{base}/Line/Mode/{id}/Status"),
         "stop-points" => format!("{base}/StopPoint/Mode/{id}"),
+        // Hub StopPoint detail — returns the parent record with a `children`
+        // array. Used to discover sibling stop-points at multi-mode hubs.
+        "stop-point" => format!("{base}/StopPoint/{id}"),
         other => format!("{base}/{other}/{id}"),
     }
 }

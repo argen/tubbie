@@ -75,7 +75,10 @@ export function isDue(seconds: number): boolean {
   return seconds < 30;
 }
 
-/** Human-readable labels for the TfL tube line ids we surface in the UI. */
+/** Human-readable labels for every TfL line id we surface in the UI —
+ *  tube + DLR + London Overground (legacy + the six named lines TfL
+ *  introduced in Nov 2024) + Elizabeth.
+ */
 const LINE_LABELS: Record<string, string> = {
   bakerloo: 'Bakerloo',
   central: 'Central',
@@ -90,6 +93,15 @@ const LINE_LABELS: Record<string, string> = {
   piccadilly: 'Piccadilly',
   victoria: 'Victoria',
   'waterloo-city': 'Waterloo & City',
+  dlr: 'DLR',
+  'london-overground': 'Overground',
+  overground: 'Overground',
+  liberty: 'Liberty',
+  lioness: 'Lioness',
+  mildmay: 'Mildmay',
+  suffragette: 'Suffragette',
+  weaver: 'Weaver',
+  windrush: 'Windrush',
 };
 
 /**

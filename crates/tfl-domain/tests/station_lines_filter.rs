@@ -1,4 +1,4 @@
-//! Pin the tube-only whitelist in Station's `lineModeGroups` projection.
+//! Pin the supported-modes whitelist in Station's `lineModeGroups` projection.
 //!
 //! User-reported regression: Victoria's hub record lists
 //! `["52", "390", "38", "district", "circle", "gatwick-express", "southern",
@@ -6,18 +6,20 @@
 //! under `lineIdentifier`. Without a whitelist those non-tube ids flow into
 //! `Station.lines` and the Settings chip UI ends up rendering bus route
 //! numbers next to the station.
+//!
+//! Whitelist coverage: tube + DLR + London Overground (legacy + the six
+//! named lines introduced Nov 2024) + Elizabeth.
 
-use tfl_domain::{is_tube_line_id, Station};
+use tfl_domain::{is_supported_line_id, Station};
 
 #[test]
-fn is_tube_line_id_accepts_every_tube_line() {
+fn is_supported_line_id_accepts_every_surfaced_line() {
     for id in [
+        // Tube
         "bakerloo",
         "central",
         "circle",
         "district",
-        "elizabeth",
-        "elizabeth-line",
         "hammersmith-city",
         "jubilee",
         "metropolitan",
@@ -25,13 +27,29 @@ fn is_tube_line_id_accepts_every_tube_line() {
         "piccadilly",
         "victoria",
         "waterloo-city",
+        // Elizabeth
+        "elizabeth",
+        "elizabeth-line",
+        // DLR
+        "dlr",
+        // Overground
+        "london-overground",
+        "liberty",
+        "lioness",
+        "mildmay",
+        "suffragette",
+        "weaver",
+        "windrush",
     ] {
-        assert!(is_tube_line_id(id), "expected {id:?} to be classified tube");
+        assert!(
+            is_supported_line_id(id),
+            "expected {id:?} to be classified as a supported line"
+        );
     }
 }
 
 #[test]
-fn is_tube_line_id_rejects_bus_rail_and_hub_ids() {
+fn is_supported_line_id_rejects_bus_rail_and_hub_ids() {
     for id in [
         "52",
         "390",
@@ -43,12 +61,10 @@ fn is_tube_line_id_rejects_bus_rail_and_hub_ids() {
         "southeastern",
         "thameslink",
         "c2c",
-        "london-overground",
-        "dlr",
     ] {
         assert!(
-            !is_tube_line_id(id),
-            "non-tube id {id:?} must NOT pass the tube filter"
+            !is_supported_line_id(id),
+            "non-supported id {id:?} must NOT pass the whitelist"
         );
     }
 }

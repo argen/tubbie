@@ -62,6 +62,16 @@
   --line-waterloo-city: #95cdba;
   --line-dlr: #00a4a7;
   --line-overground: #ee7c0e;
+  /* Six named Overground lines introduced by TfL in Nov 2024 — palette
+     per the line-standard PDF linked above. The legacy `--line-overground`
+     orange above is kept as a fallback for arrivals still tagged with the
+     pre-rename `london-overground` id. */
+  --line-liberty: #5d6062;
+  --line-lioness: #fbc91b;
+  --line-mildmay: #006fe6;
+  --line-suffragette: #5bbd72;
+  --line-weaver: #9b0058;
+  --line-windrush: #dc241f;
 }
 
 /* ------------------------------------------------------------
@@ -220,6 +230,13 @@ body {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
 }
 
+/*
+ * Window mode is a regular macOS window — the OS draws its own rounded
+ * corners and drop shadow around our (transparent) content. We render
+ * flush to the edges; the native chrome (title bar background, traffic
+ * lights, title text) is stripped at runtime by `strip_native_chrome`
+ * in src-tauri/src/lib.rs so our own HTML title bar can take over.
+ */
 .popover-root.mode-window {
   border-radius: 0;
   border: none;

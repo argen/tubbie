@@ -83,6 +83,14 @@ async fn spawn_stream_task(
     // client wrapper).
     let http = ReqwestTflHttp::new();
     let client = TflClient::new(http);
+    // The stop-points cache is per-client and the AppState client's cache
+    // (warmed at startup) is unreachable from here. Warm this stream's
+    // own cache so the first `get_arrivals` call can resolve the station's
+    // `hubNaptanCode` and fan out to DLR / Overground / Elizabeth siblings
+    // at multi-mode hubs (Bank, TCR, Whitechapel, Stratford…).
+    if let Err(e) = client.warm_stop_points_cache().await {
+        eprintln!("[tubbie] stream task: failed to warm stop-points cache: {e}");
+    }
     let service = BoardService::new(client, SystemClock);
     let mut stream = Box::pin(service.stream(cfg));
 
@@ -175,6 +183,74 @@ fn show_popover(window: &tauri::WebviewWindow, tray_rect: tauri::Rect) {
     position_popover_under_tray(window, tray_rect);
     let _ = window.show();
     let _ = window.set_focus();
+}
+
+/// Strip the native macOS title bar chrome from a decorated window so that
+/// our HTML title bar (see `Board.svelte` `.board__titlebar`) can take over.
+///
+/// The window stays "decorated" from Tauri/Cocoa's perspective — that's what
+/// makes a transparent window reliably appear in window mode under the
+/// `Regular` activation policy — but we render it without a visible title
+/// bar background, title text, or native traffic-light buttons.
+///
+/// Equivalent to running this in objc:
+/// ```objc
+/// window.titlebarAppearsTransparent = YES;
+/// window.titleVisibility = NSWindowTitleHidden;
+/// window.styleMask |= NSWindowStyleMaskFullSizeContentView;
+/// [[window standardWindowButton:NSWindowCloseButton] setHidden:YES];
+/// [[window standardWindowButton:NSWindowMiniaturizeButton] setHidden:YES];
+/// [[window standardWindowButton:NSWindowZoomButton] setHidden:YES];
+/// ```
+///
+/// `unsafe_code` is gated to this single function — there is no Rust-safe
+/// API to reach NSWindow's chrome controls.
+#[cfg(target_os = "macos")]
+#[allow(unsafe_code)]
+fn strip_native_chrome(window: &tauri::WebviewWindow) {
+    use objc2::msg_send;
+    use objc2::runtime::{AnyObject, Bool};
+
+    let Ok(ptr) = window.ns_window() else {
+        return;
+    };
+    if ptr.is_null() {
+        return;
+    }
+
+    // NSWindowStyleMask bits (Cocoa uses NSUInteger = usize on 64-bit).
+    const TITLED: usize = 1 << 0;
+    const CLOSABLE: usize = 1 << 1;
+    const MINIATURIZABLE: usize = 1 << 2;
+    const RESIZABLE: usize = 1 << 3;
+    const FULL_SIZE_CONTENT_VIEW: usize = 1 << 15;
+    // NSWindowTitleVisibility::NSWindowTitleHidden == 1 (NSInteger).
+    const TITLE_HIDDEN: isize = 1;
+    // NSWindowButton enum: close=0, miniaturize=1, zoom=2 (NSUInteger).
+    const BUTTON_KINDS: [usize; 3] = [0, 1, 2];
+
+    unsafe {
+        let ns_window = &*(ptr as *const AnyObject);
+
+        let _: () = msg_send![ns_window, setTitlebarAppearsTransparent: Bool::YES];
+        let _: () = msg_send![ns_window, setTitleVisibility: TITLE_HIDDEN];
+
+        // Build the style mask explicitly rather than OR-ing into the
+        // existing mask — `set_decorations(true)` may not have settled yet
+        // when this runs, so reading styleMask could return a partial bag
+        // (e.g. just the FullSizeContentView bit) and we'd silently drop
+        // Titled, leaving the window in a state where macOS won't render
+        // it as a normal floating window.
+        let new_mask = TITLED | CLOSABLE | MINIATURIZABLE | RESIZABLE | FULL_SIZE_CONTENT_VIEW;
+        let _: () = msg_send![ns_window, setStyleMask: new_mask];
+
+        for kind in BUTTON_KINDS {
+            let btn: *mut AnyObject = msg_send![ns_window, standardWindowButton: kind];
+            if !btn.is_null() {
+                let _: () = msg_send![btn, setHidden: Bool::YES];
+            }
+        }
+    }
 }
 
 /// Application entry point. Called from `main.rs` (and mobile entry point).
@@ -352,16 +428,20 @@ pub fn run() {
                 //
                 // The static window config is tuned for the menubar popover
                 // (small, borderless, transparent, hidden on launch). For
-                // window mode we override those at runtime and reveal a
-                // normal resizable window centred on screen.
+                // window mode we re-decorate the window so macOS reliably
+                // brings it onscreen, then strip the native chrome (title
+                // bar background, title text, traffic-light buttons) so our
+                // own LED-themed title bar in Board.svelte takes over.
                 if let Some(win) = app.get_webview_window("main") {
                     let _ = win.set_decorations(true);
-                    let _ = win.set_resizable(true);
                     let _ = win.set_always_on_top(false);
+                    let _ = win.set_min_size(Some(LogicalSize::new(600.0, 400.0)));
                     let _ = win.set_size(LogicalSize::new(980.0, 720.0));
                     let _ = win.center();
                     let _ = win.show();
                     let _ = win.set_focus();
+                    #[cfg(target_os = "macos")]
+                    strip_native_chrome(&win);
                 }
             }
 
