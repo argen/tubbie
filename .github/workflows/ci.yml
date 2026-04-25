@@ -30,10 +30,10 @@ jobs:
       - name: Assert cookie >= 0.7 (GHSA-pxg6-pf52-xh8x)
         run: |
           npm ls cookie --json --all \
-            | jq -e '[.. | objects | select(.name=="cookie") | .version]
+            | jq -e '[.. | objects | to_entries[]? | select(.key=="cookie") | .value.version]
                      | unique
-                     | length > 0
-                     and all(startswith("0.7.") or startswith("0.8.") or startswith("1."))'
+                     | (length > 0)
+                       and all(startswith("0.7.") or startswith("0.8.") or startswith("1."))'
 
       - name: Lint
         run: npm run lint
@@ -95,7 +95,6 @@ jobs:
     uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@c51854704019a247608d928f370c98740469d4b5 # v2.3.5
     permissions:
       contents: read
-      security-events: write
       actions: read
     with:
       scan-args: |-
@@ -103,6 +102,9 @@ jobs:
         --skip-git
         ./
       fail-on-vuln: true
+      # SARIF upload requires GitHub code scanning, which is only free
+      # on public repos. Re-enable once the repo flips public.
+      upload-sarif: false
 
   sbom:
     name: sbom
