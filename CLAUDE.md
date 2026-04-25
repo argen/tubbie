@@ -153,6 +153,15 @@ Before reporting work as complete:
 - Squash-merge with `--delete-branch`. No rebase-merge, no merge-commit.
 - The user runs the merge themselves unless explicitly asked.
 
+## External consumers of `crates/tfl-*`
+
+The three core crates (`tfl-domain`, `tfl-client`, `tfl-board`) are consumed
+by [`argen/tubbie-ios`](https://github.com/argen/tubbie-ios) via a SHA-pinned
+git submodule. Their public surface is now a contract — see
+`docs/ADR/crates-as-public-contract.md`. Breaking changes to public symbols
+require coordination (paired PR + submodule bump in tubbie-ios). Internal
+refactors are unaffected.
+
 ## Things that look correct in isolation but break the integration
 
 - A passing `BoardService::stream` test does NOT prove `save_config`
