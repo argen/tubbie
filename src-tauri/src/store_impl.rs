@@ -31,7 +31,7 @@ use serde_json::Value;
 use tauri::AppHandle;
 use tauri_plugin_store::{Store, StoreExt};
 
-use crate::state::{default_board_config, ConfigStore};
+use crate::state::{default_board_config, ConfigStore, DEFAULT_DISPLAY_MODE};
 use tfl_board::BoardConfig;
 
 /// `ConfigStore` backed by `tauri-plugin-store`.
@@ -110,6 +110,29 @@ impl ConfigStore for StorePluginConfigStore {
         let store = Arc::clone(&self.store);
         tokio::task::spawn_blocking(move || {
             store.set("tfl_app_key", value);
+            store
+                .save()
+                .map_err(|e| format!("failed to save config store: {e}"))
+        })
+        .await
+        .map_err(|e| format!("spawn_blocking panicked: {e}"))??;
+        Ok(())
+    }
+
+    async fn load_display_mode(&self) -> Result<String, String> {
+        let mode = self
+            .store
+            .get("display_mode")
+            .and_then(|v| serde_json::from_value::<String>(v).ok())
+            .unwrap_or_else(|| DEFAULT_DISPLAY_MODE.to_string());
+        Ok(mode)
+    }
+
+    async fn save_display_mode(&self, mode: &str) -> Result<(), String> {
+        let value = serde_json::json!(mode);
+        let store = Arc::clone(&self.store);
+        tokio::task::spawn_blocking(move || {
+            store.set("display_mode", value);
             store
                 .save()
                 .map_err(|e| format!("failed to save config store: {e}"))

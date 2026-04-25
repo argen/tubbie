@@ -92,6 +92,35 @@ export async function getLineStatus(lineId: string): Promise<LineStatus> {
   return raw;
 }
 
+/** UI-level display mode: floating window or menubar popover. */
+export type DisplayMode = 'window' | 'menubar';
+
+function isDisplayMode(value: unknown): value is DisplayMode {
+  return value === 'window' || value === 'menubar';
+}
+
+/** Load the persisted display mode. Defaults to `"window"` if absent. */
+export async function loadDisplayMode(): Promise<DisplayMode> {
+  const raw = await invoke<unknown>('load_display_mode');
+  if (!isDisplayMode(raw)) {
+    throw new TypeError(`load_display_mode: unexpected value ${String(raw)}`);
+  }
+  return raw;
+}
+
+/**
+ * Persist the display mode. Returns `"restart to apply"` because the
+ * window chrome and tray icon are decided at startup — the renderer
+ * should surface that hint to the user.
+ */
+export async function saveDisplayMode(mode: DisplayMode): Promise<string> {
+  const raw = await invoke<unknown>('save_display_mode', { mode });
+  if (typeof raw !== 'string') {
+    throw new TypeError('save_display_mode: expected string response');
+  }
+  return raw;
+}
+
 // ---------------------------------------------------------------------------
 // Event subscription
 // ---------------------------------------------------------------------------

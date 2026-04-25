@@ -9,7 +9,13 @@
   } from '$lib/stores/config.js';
   import StationSearch from '$lib/components/StationSearch.svelte';
   import ThemePicker from '$lib/components/ThemePicker.svelte';
-  import { hasAppKey, saveAppKey } from '$lib/ipc/commands.js';
+  import {
+    hasAppKey,
+    saveAppKey,
+    saveDisplayMode,
+    type DisplayMode,
+  } from '$lib/ipc/commands.js';
+  import { displayMode } from '$lib/stores/displayMode.js';
   import { board } from '$lib/stores/board.js';
   import { debounce } from '$lib/utils/debounce.js';
   import { shortStationName } from '$lib/utils/format.js';
@@ -38,6 +44,13 @@
   let appKeyVisible = $state(false);
   let appKeyStatus = $state<string | null>(null);
   let appKeySaving = $state(false);
+
+  // Display-mode picker state. We mirror the persisted value into a local
+  // `pendingDisplayMode` so the radio reflects the user's selection before
+  // restart, while `$displayMode` (the active runtime mode) keeps driving
+  // the popover-root chrome until the next launch.
+  let pendingDisplayMode = $state<DisplayMode>($displayMode);
+  let displayModeStatus = $state<string | null>(null);
   /** Transient "saved X seconds ago" chip next to the header. */
   let saveState = $state<'idle' | 'saving' | 'saved'>('idle');
   let saveStateTimer: ReturnType<typeof setTimeout> | null = null;
@@ -192,6 +205,24 @@
     // Fires on every slider tick; the debounced persist coalesces the drag
     // so we don't slam save_config → stream-restart 295 times on a full sweep.
     persistDebounced();
+  }
+
+  async function handleDisplayModeChange(next: DisplayMode): Promise<void> {
+    pendingDisplayMode = next;
+    try {
+      const msg = await saveDisplayMode(next);
+      displayModeStatus =
+        next === $displayMode
+          ? `Active mode: ${prettyDisplayMode(next)}.`
+          : `${prettyDisplayMode(next)} — ${msg}.`;
+    } catch (err: unknown) {
+      displayModeStatus = `Error: ${err instanceof Error ? err.message : String(err)}`;
+      pendingDisplayMode = $displayMode;
+    }
+  }
+
+  function prettyDisplayMode(mode: DisplayMode): string {
+    return mode === 'menubar' ? 'Menu bar popover' : 'Floating window';
   }
 
   async function handleSaveAppKey(): Promise<void> {
@@ -381,6 +412,45 @@
     <section class="settings__section" aria-labelledby="section-theme">
       <h2 id="section-theme" class="settings__section-title">Theme</h2>
       <ThemePicker selected={theme} onSelect={handleThemeSelect} />
+    </section>
+
+    <!-- Display mode -->
+    <section class="settings__section" aria-labelledby="section-display-mode">
+      <h2 id="section-display-mode" class="settings__section-title">Display mode</h2>
+      <p class="settings__api-hint">
+        Choose how Tubbie launches. Changes take effect after restarting the app.
+      </p>
+      <div class="settings__display-mode" role="radiogroup" aria-label="Display mode">
+        <label class="settings__display-mode-option">
+          <input
+            type="radio"
+            name="display-mode"
+            value="window"
+            checked={pendingDisplayMode === 'window'}
+            onchange={() => void handleDisplayModeChange('window')}
+          />
+          <span class="settings__display-mode-label">Floating window</span>
+          <span class="settings__display-mode-hint">
+            Resizable desktop window with full board layout.
+          </span>
+        </label>
+        <label class="settings__display-mode-option">
+          <input
+            type="radio"
+            name="display-mode"
+            value="menubar"
+            checked={pendingDisplayMode === 'menubar'}
+            onchange={() => void handleDisplayModeChange('menubar')}
+          />
+          <span class="settings__display-mode-label">Menu bar popover</span>
+          <span class="settings__display-mode-hint">
+            Compact popover anchored to a menu bar icon.
+          </span>
+        </label>
+      </div>
+      {#if displayModeStatus}
+        <p class="settings__api-status" aria-live="polite">{displayModeStatus}</p>
+      {/if}
     </section>
 
     <!-- API key -->
@@ -688,6 +758,49 @@
   .settings__api-hint--small {
     font-size: 0.75rem;
     opacity: 0.5;
+  }
+
+  .settings__display-mode {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .settings__display-mode-option {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 0.6rem;
+    row-gap: 0.15rem;
+    align-items: baseline;
+    padding: 0.5rem 0.75rem;
+    background: var(--chip-bg);
+    border: 1px solid var(--input-border);
+    border-radius: 2px;
+    cursor: pointer;
+  }
+
+  .settings__display-mode-option:hover,
+  .settings__display-mode-option:focus-within {
+    border-color: var(--platform-label);
+  }
+
+  .settings__display-mode-option input[type='radio'] {
+    grid-row: 1 / span 2;
+    accent-color: var(--fg);
+    margin: 0;
+  }
+
+  .settings__display-mode-label {
+    font-family: var(--font-board);
+    font-size: 1rem;
+    color: var(--fg);
+  }
+
+  .settings__display-mode-hint {
+    font-family: var(--font-board);
+    font-size: 0.8rem;
+    color: var(--platform-label);
+    opacity: 0.75;
   }
 
   .settings__link {

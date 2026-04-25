@@ -42,7 +42,7 @@ use futures::StreamExt;
 use tauri::{
     menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    Emitter, Manager, PhysicalPosition, WindowEvent,
+    Emitter, LogicalSize, Manager, PhysicalPosition, WindowEvent,
 };
 use tfl_board::{BoardConfig, BoardService};
 use tfl_client::{clock::SystemClock, http::ReqwestTflHttp, TflClient};
@@ -50,8 +50,8 @@ use tokio::sync::RwLock;
 use tokio::task::AbortHandle;
 
 use commands::{
-    get_board, get_line_status, has_app_key, load_app_key, load_config, save_app_key, save_config,
-    search_stations,
+    get_board, get_line_status, has_app_key, load_app_key, load_config, load_display_mode,
+    save_app_key, save_config, save_display_mode, search_stations,
 };
 use state::{AnyBoardService, AppState};
 use store_impl::StorePluginConfigStore;
@@ -189,19 +189,28 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_store::Builder::default().build())
         .setup(|app| {
-            // macOS: hide dock icon and menu so the app behaves as a
-            // menubar-only utility. Info.plist sets LSUIElement for bundled
-            // builds; this call covers `tauri dev`.
-            #[cfg(target_os = "macos")]
-            {
-                app.set_activation_policy(tauri::ActivationPolicy::Accessory);
-            }
-
             // Read saved API key, if any. The client is constructed once at
             // startup. Changing the key requires a restart (Settings UI shows
             // "restart to apply" after save_app_key).
             let store =
                 StorePluginConfigStore::open(app.handle()).expect("failed to open config store");
+
+            // Resolve display mode early — every conditional below (activation
+            // policy, window chrome, tray, blur-to-hide) branches on it.
+            let display_mode: String = store
+                .raw_get("display_mode")
+                .and_then(|v| serde_json::from_value::<String>(v).ok())
+                .unwrap_or_else(|| state::DEFAULT_DISPLAY_MODE.to_string());
+
+            // macOS: only the menubar mode hides the dock icon. In window
+            // mode we want a normal Regular activation policy so the user
+            // sees a dock icon and can ⌘-Tab to it.
+            #[cfg(target_os = "macos")]
+            {
+                if display_mode == "menubar" {
+                    app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+                }
+            }
 
             let saved_key: Option<String> = store.raw_get("tfl_app_key").and_then(|v| {
                 if v.is_null() {
@@ -278,67 +287,87 @@ pub fn run() {
                 board_service,
                 config_store,
                 stream_abort,
+                display_mode: display_mode.clone(),
             });
 
-            // --- Menubar tray icon + popover behaviour ---------------------
-            //
-            // Left click on the tray icon toggles the popover window, placing
-            // it anchored under the icon. Right click opens a native menu
-            // (Settings / About / Quit). Losing focus hides the popover —
-            // see the `on_window_event` handler below.
+            if display_mode == "menubar" {
+                // --- Menubar tray icon + popover behaviour -----------------
+                //
+                // Left click on the tray icon toggles the popover window,
+                // placing it anchored under the icon. Right click opens a
+                // native menu (Settings / About / Quit). Losing focus hides
+                // the popover — see the `on_window_event` handler below.
 
-            let settings_item = MenuItemBuilder::with_id("settings", "Settings…").build(app)?;
-            let about_item = PredefinedMenuItem::about(
-                app,
-                Some("About Tubbie"),
-                Some(tauri::menu::AboutMetadata {
-                    name: Some("Tubbie".into()),
-                    copyright: Some("© 2026 Bruno Belcastro".into()),
-                    ..Default::default()
-                }),
-            )?;
-            let quit_item = PredefinedMenuItem::quit(app, Some("Quit Tubbie"))?;
-            let tray_menu = MenuBuilder::new(app)
-                .item(&settings_item)
-                .separator()
-                .item(&about_item)
-                .separator()
-                .item(&quit_item)
-                .build()?;
+                let settings_item =
+                    MenuItemBuilder::with_id("settings", "Settings…").build(app)?;
+                let about_item = PredefinedMenuItem::about(
+                    app,
+                    Some("About Tubbie"),
+                    Some(tauri::menu::AboutMetadata {
+                        name: Some("Tubbie".into()),
+                        copyright: Some("© 2026 Bruno Belcastro".into()),
+                        ..Default::default()
+                    }),
+                )?;
+                let quit_item = PredefinedMenuItem::quit(app, Some("Quit Tubbie"))?;
+                let tray_menu = MenuBuilder::new(app)
+                    .item(&settings_item)
+                    .separator()
+                    .item(&about_item)
+                    .separator()
+                    .item(&quit_item)
+                    .build()?;
 
-            let _tray = TrayIconBuilder::with_id("tubbie-tray")
-                .icon(tauri::include_image!("icons/tray-icon.png"))
-                .icon_as_template(true)
-                .menu(&tray_menu)
-                .show_menu_on_left_click(false)
-                .on_menu_event(|app, event| {
-                    if event.id().as_ref() == "settings" {
-                        if let Some(win) = app.get_webview_window("main") {
-                            let _ = win.show();
-                            let _ = win.set_focus();
-                            let _ = app.emit("tray://open-settings", ());
-                        }
-                    }
-                })
-                .on_tray_icon_event(|tray, event| {
-                    if let TrayIconEvent::Click {
-                        button: MouseButton::Left,
-                        button_state: MouseButtonState::Up,
-                        rect,
-                        ..
-                    } = event
-                    {
-                        let app = tray.app_handle();
-                        if let Some(win) = app.get_webview_window("main") {
-                            if win.is_visible().unwrap_or(false) {
-                                let _ = win.hide();
-                            } else {
-                                show_popover(&win, rect);
+                let _tray = TrayIconBuilder::with_id("tubbie-tray")
+                    .icon(tauri::include_image!("icons/tray-icon.png"))
+                    .icon_as_template(true)
+                    .menu(&tray_menu)
+                    .show_menu_on_left_click(false)
+                    .on_menu_event(|app, event| {
+                        if event.id().as_ref() == "settings" {
+                            if let Some(win) = app.get_webview_window("main") {
+                                let _ = win.show();
+                                let _ = win.set_focus();
+                                let _ = app.emit("tray://open-settings", ());
                             }
                         }
-                    }
-                })
-                .build(app)?;
+                    })
+                    .on_tray_icon_event(|tray, event| {
+                        if let TrayIconEvent::Click {
+                            button: MouseButton::Left,
+                            button_state: MouseButtonState::Up,
+                            rect,
+                            ..
+                        } = event
+                        {
+                            let app = tray.app_handle();
+                            if let Some(win) = app.get_webview_window("main") {
+                                if win.is_visible().unwrap_or(false) {
+                                    let _ = win.hide();
+                                } else {
+                                    show_popover(&win, rect);
+                                }
+                            }
+                        }
+                    })
+                    .build(app)?;
+            } else {
+                // --- Floating window mode -----------------------------------
+                //
+                // The static window config is tuned for the menubar popover
+                // (small, borderless, transparent, hidden on launch). For
+                // window mode we override those at runtime and reveal a
+                // normal resizable window centred on screen.
+                if let Some(win) = app.get_webview_window("main") {
+                    let _ = win.set_decorations(true);
+                    let _ = win.set_resizable(true);
+                    let _ = win.set_always_on_top(false);
+                    let _ = win.set_size(LogicalSize::new(980.0, 720.0));
+                    let _ = win.center();
+                    let _ = win.show();
+                    let _ = win.set_focus();
+                }
+            }
 
             Ok(())
         })
@@ -354,8 +383,12 @@ pub fn run() {
                         }
                     });
                 }
-                WindowEvent::Focused(false) => {
-                    // Click-away hides the popover, matching native menubar apps.
+                WindowEvent::Focused(false)
+                    if window.state::<AppState>().display_mode == "menubar" =>
+                {
+                    // Click-away hides the popover only in menubar mode.
+                    // In windowed mode the user expects the window to stay
+                    // visible when it loses focus.
                     let _ = window.hide();
                 }
                 _ => {}
@@ -370,6 +403,8 @@ pub fn run() {
             load_app_key,
             has_app_key,
             get_line_status,
+            save_display_mode,
+            load_display_mode,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tubbie");

@@ -231,6 +231,32 @@ pub(crate) async fn has_app_key_inner(state: &AppState) -> Result<bool, String> 
     Ok(key.is_some())
 }
 
+/// Validate a `display_mode` argument. Only `"window"` and `"menubar"` are
+/// accepted; the renderer must never persist an unrecognised value because
+/// startup branches on this string and would silently fall back to default.
+pub(crate) fn validate_display_mode(mode: &str) -> Result<(), String> {
+    if mode == "window" || mode == "menubar" {
+        Ok(())
+    } else {
+        Err(format!(
+            "validation: display_mode must be \"window\" or \"menubar\", got {mode:?}"
+        ))
+    }
+}
+
+pub(crate) async fn save_display_mode_inner(
+    mode: &str,
+    state: &AppState,
+) -> Result<String, String> {
+    validate_display_mode(mode)?;
+    state.config_store.save_display_mode(mode).await?;
+    Ok("restart to apply".to_string())
+}
+
+pub(crate) async fn load_display_mode_inner(state: &AppState) -> Result<String, String> {
+    state.config_store.load_display_mode().await
+}
+
 pub(crate) async fn get_line_status_inner(
     line_id: &str,
     state: &AppState,
@@ -331,6 +357,25 @@ pub async fn get_line_status(
     get_line_status_inner(&line_id, &state).await
 }
 
+/// Persist the display mode (`"window"` or `"menubar"`).
+///
+/// Returns `"restart to apply"` — the window decorations and tray icon
+/// are decided once at startup, so the renderer must prompt the user to
+/// quit and relaunch before the new mode takes effect.
+#[tauri::command]
+pub async fn save_display_mode(
+    mode: String,
+    state: State<'_, AppState>,
+) -> Result<String, String> {
+    save_display_mode_inner(&mode, &state).await
+}
+
+/// Load the persisted display mode. Defaults to `"window"`.
+#[tauri::command]
+pub async fn load_display_mode(state: State<'_, AppState>) -> Result<String, String> {
+    load_display_mode_inner(&state).await
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -361,6 +406,7 @@ mod tests {
             board_service,
             config_store,
             stream_abort: Arc::new(RwLock::new(None)),
+            display_mode: "window".to_string(),
         }
     }
 
@@ -929,6 +975,50 @@ mod tests {
         let err = get_line_status_inner("../etc", &state)
             .await
             .expect_err("path traversal should be rejected");
+        assert!(err.contains("validation:"), "error: {err}");
+    }
+
+    // -----------------------------------------------------------------------
+    // Display mode
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn validate_display_mode_accepts_known_values() {
+        assert!(validate_display_mode("window").is_ok());
+        assert!(validate_display_mode("menubar").is_ok());
+    }
+
+    #[test]
+    fn validate_display_mode_rejects_unknown() {
+        assert!(validate_display_mode("").is_err());
+        assert!(validate_display_mode("Window").is_err());
+        assert!(validate_display_mode("popover").is_err());
+    }
+
+    #[tokio::test]
+    async fn load_display_mode_defaults_to_window() {
+        let state = fixture_state();
+        let mode = load_display_mode_inner(&state).await.expect("should load");
+        assert_eq!(mode, "window");
+    }
+
+    #[tokio::test]
+    async fn save_and_load_display_mode_round_trips() {
+        let state = fixture_state();
+        let msg = save_display_mode_inner("menubar", &state)
+            .await
+            .expect("should save");
+        assert_eq!(msg, "restart to apply");
+        let mode = load_display_mode_inner(&state).await.expect("should load");
+        assert_eq!(mode, "menubar");
+    }
+
+    #[tokio::test]
+    async fn save_display_mode_rejects_unknown_value() {
+        let state = fixture_state();
+        let err = save_display_mode_inner("invalid", &state)
+            .await
+            .expect_err("should reject unknown mode");
         assert!(err.contains("validation:"), "error: {err}");
     }
 }

@@ -4,6 +4,7 @@
   import type { Snippet } from 'svelte';
   import { startBoardSubscription } from '$lib/stores/board.js';
   import { initConfig, config, applyTheme } from '$lib/stores/config.js';
+  import { initDisplayMode, displayMode } from '$lib/stores/displayMode.js';
   import Attribution from '$lib/components/Attribution.svelte';
   import { goto } from '$app/navigation';
 
@@ -17,7 +18,12 @@
   let cleanupTrayMenu: (() => void) | null = null;
 
   onMount(async () => {
-    // Load config first (provides theme + station settings)
+    // Load the active display mode first so the popover-root has the
+    // correct chrome class on first paint. This avoids a flash of
+    // popover styling inside a regular floating window.
+    await initDisplayMode();
+
+    // Load config (provides theme + station settings)
     await initConfig();
 
     // Apply persisted theme immediately
@@ -51,7 +57,7 @@
   });
 </script>
 
-<div class="popover-root">
+<div class="popover-root mode-{$displayMode}">
   <div class="popover-content">
     {@render children()}
   </div>

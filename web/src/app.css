@@ -198,9 +198,10 @@ body {
 }
 
 /* ------------------------------------------------------------
-   Popover card — the visible "chrome" of the menubar popover.
-   The Tauri window is transparent + borderless, so the rounded
-   corners and solid background come from this element.
+   Popover / window root — the visible "chrome" around the board.
+   In menubar mode the Tauri window is transparent + borderless,
+   so the rounded corners and shadow come from CSS. In window
+   mode the OS provides the window chrome and we render flush.
    ------------------------------------------------------------ */
 
 .popover-root {
@@ -209,11 +210,20 @@ body {
   width: 100vw;
   overflow: hidden;
   background: var(--bg);
+  display: flex;
+  flex-direction: column;
+}
+
+.popover-root.mode-menubar {
   border-radius: 12px;
   border: 1px solid var(--row-divider);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-  display: flex;
-  flex-direction: column;
+}
+
+.popover-root.mode-window {
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
 }
 
 /* LED glow text effect — applied to board text surfaces */
