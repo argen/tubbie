@@ -29,7 +29,8 @@ use std::time::Duration;
 use tfl_client::error::TflError;
 use tfl_client::http::ReqwestTflHttp;
 use tfl_client::http::TflHttp;
-use wiremock::matchers::{method, path};
+use tfl_client::TflClient;
+use wiremock::matchers::{method, path, query_param};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
 // ---------------------------------------------------------------------------
@@ -393,5 +394,155 @@ async fn fetch_404_is_not_retried() {
         "expected NotFound, got: {err:?}"
     );
 
+    server.verify().await;
+}
+
+// ---------------------------------------------------------------------------
+// Item 3 — get_line_status 60s TTL cache
+// ---------------------------------------------------------------------------
+
+/// A minimal TfL line-status payload containing two lines.
+fn two_line_status_body() -> serde_json::Value {
+    serde_json::json!([
+        {
+            "id": "northern",
+            "name": "Northern",
+            "lineStatuses": [
+                {"statusSeverity": 10, "statusSeverityDescription": "Good Service"}
+            ]
+        },
+        {
+            "id": "victoria",
+            "name": "Victoria",
+            "lineStatuses": [
+                {"statusSeverity": 10, "statusSeverityDescription": "Good Service"}
+            ]
+        }
+    ])
+}
+
+/// Two `get_line_status` calls for different lines should share one wire
+/// request when the cache is hot. The mock is configured with `.expect(1)`;
+/// if each call hits the wire independently (pre-fix behaviour) the second
+/// request makes the mock fire twice and `server.verify()` fails.
+#[tokio::test]
+async fn get_line_status_serves_repeat_calls_from_cache() {
+    let server = MockServer::start().await;
+
+    Mock::given(method("GET"))
+        .and(path("/Line/Mode/tube/Status"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(two_line_status_body()))
+        .expect(1) // exactly ONE wire hit for both calls
+        .mount(&server)
+        .await;
+
+    let http = ReqwestTflHttp::with_config(None, server.uri(), Duration::from_secs(5));
+    let client = TflClient::new(http);
+
+    // Two calls for different line_ids — both should be served from the same
+    // cached response after the first fetch.
+    client
+        .get_line_status("northern")
+        .await
+        .expect("first call should succeed");
+    client
+        .get_line_status("victoria")
+        .await
+        .expect("second call should hit cache");
+
+    // If the cache is missing, this assertion fires: the mock saw 2 requests,
+    // but we declared expect(1).
+    server.verify().await;
+}
+
+// TTL invalidation: tokio::time::advance does not move std::time::Instant on
+// real-socket tests, so the TTL expiry test is deferred to a dedicated
+// unit-level test in client.rs that uses no I/O. This avoids introducing
+// flaky timing dependencies in the wiremock suite.
+// TODO: add get_line_status_refetches_after_ttl in client.rs once a
+// test-only `invalidate_line_status_cache` helper is available.
+
+// ---------------------------------------------------------------------------
+// Item 6 — process-wide 429 cooldown gate
+// ---------------------------------------------------------------------------
+
+/// When a 429 with retry-after exceeding the cap triggers the cooldown gate,
+/// a second concurrent fetch on the same client must wait until the cooldown
+/// expires before hitting the wire.
+///
+/// Red: without the gate, the second call fires immediately, the mock sees 2
+/// requests but declared expect(1), so server.verify() panics.
+///
+/// Green: with the gate the second call blocks on the cooldown; the mock sees
+/// exactly 1 request within the observation window.
+///
+/// We use retry-after: 6 (> RETRY_AFTER_CAP_SECS=5 → fail-fast, sets cooldown
+/// ~6s). To avoid a 6-second wall-clock wait we assert the second call has NOT
+/// completed within 200 ms — proof it is blocked on the cooldown.
+#[tokio::test]
+async fn concurrent_calls_share_429_cooldown() {
+    let server = MockServer::start().await;
+
+    // This mock will only ever be hit once — the cooldown prevents the second
+    // call from reaching the wire during the 6-second window.
+    Mock::given(method("GET"))
+        .and(path("/StopPoint/COOL/Arrivals"))
+        .respond_with(
+            ResponseTemplate::new(429)
+                .insert_header("retry-after", "6") // > RETRY_AFTER_CAP_SECS → fail-fast + set cooldown
+                .set_body_string("rate limited"),
+        )
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    let client = test_client(&server);
+
+    // First call: hits 429 with retry-after:6, fails immediately, sets cooldown.
+    let first = client.fetch("arrivals", "COOL").await;
+    assert!(
+        matches!(first, Err(TflError::RateLimited { .. })),
+        "first call should return RateLimited"
+    );
+
+    // Second call: should block on the cooldown gate (6s remaining).
+    // Assert it has NOT completed within 200 ms — if it had, the cooldown gate
+    // would not be functioning and the mock would have received a second request.
+    let second_task =
+        tokio::time::timeout(Duration::from_millis(200), client.fetch("arrivals", "COOL")).await;
+    assert!(
+        second_task.is_err(),
+        "second call should still be blocked on cooldown after 200 ms"
+    );
+
+    // Exactly 1 wire request was made: the first call. The second is still
+    // sleeping on the gate and has not touched the wire.
+    server.verify().await;
+}
+
+// ---------------------------------------------------------------------------
+// Item 1 — app_key query param
+// ---------------------------------------------------------------------------
+
+/// Proves that `ReqwestTflHttp::with_app_key` sends `app_key=` as a query
+/// parameter. This is the primitive the stream-client fix in lib.rs relies on.
+#[tokio::test]
+async fn with_app_key_appends_query_param() {
+    let server = MockServer::start().await;
+    let body = serde_json::json!([]);
+
+    Mock::given(method("GET"))
+        .and(path("/StopPoint/X/Arrivals"))
+        .and(query_param("app_key", "DEADBEEF"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    let client = test_client_with_key(&server, "DEADBEEF");
+    client
+        .fetch("arrivals", "X")
+        .await
+        .expect("should succeed when app_key is present");
     server.verify().await;
 }

@@ -59,11 +59,17 @@ use store_impl::StorePluginConfigStore;
 /// Spawn a stream task for the latest config, storing its `AbortHandle` in
 /// `stream_abort`.
 ///
+/// `app_key` is the persisted TfL API key, if any.  Passing it here ensures
+/// the stream's HTTP client operates under the registered 500 req/min bucket
+/// rather than the anonymous 50 req/min bucket — the single biggest leverage
+/// point for rate-limit reduction.
+///
 /// Called at startup and whenever the abort handle is cleared (config change).
 async fn spawn_stream_task(
     app_handle: tauri::AppHandle,
     config_store: Arc<dyn state::ConfigStore>,
     stream_abort: Arc<RwLock<Option<AbortHandle>>>,
+    app_key: Option<String>,
 ) {
     // Load the latest config from the store every time we (re-)start.
     let cfg: BoardConfig = match config_store.load_config().await {
@@ -81,7 +87,13 @@ async fn spawn_stream_task(
     // stream() consumes self and returns an impl Stream — impossible to make
     // object-safe. The service is cheap to construct (no state, just an HTTP
     // client wrapper).
-    let http = ReqwestTflHttp::new();
+    //
+    // Use the persisted app_key so the stream runs under the registered
+    // 500 req/min bucket instead of the anonymous 50 req/min bucket.
+    let http = match app_key {
+        Some(key) => ReqwestTflHttp::with_app_key(key),
+        None => ReqwestTflHttp::new(),
+    };
     let client = TflClient::new(http);
     // The stop-points cache is per-client and the AppState client's cache
     // (warmed at startup) is unreachable from here. Warm this stream's
@@ -307,6 +319,10 @@ pub fn run() {
                 }
             });
 
+            // Clone before consuming in the AppState HTTP client so we can also
+            // thread the key into spawn_stream_task (and the watcher restarts).
+            let stream_app_key = saved_key.clone();
+
             let http = match saved_key {
                 Some(key) => ReqwestTflHttp::with_app_key(key),
                 None => ReqwestTflHttp::new(),
@@ -318,12 +334,14 @@ pub fn run() {
             let config_store = Arc::new(store) as Arc<dyn state::ConfigStore>;
             let stream_abort: Arc<RwLock<Option<AbortHandle>>> = Arc::new(RwLock::new(None));
 
-            // Spawn the initial stream task.
+            // Spawn the initial stream task, forwarding the persisted API key
+            // so the stream client operates on the registered 500 req/min bucket.
             let cs = Arc::clone(&config_store);
             let sa = Arc::clone(&stream_abort);
             let ah = app.handle().clone();
+            let key_for_stream = stream_app_key.clone();
             tauri::async_runtime::spawn(async move {
-                spawn_stream_task(ah, cs, sa).await;
+                spawn_stream_task(ah, cs, sa, key_for_stream).await;
             });
 
             // Pre-warm the stop-points cache so the first settings search is
@@ -339,9 +357,12 @@ pub fn run() {
 
             // Watcher loop: restarts the stream when the abort handle is
             // cleared (e.g. after save_config cancels the previous task).
+            // The saved_key is cloned once here so restarts also benefit from
+            // the registered 500 req/min bucket.
             let cs2 = Arc::clone(&config_store);
             let sa2 = Arc::clone(&stream_abort);
             let ah2 = app.handle().clone();
+            let key_for_watcher = stream_app_key;
             tauri::async_runtime::spawn(async move {
                 loop {
                     tokio::time::sleep(std::time::Duration::from_secs(2)).await;
@@ -365,7 +386,13 @@ pub fn run() {
                     if needs_restart {
                         // Task was aborted or ended (config change or fatal stream
                         // error). Restart with the current store config.
-                        spawn_stream_task(ah2.clone(), Arc::clone(&cs2), Arc::clone(&sa2)).await;
+                        spawn_stream_task(
+                            ah2.clone(),
+                            Arc::clone(&cs2),
+                            Arc::clone(&sa2),
+                            key_for_watcher.clone(),
+                        )
+                        .await;
                     }
                 }
             });

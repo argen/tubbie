@@ -107,7 +107,7 @@
       station_id: stationId,
       line_ids: lineIds,
       directions: selectedDirections,
-      poll_seconds: Math.min(300, Math.max(5, pollSeconds)),
+      poll_seconds: Math.min(300, Math.max(10, pollSeconds)),
       theme,
     });
     if ($configError !== null) {
@@ -385,19 +385,19 @@
         <input
           id="poll-slider"
           type="range"
-          min="5"
+          min="10"
           max="300"
           step="5"
           bind:value={pollSeconds}
           oninput={handlePollInput}
           class="settings__range"
           aria-label="Poll interval in seconds: {pollSeconds}"
-          aria-valuemin={5}
+          aria-valuemin={10}
           aria-valuemax={300}
           aria-valuenow={pollSeconds}
         />
         <div class="settings__range-bounds" aria-hidden="true">
-          <span>5s</span>
+          <span>10s</span>
           <span>300s</span>
         </div>
       </div>

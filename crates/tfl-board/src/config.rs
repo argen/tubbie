@@ -46,13 +46,16 @@ fn default_theme() -> String {
 
 impl BoardConfig {
     /// Create a config that shows all lines and directions for `station_id`,
-    /// polling every 20 seconds, with the default classic-amber theme.
+    /// polling every 30 seconds, with the default classic-amber theme.
+    ///
+    /// 30 s matches TfL's ~30 s arrivals-data refresh cadence; polling faster
+    /// returns identical payloads and wastes ~33 % of the API quota.
     pub fn new(station_id: impl Into<String>) -> Self {
         Self {
             station_id: station_id.into(),
             line_ids: vec![],
             directions: vec![],
-            poll_seconds: 20,
+            poll_seconds: 30,
             theme: DEFAULT_THEME.to_string(),
         }
     }
@@ -61,5 +64,19 @@ impl BoardConfig {
 impl Default for BoardConfig {
     fn default() -> Self {
         Self::new("")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_poll_seconds_is_30() {
+        assert_eq!(
+            BoardConfig::new("940GZZLUBZP").poll_seconds,
+            30,
+            "default poll_seconds should be 30 (TfL refreshes ~every 30s)"
+        );
     }
 }

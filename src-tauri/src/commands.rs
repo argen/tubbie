@@ -14,7 +14,7 @@
 //! - `station_id`: 1–32 chars, ASCII alphanumeric + `_` + `-`.
 //! - `line_id`: 1–32 chars, ASCII lowercase alphanumeric + `-`.
 //! - `query`: max 100 chars, no null bytes.
-//! - `poll_seconds`: clamped to [5, 300] (not rejected, UI can display effective value).
+//! - `poll_seconds`: clamped to [10, 300] (not rejected, UI can display effective value).
 //! - `app_key`: max 64 chars, no null bytes (when `Some`).
 //! - `line_ids`: at most 32 entries.
 //! - `directions`: at most 16 entries.
@@ -98,9 +98,12 @@ pub(crate) fn validate_query(query: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// Clamp `poll_seconds` to the allowed range [5, 300].
+/// Clamp `poll_seconds` to the allowed range [10, 300].
+///
+/// The floor is 10 s rather than 5 s: TfL's arrivals data refreshes ~30 s,
+/// so sub-10 s polling only adds load without returning fresher data.
 pub(crate) fn clamp_poll_seconds(v: u32) -> u32 {
-    v.clamp(5, 300)
+    v.clamp(10, 300)
 }
 
 /// Validate an optional `app_key`.
@@ -297,7 +300,7 @@ pub async fn get_board(state: State<'_, AppState>) -> Result<Board, String> {
 
 /// Persist a `BoardConfig` to the store.
 ///
-/// Validates all fields and clamps `poll_seconds` to [5, 300] before saving.
+/// Validates all fields and clamps `poll_seconds` to [10, 300] before saving.
 #[tauri::command]
 pub async fn save_config(cfg: BoardConfig, state: State<'_, AppState>) -> Result<(), String> {
     save_config_inner(&cfg, &state).await
@@ -556,8 +559,8 @@ mod tests {
 
     #[test]
     fn poll_seconds_below_min_is_clamped() {
-        assert_eq!(clamp_poll_seconds(0), 5);
-        assert_eq!(clamp_poll_seconds(4), 5);
+        assert_eq!(clamp_poll_seconds(0), 10);
+        assert_eq!(clamp_poll_seconds(9), 10);
     }
 
     #[test]
@@ -569,7 +572,7 @@ mod tests {
     #[test]
     fn poll_seconds_in_range_passes_through() {
         assert_eq!(clamp_poll_seconds(20), 20);
-        assert_eq!(clamp_poll_seconds(5), 5);
+        assert_eq!(clamp_poll_seconds(10), 10);
         assert_eq!(clamp_poll_seconds(300), 300);
     }
 
@@ -669,7 +672,7 @@ mod tests {
             .await
             .expect("should return default");
         assert_eq!(cfg.station_id, "940GZZLUBZP");
-        assert_eq!(cfg.poll_seconds, 20);
+        assert_eq!(cfg.poll_seconds, 30);
     }
 
     #[tokio::test]

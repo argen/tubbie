@@ -42,6 +42,13 @@ use tfl_domain::types::{
 /// station-metadata edits within a lunchbreak.
 const STOP_POINTS_TTL: Duration = Duration::from_secs(15 * 60);
 
+/// How long the `line-status/tube` response is cached.
+///
+/// 60 s matches the frontend ticker period, so UI calls for each visible
+/// line are all served from a single wire fetch per minute instead of one
+/// per-line per-tick (typically 3–5× multiplier for multi-line stations).
+const LINE_STATUS_TTL: Duration = Duration::from_secs(60);
+
 struct StopPointsCacheEntry {
     fetched_at: Instant,
     stations: Vec<Station>,
@@ -72,6 +79,15 @@ pub struct TflClient<H: TflHttp> {
     /// the Settings chip UI shows DLR / Elizabeth / Overground chips
     /// alongside tube lines. Stable for the process lifetime.
     hub_lines_cache: Mutex<HashMap<String, Vec<LineRef>>>,
+    /// Short-lived cache for the `/Line/Mode/tube/Status` response.
+    ///
+    /// The frontend calls `get_line_status` once per visible line on each
+    /// ticker cycle. Without this cache, every call fetches the entire
+    /// tube line list, meaning 3–5 identical 16 kB requests per minute at
+    /// a typical multi-line station. With a 60 s TTL (matching the ticker
+    /// period) the list is fetched once and all per-line lookups are
+    /// served from memory.
+    line_status_cache: Mutex<Option<(Instant, Vec<TflLine>)>>,
 }
 
 impl<H: TflHttp> TflClient<H> {
@@ -82,6 +98,7 @@ impl<H: TflHttp> TflClient<H> {
             stop_points_cache: Mutex::new(None),
             hub_children_cache: Mutex::new(HashMap::new()),
             hub_lines_cache: Mutex::new(HashMap::new()),
+            line_status_cache: Mutex::new(None),
         }
     }
 
@@ -327,8 +344,42 @@ impl<H: TflHttp> TflClient<H> {
         // returns useful arrivals data for non-tube lines because the
         // arrivals endpoint is mode-agnostic; only the per-line status
         // ticker is tube-only.
-        let value = self.http.fetch("line-status", "tube").await?;
-        let lines: Vec<TflLine> = serde_json::from_value(value)?;
+
+        // Serve from the TTL cache when fresh. The entire line list is
+        // fetched once per LINE_STATUS_TTL window; per-line lookups all
+        // run against the cached Vec<TflLine> in memory.
+        let cached_lines = {
+            let guard = self.line_status_cache.lock().unwrap_or_else(|p| {
+                eprintln!("[tfl-client] line_status_cache mutex poisoned; recovering");
+                p.into_inner()
+            });
+            guard.as_ref().and_then(|(fetched_at, lines)| {
+                if fetched_at.elapsed() < LINE_STATUS_TTL {
+                    Some(lines.clone())
+                } else {
+                    None
+                }
+            })
+        };
+
+        let lines = if let Some(lines) = cached_lines {
+            lines
+        } else {
+            let value = self.http.fetch("line-status", "tube").await?;
+            let fresh: Vec<TflLine> = serde_json::from_value(value)?;
+            // Store in cache for the next call within the TTL window.
+            match self.line_status_cache.lock() {
+                Ok(mut guard) => {
+                    *guard = Some((Instant::now(), fresh.clone()));
+                }
+                Err(poison) => {
+                    eprintln!("[tfl-client] line_status_cache mutex poisoned on write; recovering");
+                    let mut guard = poison.into_inner();
+                    *guard = Some((Instant::now(), fresh.clone()));
+                }
+            }
+            fresh
+        };
 
         let tfl_line = lines
             .into_iter()
