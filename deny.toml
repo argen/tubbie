@@ -68,7 +68,13 @@ allow = [
 ]
 # Surface licenses we deliberately accept on a per-crate basis here.
 # Empty by default — drift gets surfaced on first CI run.
-exceptions = []
+exceptions = [
+  # Mozilla CA root cert bundle, vendored by rustls-platform-verifier ←
+  # reqwest. CDLA-Permissive-2.0 is a permissive data-sharing license
+  # (Apache-2.0-style for datasets). Scoped to this crate to keep the
+  # global allowlist tight.
+  { allow = ["CDLA-Permissive-2.0"], crate = "webpki-root-certs" },
+]
 
 [bans]
 multiple-versions = "warn"
