@@ -463,6 +463,64 @@ async fn get_line_status_serves_repeat_calls_from_cache() {
 // test-only `invalidate_line_status_cache` helper is available.
 
 // ---------------------------------------------------------------------------
+// Item 6 — process-wide 429 cooldown gate
+// ---------------------------------------------------------------------------
+
+/// When a 429 with retry-after exceeding the cap triggers the cooldown gate,
+/// a second concurrent fetch on the same client must wait until the cooldown
+/// expires before hitting the wire.
+///
+/// Red: without the gate, the second call fires immediately, the mock sees 2
+/// requests but declared expect(1), so server.verify() panics.
+///
+/// Green: with the gate the second call blocks on the cooldown; the mock sees
+/// exactly 1 request within the observation window.
+///
+/// We use retry-after: 6 (> RETRY_AFTER_CAP_SECS=5 → fail-fast, sets cooldown
+/// ~6s). To avoid a 6-second wall-clock wait we assert the second call has NOT
+/// completed within 200 ms — proof it is blocked on the cooldown.
+#[tokio::test]
+async fn concurrent_calls_share_429_cooldown() {
+    let server = MockServer::start().await;
+
+    // This mock will only ever be hit once — the cooldown prevents the second
+    // call from reaching the wire during the 6-second window.
+    Mock::given(method("GET"))
+        .and(path("/StopPoint/COOL/Arrivals"))
+        .respond_with(
+            ResponseTemplate::new(429)
+                .insert_header("retry-after", "6") // > RETRY_AFTER_CAP_SECS → fail-fast + set cooldown
+                .set_body_string("rate limited"),
+        )
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    let client = test_client(&server);
+
+    // First call: hits 429 with retry-after:6, fails immediately, sets cooldown.
+    let first = client.fetch("arrivals", "COOL").await;
+    assert!(
+        matches!(first, Err(TflError::RateLimited { .. })),
+        "first call should return RateLimited"
+    );
+
+    // Second call: should block on the cooldown gate (6s remaining).
+    // Assert it has NOT completed within 200 ms — if it had, the cooldown gate
+    // would not be functioning and the mock would have received a second request.
+    let second_task =
+        tokio::time::timeout(Duration::from_millis(200), client.fetch("arrivals", "COOL")).await;
+    assert!(
+        second_task.is_err(),
+        "second call should still be blocked on cooldown after 200 ms"
+    );
+
+    // Exactly 1 wire request was made: the first call. The second is still
+    // sleeping on the gate and has not touched the wire.
+    server.verify().await;
+}
+
+// ---------------------------------------------------------------------------
 // Item 1 — app_key query param
 // ---------------------------------------------------------------------------
 
