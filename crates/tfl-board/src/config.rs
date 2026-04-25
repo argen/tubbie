@@ -63,3 +63,17 @@ impl Default for BoardConfig {
         Self::new("")
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_poll_seconds_is_30() {
+        assert_eq!(
+            BoardConfig::new("940GZZLUBZP").poll_seconds,
+            30,
+            "default poll_seconds should be 30 (TfL refreshes ~every 30s)"
+        );
+    }
+}

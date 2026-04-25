@@ -556,8 +556,8 @@ mod tests {
 
     #[test]
     fn poll_seconds_below_min_is_clamped() {
-        assert_eq!(clamp_poll_seconds(0), 5);
-        assert_eq!(clamp_poll_seconds(4), 5);
+        assert_eq!(clamp_poll_seconds(0), 10);
+        assert_eq!(clamp_poll_seconds(9), 10);
     }
 
     #[test]
@@ -569,7 +569,7 @@ mod tests {
     #[test]
     fn poll_seconds_in_range_passes_through() {
         assert_eq!(clamp_poll_seconds(20), 20);
-        assert_eq!(clamp_poll_seconds(5), 5);
+        assert_eq!(clamp_poll_seconds(10), 10);
         assert_eq!(clamp_poll_seconds(300), 300);
     }
 
