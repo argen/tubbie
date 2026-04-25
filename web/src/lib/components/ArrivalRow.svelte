@@ -43,6 +43,12 @@
     dlr: '--line-dlr',
     'london-overground': '--line-overground',
     overground: '--line-overground',
+    liberty: '--line-liberty',
+    lioness: '--line-lioness',
+    mildmay: '--line-mildmay',
+    suffragette: '--line-suffragette',
+    weaver: '--line-weaver',
+    windrush: '--line-windrush',
   };
 
   const lineColor = $derived.by(() => {

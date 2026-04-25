@@ -156,6 +156,14 @@ pub struct Station {
     pub lat: f64,
     pub lon: f64,
     pub lines: Vec<LineRef>,
+    /// Hub NaPTAN id (e.g. `HUBTCR` for Tottenham Court Road). Present on
+    /// tube parents that share a station with non-tube modes (DLR,
+    /// Overground, Elizabeth). When set, the arrivals endpoint must be
+    /// queried against the hub id rather than the tube id — otherwise TfL
+    /// returns only the tube child's arrivals and DLR / Overground /
+    /// Elizabeth trains never appear on the board.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hub_naptan_code: Option<String>,
 }
 
 impl<'de> Deserialize<'de> for Station {
@@ -184,29 +192,38 @@ impl<'de> Deserialize<'de> for Station {
             lines: Vec<LineRef>,
             #[serde(default)]
             line_mode_groups: Vec<LineModeGroup>,
+            #[serde(default)]
+            hub_naptan_code: Option<String>,
         }
 
         let raw = RawStation::deserialize(deserializer)?;
         let lines: Vec<LineRef> = if !raw.lines.is_empty() {
             raw.lines
                 .into_iter()
-                .filter(|l| is_tube_line_id(&l.id))
+                .filter(|l| is_supported_line_id(&l.id))
                 .collect()
         } else {
             raw.line_mode_groups
                 .into_iter()
-                // Accept explicit tube entries, and accept entries with an
-                // absent/empty modeName (our trimmed fixture drops the field
-                // to save space — the parent Station's `modes` already
-                // constrains us to tube stations upstream).
-                .filter(|g| g.mode_name.is_empty() || g.mode_name == "tube")
+                // Accept entries for any of the modes we surface, and accept
+                // entries with an absent/empty modeName (our trimmed fixture
+                // drops the field to save space). Bus, coach, river-bus,
+                // tram, national-rail groups are dropped at this layer so
+                // their line ids never reach the per-id whitelist below.
+                .filter(|g| {
+                    g.mode_name.is_empty()
+                        || matches!(
+                            g.mode_name.as_str(),
+                            "tube" | "dlr" | "overground" | "elizabeth-line"
+                        )
+                })
                 .flat_map(|g| g.line_identifier.into_iter())
                 // Hub stop-points mix bus routes, national-rail services, and
-                // tube lines into the same list when modeName is absent; the
-                // tube-id whitelist removes the non-tube entries so the chip
-                // UI doesn't render "52, 390, GATWICK-EXPRESS, …" next to a
+                // our supported lines into the same list when modeName is
+                // absent; this whitelist removes the rest so the chip UI
+                // doesn't render "52, 390, GATWICK-EXPRESS, …" next to a
                 // station name.
-                .filter(|id| is_tube_line_id(id))
+                .filter(|id| is_supported_line_id(id))
                 .map(|id| {
                     let name = pretty_line_name(&id).to_string();
                     LineRef { id, name }
@@ -220,6 +237,7 @@ impl<'de> Deserialize<'de> for Station {
             lat: raw.lat,
             lon: raw.lon,
             lines,
+            hub_naptan_code: raw.hub_naptan_code.filter(|s| !s.is_empty()),
         })
     }
 }
@@ -247,24 +265,36 @@ pub fn pretty_line_name(id: &str) -> &str {
         "piccadilly" => "Piccadilly",
         "victoria" => "Victoria",
         "waterloo-city" => "Waterloo & City",
+        "dlr" => "DLR",
+        "london-overground" => "Overground",
+        // Six named Overground lines introduced by TfL in November 2024.
+        "liberty" => "Liberty",
+        "lioness" => "Lioness",
+        "mildmay" => "Mildmay",
+        "suffragette" => "Suffragette",
+        "weaver" => "Weaver",
+        "windrush" => "Windrush",
         other => other,
     }
 }
 
-/// `true` iff `id` is a known tube / Underground line identifier. Used to
-/// filter out bus route numbers, national-rail services, and other non-tube
-/// entries that TfL returns alongside tube lines on `lineModeGroups` for hub
-/// stop-points (e.g. Victoria the hub has `52, 390, 38, district, circle,
-/// gatwick-express, …`).
-pub fn is_tube_line_id(id: &str) -> bool {
+/// `true` iff `id` is a TfL line id we want to surface in the UI — tube,
+/// DLR, London Overground (legacy + the six named lines), and Elizabeth.
+///
+/// Used as a whitelist when projecting hub stop-points, whose
+/// `lineModeGroups` mix bus routes, national-rail services, and our
+/// supported lines into the same list (e.g. Victoria the hub has
+/// `52, 390, 38, district, circle, gatwick-express, …`). Bus route
+/// numbers and rail operators are rejected so the chip UI never renders
+/// "52, GATWICK-EXPRESS" next to a station name.
+pub fn is_supported_line_id(id: &str) -> bool {
     matches!(
         id,
+        // Tube
         "bakerloo"
             | "central"
             | "circle"
             | "district"
-            | "elizabeth"
-            | "elizabeth-line"
             | "hammersmith-city"
             | "jubilee"
             | "metropolitan"
@@ -272,6 +302,19 @@ pub fn is_tube_line_id(id: &str) -> bool {
             | "piccadilly"
             | "victoria"
             | "waterloo-city"
+            // Elizabeth line
+            | "elizabeth"
+            | "elizabeth-line"
+            // DLR
+            | "dlr"
+            // London Overground — legacy single id + the six named lines.
+            | "london-overground"
+            | "liberty"
+            | "lioness"
+            | "mildmay"
+            | "suffragette"
+            | "weaver"
+            | "windrush"
     )
 }
 

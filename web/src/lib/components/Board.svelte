@@ -96,18 +96,93 @@
   // directions fit on the 380×560 surface without scroll. The floating
   // window has room for a longer list.
   const rowsPerPlatform = $derived($displayMode === 'menubar' ? 4 : 6);
+
+  // ---------------------------------------------------------------------------
+  // Window controls (window mode only)
+  //
+  // The Tauri window is borderless + transparent, so we draw our own
+  // close / minimise / fullscreen buttons in the title-bar strip. Each
+  // delegates to the Tauri window API. We feature-detect at call time so
+  // unit tests (vitest, plain `vite dev`) do not crash trying to import
+  // @tauri-apps/api outside the Tauri runtime.
+  // ---------------------------------------------------------------------------
+
+  async function withWindow<T>(fn: (win: import('@tauri-apps/api/window').Window) => Promise<T>) {
+    try {
+      const { getCurrentWindow } = await import('@tauri-apps/api/window');
+      return await fn(getCurrentWindow());
+    } catch {
+      // Not running under Tauri — no-op.
+    }
+  }
+
+  const handleClose = () => withWindow((w) => w.close());
+  const handleMinimize = () => withWindow((w) => w.minimize());
+  const handleFullscreen = () =>
+    withWindow(async (w) => {
+      const isFs = await w.isFullscreen();
+      await w.setFullscreen(!isFs);
+    });
 </script>
 
 <main class="board" aria-label="Arrivals board for {displayName}">
+  {#if $displayMode === 'window'}
+    <!--
+      Window-mode title bar. The Tauri window is borderless + transparent
+      so we draw our own close/minimise/fullscreen buttons here and the
+      rest of the strip is a drag region. Hidden in menubar mode where
+      the popover already has its own rounded chrome.
+    -->
+    <div class="board__titlebar" data-tauri-drag-region>
+      <div class="board__traffic-lights" aria-label="Window controls">
+        <button
+          type="button"
+          class="board__traffic-light board__traffic-light--close"
+          aria-label="Close window"
+          title="Close"
+          onclick={handleClose}
+        >
+          <svg viewBox="0 0 12 12" aria-hidden="true">
+            <path d="M3.5 3.5l5 5M8.5 3.5l-5 5" stroke-width="1.2" stroke-linecap="round" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          class="board__traffic-light board__traffic-light--min"
+          aria-label="Minimise window"
+          title="Minimise"
+          onclick={handleMinimize}
+        >
+          <svg viewBox="0 0 12 12" aria-hidden="true">
+            <path d="M3 6h6" stroke-width="1.2" stroke-linecap="round" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          class="board__traffic-light board__traffic-light--full"
+          aria-label="Toggle fullscreen"
+          title="Fullscreen"
+          onclick={handleFullscreen}
+        >
+          <svg viewBox="0 0 12 12" aria-hidden="true">
+            <path d="M3.5 3.5h3v3zM8.5 8.5h-3v-3z" stroke-width="0" fill="currentColor" />
+          </svg>
+        </button>
+      </div>
+      <span class="board__titlebar-wordmark led-accent" data-tauri-drag-region>TUBBIE</span>
+    </div>
+  {/if}
+
   <!-- Header -->
   <header
     class="board__header"
     class:refresh-pulse={pulsing}
     class:board__header--stale={isStale}
     aria-label="Station header"
+    data-tauri-drag-region
   >
-    <div class="board__station-block">
-      <h1 class="board__station-name led-accent">
+    <div class="board__station-block" data-tauri-drag-region>
+      <h1 class="board__station-name led-accent" data-tauri-drag-region>
         {displayName}
       </h1>
       {#if filterLabels.length > 0}
@@ -116,6 +191,7 @@
           data-testid="board-line-filter"
           role="status"
           aria-label="Filtering by lines: {filterLabels.join(', ')}"
+          data-tauri-drag-region
         >
           <span class="board__line-filter-label">Filtering:</span>
           {filterLabels.join(' · ')}
@@ -178,6 +254,86 @@
     height: calc(100vh - 24px); /* 24px for Attribution footer */
     background: var(--bg);
     overflow: hidden;
+  }
+
+  /* Title bar (window mode only).
+     Borderless transparent window — we draw our own chrome here so the
+     rounded corners + shadow from .popover-root.mode-window give a clean
+     LED-themed window with no native macOS title bar above. The whole
+     strip is a drag region except for the traffic-light buttons. */
+  .board__titlebar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 32px;
+    padding: 0 1rem;
+    background: var(--bg);
+    border-bottom: 1px solid var(--row-divider);
+    flex-shrink: 0;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  .board__titlebar-wordmark {
+    font-family: var(--font-board);
+    font-size: 0.7rem;
+    letter-spacing: 0.25em;
+    color: var(--accent);
+    opacity: 0.55;
+  }
+
+  /* Traffic-light style buttons — match the macOS look (red/yellow/green
+     12px circles, glyph appears on group hover) but rendered in HTML so
+     they sit inside our LED-dark title bar instead of floating in a
+     separate native chrome strip. */
+  .board__traffic-lights {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .board__traffic-light {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 0.5px solid rgba(0, 0, 0, 0.25);
+    padding: 0;
+    margin: 0;
+    cursor: default;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(0, 0, 0, 0.55);
+  }
+
+  .board__traffic-light svg {
+    width: 100%;
+    height: 100%;
+    stroke: currentColor;
+    fill: none;
+    opacity: 0;
+    transition: opacity 0.1s ease;
+  }
+
+  .board__traffic-lights:hover .board__traffic-light svg,
+  .board__traffic-light:focus-visible svg {
+    opacity: 1;
+  }
+
+  .board__traffic-light:focus {
+    outline: none;
+  }
+
+  .board__traffic-light--close {
+    background: #ff5f57;
+  }
+
+  .board__traffic-light--min {
+    background: #febc2e;
+  }
+
+  .board__traffic-light--full {
+    background: #28c840;
   }
 
   /* Header */

@@ -9,6 +9,6 @@ pub mod types;
 pub use direction::{Direction, NorthernBranch};
 pub use theme::{Theme, ThemeError};
 pub use types::{
-    is_tube_line_id, Arrival, Board, Line, LineRef, LineStatus, Platform, Station, StatusEntry,
-    TflDisruption, TflLine, TflLineStatus,
+    is_supported_line_id, Arrival, Board, Line, LineRef, LineStatus, Platform, Station,
+    StatusEntry, TflDisruption, TflLine, TflLineStatus,
 };

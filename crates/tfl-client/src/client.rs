@@ -28,6 +28,7 @@
 
 use crate::error::TflError;
 use crate::http::TflHttp;
+use std::collections::HashMap;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 use tfl_domain::types::{Arrival, LineStatus, Station, StatusEntry, TflLine};
@@ -55,6 +56,13 @@ struct StopPointsCacheEntry {
 pub struct TflClient<H: TflHttp> {
     http: H,
     stop_points_cache: Mutex<Option<StopPointsCacheEntry>>,
+    /// Per-process map from a hub NaPTAN id (e.g. `HUBBAN`) to the list
+    /// of child stop-point ids whose arrivals we want to merge — tube,
+    /// DLR, Overground, Elizabeth. Populated lazily the first time we
+    /// resolve arrivals for a station that has a hub. Entries are stable
+    /// for the lifetime of the process; TfL doesn't restructure hubs at
+    /// runtime.
+    hub_children_cache: Mutex<HashMap<String, Vec<String>>>,
 }
 
 impl<H: TflHttp> TflClient<H> {
@@ -63,6 +71,7 @@ impl<H: TflHttp> TflClient<H> {
         Self {
             http,
             stop_points_cache: Mutex::new(None),
+            hub_children_cache: Mutex::new(HashMap::new()),
         }
     }
 
@@ -71,15 +80,128 @@ impl<H: TflHttp> TflClient<H> {
     /// Returns a `Vec<Arrival>` in TfL's natural order (typically sorted by
     /// `timeToStation` ascending, but not guaranteed by the API).
     ///
+    /// ## Multi-mode hub stations
+    ///
+    /// At Tottenham Court Road / Bank / Whitechapel / Stratford and similar
+    /// shared stations the tube parent id only returns tube arrivals —
+    /// DLR, Overground, and Elizabeth predictions sit on sibling stop-points
+    /// (`940GZZDLBNK`, `910GTOTCTRD`, …). The hub id (`HUBBAN`, `HUBTCR`)
+    /// itself returns nothing because TfL hubs aggregate physical platforms,
+    /// not predictions.
+    ///
+    /// So when the requested station has a `hubNaptanCode`, we look up the
+    /// hub's children once (and cache the result for the lifetime of the
+    /// process), filter to the modes we surface, fan out a parallel arrivals
+    /// fetch to every sibling, and concatenate the results. Cold-cache or
+    /// non-hub stations fall back to the single-id path unchanged.
+    ///
     /// # Errors
     /// - `TflError::NotFound` — unknown station id or missing fixture.
     /// - `TflError::Parse` — response is valid JSON but not a `Vec<Arrival>`.
     /// - `TflError::ParseAt` — fixture file is invalid JSON (offline only).
     /// - `TflError::Transport` — network failure (live client only).
     pub async fn get_arrivals(&self, stop_point_id: &str) -> Result<Vec<Arrival>, TflError> {
-        let value = self.http.fetch("arrivals", stop_point_id).await?;
-        let arrivals: Vec<Arrival> = serde_json::from_value(value)?;
-        Ok(arrivals)
+        let ids = self.resolve_arrival_ids(stop_point_id).await;
+
+        // Single-id fast path — preserves error semantics (NotFound / Parse
+        // propagate) for tube-only stations and for the cold-cache window.
+        if ids.len() == 1 {
+            let value = self.http.fetch("arrivals", ids[0].as_str()).await?;
+            let arrivals: Vec<Arrival> = serde_json::from_value(value)?;
+            return Ok(arrivals);
+        }
+
+        // Multi-id parallel fetch (hub stations). Drop individual failures
+        // rather than nuking the whole board if e.g. the Elizabeth-line
+        // sub-stop is briefly 404 — the user still sees tube arrivals.
+        let fetches = ids.iter().map(|id| async move {
+            let value = self.http.fetch("arrivals", id).await.ok()?;
+            serde_json::from_value::<Vec<Arrival>>(value).ok()
+        });
+        let results = futures::future::join_all(fetches).await;
+
+        // Dedupe by `Arrival.id` — TfL occasionally returns the same
+        // prediction across two child stop-points (typically when the tube
+        // parent and a sibling both list a shared bay), and Svelte's
+        // keyed `{#each}` block crashes with `each_key_duplicate` if the
+        // same id reaches the UI twice. First-seen wins.
+        let mut seen = std::collections::HashSet::new();
+        let mut merged: Vec<Arrival> = results
+            .into_iter()
+            .flatten()
+            .flatten()
+            .filter(|a| seen.insert(a.id.clone()))
+            .collect();
+        // TfL doesn't promise ordering even per-id; sort by timeToStation so
+        // the platform columns stay coherent after merge.
+        merged.sort_by_key(|a| a.time_to_station);
+        Ok(merged)
+    }
+
+    /// Resolve the list of stop-point ids whose arrivals we should query.
+    /// Returns `[stop_point_id]` for tube-only stations or cold cache.
+    /// Returns the hub's filtered children for multi-mode stations.
+    async fn resolve_arrival_ids(&self, stop_point_id: &str) -> Vec<String> {
+        let hub_id = self.read_fresh_cache().and_then(|stations| {
+            stations
+                .iter()
+                .find(|s| s.id == stop_point_id)
+                .and_then(|s| s.hub_naptan_code.clone())
+        });
+
+        let Some(hub_id) = hub_id else {
+            return vec![stop_point_id.to_string()];
+        };
+
+        match self.hub_children_cached(&hub_id).await {
+            Ok(children) if !children.is_empty() => children,
+            _ => vec![stop_point_id.to_string()],
+        }
+    }
+
+    /// Look up (and lazily populate) the cached child stop-point ids for a
+    /// hub. Children are filtered to modes we surface (tube / DLR /
+    /// Overground / Elizabeth) so we don't waste an arrivals fetch on the
+    /// bus stops that hubs also enumerate.
+    async fn hub_children_cached(&self, hub_id: &str) -> Result<Vec<String>, TflError> {
+        if let Ok(guard) = self.hub_children_cache.lock() {
+            if let Some(cached) = guard.get(hub_id) {
+                return Ok(cached.clone());
+            }
+        }
+
+        let value = self.http.fetch("stop-point", hub_id).await?;
+        // Hub StopPoint detail JSON has `children: [ { id, modes, ... } ]`.
+        let children = value
+            .get("children")
+            .and_then(|v| v.as_array())
+            .map(|arr| {
+                arr.iter()
+                    .filter(|c| {
+                        c.get("modes")
+                            .and_then(|m| m.as_array())
+                            .map(|m| {
+                                m.iter().any(|mode| {
+                                    matches!(
+                                        mode.as_str(),
+                                        Some("tube")
+                                            | Some("dlr")
+                                            | Some("overground")
+                                            | Some("elizabeth-line")
+                                    )
+                                })
+                            })
+                            .unwrap_or(false)
+                    })
+                    .filter_map(|c| c.get("id").and_then(|v| v.as_str()).map(String::from))
+                    .collect::<Vec<String>>()
+            })
+            .unwrap_or_default();
+
+        if let Ok(mut guard) = self.hub_children_cache.lock() {
+            guard.insert(hub_id.to_string(), children.clone());
+        }
+        Ok(children)
     }
 
     /// Fetch the current status for a tube line.
@@ -99,6 +221,12 @@ impl<H: TflHttp> TflClient<H> {
     /// - `TflError::ParseAt` — fixture file is invalid JSON (offline only).
     /// - `TflError::Transport` — network failure (live client only).
     pub async fn get_line_status(&self, line_id: &str) -> Result<LineStatus, TflError> {
+        // TODO: extend to `tube,dlr,overground,elizabeth-line` once the
+        // `line-status` fixture is re-recorded with multi-mode data and
+        // the path validator allows commas. For now the live API still
+        // returns useful arrivals data for non-tube lines because the
+        // arrivals endpoint is mode-agnostic; only the per-line status
+        // ticker is tube-only.
         let value = self.http.fetch("line-status", "tube").await?;
         let lines: Vec<TflLine> = serde_json::from_value(value)?;
 

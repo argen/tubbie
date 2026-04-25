@@ -22,6 +22,7 @@ fn station_serializes_with_snake_case_fields_for_ipc() {
             id: "northern".to_string(),
             name: "Northern".to_string(),
         }],
+        hub_naptan_code: None,
     };
 
     let json = serde_json::to_value(&s).expect("Station must serialize");

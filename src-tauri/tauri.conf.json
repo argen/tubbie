@@ -16,7 +16,7 @@
         "title": "Tubbie",
         "width": 380,
         "height": 560,
-        "resizable": false,
+        "resizable": true,
         "decorations": false,
         "transparent": true,
         "alwaysOnTop": true,
