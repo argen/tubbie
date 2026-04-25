@@ -1,7 +1,9 @@
 use crate::error::TflError;
 use chrono::{DateTime, Utc};
 use serde_json::Value;
-use std::time::Duration;
+use std::sync::Arc;
+use std::time::{Duration, Instant};
+use tokio::sync::RwLock;
 use url::Url;
 use zeroize::Zeroize;
 
@@ -96,6 +98,18 @@ pub struct ReqwestTflHttp {
     client: reqwest::Client,
     base_url: Url,
     app_key: Option<AppKey>,
+    /// Process-wide 429 cooldown gate.
+    ///
+    /// When TfL returns a 429 with `retry-after` exceeding the cap, the
+    /// fail-fast branch sets this to `Instant::now() + retry_after`. Any
+    /// subsequent `fetch` call on this client will sleep until the cooldown
+    /// expires before issuing a wire request. This prevents concurrent callers
+    /// (stream tick + settings search) from all hammering TfL during a
+    /// rate-limit event.
+    ///
+    /// `tokio::sync::RwLock` is used because the sleep path awaits across the
+    /// lock boundary — `std::sync::RwLock` would deadlock there.
+    cooldown_until: Arc<RwLock<Option<Instant>>>,
 }
 
 impl std::fmt::Debug for ReqwestTflHttp {
@@ -172,6 +186,7 @@ impl ReqwestTflHttp {
             client,
             base_url,
             app_key,
+            cooldown_until: Arc::new(RwLock::new(None)),
         }
     }
 
@@ -224,6 +239,22 @@ impl ReqwestTflHttp {
     /// - Connect-timeout: exponential backoff.
     /// - Other 4xx / 5xx: no retry.
     async fn fetch_with_retry(&self, endpoint: &str, id: &str) -> Result<Value, TflError> {
+        // Check the process-wide cooldown gate before issuing any wire request.
+        // If a previous call set the cooldown (because TfL returned 429 with a
+        // retry-after > RETRY_AFTER_CAP_SECS), sleep until it expires. This
+        // prevents concurrent callers from all hitting TfL during the backoff
+        // window and extends the effective cooldown across the whole process.
+        let cooldown_sleep = {
+            let guard = self.cooldown_until.read().await;
+            guard.and_then(|until| until.checked_duration_since(Instant::now()))
+        };
+        if let Some(remaining) = cooldown_sleep {
+            tokio::time::sleep(remaining).await;
+            // Clear the gate once we've slept past it so the next caller
+            // doesn't re-sleep an already-elapsed duration.
+            *self.cooldown_until.write().await = None;
+        }
+
         let url = self.build_url(endpoint, id)?;
 
         let mut last_err: Option<TflError> = None;
@@ -286,9 +317,14 @@ impl ReqwestTflHttp {
                     .and_then(|v| v.to_str().ok())
                     .and_then(|s| parse_retry_after(s, Utc::now()));
 
-                // If Retry-After exceeds our cap, give up immediately.
+                // If Retry-After exceeds our cap, give up immediately and
+                // set the process-wide cooldown gate so concurrent callers
+                // (stream tick + settings search) don't pile in during the
+                // backoff window.
                 if let Some(dur) = retry_after {
                     if dur.as_secs() > RETRY_AFTER_CAP_SECS {
+                        *self.cooldown_until.write().await =
+                            Some(Instant::now() + dur);
                         return Err(RetryDecision::Fail(TflError::RateLimited {
                             retry_after: Some(dur),
                         }));
