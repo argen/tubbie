@@ -96,6 +96,10 @@ jobs:
     permissions:
       contents: read
       actions: read
+      # security-events kept granted because the reusable workflow's
+      # static validation requires it even when upload-sarif=false
+      # skips the actual upload step at runtime.
+      security-events: write
     with:
       scan-args: |-
         --recursive
@@ -103,7 +107,8 @@ jobs:
         ./
       fail-on-vuln: true
       # SARIF upload requires GitHub code scanning, which is only free
-      # on public repos. Re-enable once the repo flips public.
+      # on public repos. Re-enable (set to true / drop the line) once
+      # the repo flips public.
       upload-sarif: false
 
   sbom:
