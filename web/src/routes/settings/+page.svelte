@@ -92,10 +92,11 @@
    * Persist the current form state. `updateConfig` catches its own errors
    * and drives `$configError`, so callers never need to try/catch.
    *
-   * The backend's `save_config` aborts the current stream; the watcher loop
-   * in `src-tauri/src/lib.rs` restarts it with the new config. No explicit
-   * navigation needed — the board page subscribes to the same `$config`
-   * store and updates in place.
+   * The backend's `save_config` publishes the new config to a watch channel
+   * the running stream observes; the stream applies the change on its next
+   * tick (or immediately for `poll_seconds`/`station_id`) without
+   * restarting. The board page subscribes to the same `$config` store and
+   * updates in place — no explicit navigation needed.
    */
   async function persist(): Promise<void> {
     if (saveStateTimer !== null) {
@@ -121,8 +122,9 @@
     }, 1500);
   }
 
-  // Slider events fire on every tick of the drag; each persist round-trips
-  // through save_config + stream-restart, so debounce to the trailing edge.
+  // Slider events fire on every tick of the drag, and chip / direction /
+  // theme toggles can come in bursts. Debounce to the trailing edge so a
+  // burst becomes one disk write and one watch-channel publish.
   const persistDebounced = debounce(persist, 400);
 
   function handleStationSelect(station: Station): void {

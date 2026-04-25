@@ -253,7 +253,7 @@ impl AppState {
 // Defaults
 // ---------------------------------------------------------------------------
 
-/// Default board config: Belsize Park, no filters, 20-second poll.
+/// Default board config: Belsize Park, no filters, 30-second poll.
 pub fn default_board_config() -> BoardConfig {
     BoardConfig::new("940GZZLUBZP")
 }

@@ -317,28 +317,19 @@ pub fn run() {
             // writes to it after persisting, and the stream observes changes
             // mid-flight without restarting the task.
             //
-            // Seeded with the documented default (Belsize Park); a one-shot
-            // task below replaces it with the persisted config as soon as
-            // the runtime is available. The stream's first tick reads from
-            // `cfg_rx.borrow()` so it'll see the persisted value too —
-            // there's no observable difference from blocking-load semantics.
-            let (cfg_tx, cfg_rx) =
-                tokio::sync::watch::channel::<BoardConfig>(state::default_board_config());
+            // Load synchronously here so the first stream tick observes the
+            // user's saved station, not the default. The store's load is a
+            // single in-memory JSON read wrapped in async for trait
+            // uniformity — `block_on` cannot deadlock and avoids the race
+            // where the stream would otherwise fetch arrivals for the
+            // default station before an async loader had a chance to run.
+            let initial_cfg = tauri::async_runtime::block_on(config_store.load_config())
+                .unwrap_or_else(|e| {
+                    eprintln!("[tubbie] Failed to load initial config: {e}");
+                    state::default_board_config()
+                });
+            let (cfg_tx, cfg_rx) = tokio::sync::watch::channel::<BoardConfig>(initial_cfg);
             let cfg_tx = Arc::new(cfg_tx);
-
-            // One-shot loader: replace the default-seeded config with the
-            // persisted value. Failure here is logged and tolerated — the
-            // stream still runs against the default until save_config fires.
-            let cs_load = Arc::clone(&config_store);
-            let cfg_tx_load = Arc::clone(&cfg_tx);
-            tauri::async_runtime::spawn(async move {
-                match cs_load.load_config().await {
-                    Ok(cfg) => {
-                        let _ = cfg_tx_load.send(cfg);
-                    }
-                    Err(e) => eprintln!("[tubbie] Failed to load initial config: {e}"),
-                }
-            });
 
             // Spawn the initial stream task. Reuses the shared client so the
             // stream task and the on-demand command path share one set of
