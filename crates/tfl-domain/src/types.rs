@@ -367,7 +367,7 @@ pub struct StatusEntry {
 
 /// TfL wire format for a single line from `/Line/Mode/{mode}/Status`.
 /// This is separate from the domain `LineStatus` — the client layer converts.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TflLine {
     pub id: String,
@@ -379,7 +379,7 @@ pub struct TflLine {
 }
 
 /// TfL wire format for one entry inside `lineStatuses`.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TflLineStatus {
     pub status_severity: i32,
@@ -393,7 +393,7 @@ pub struct TflLineStatus {
 }
 
 /// TfL wire format for disruption info nested inside a line status.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TflDisruption {
     #[serde(default)]
