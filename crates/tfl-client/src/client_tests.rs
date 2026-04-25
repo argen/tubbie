@@ -702,10 +702,12 @@ mod tests {
             !first.is_empty() && !second.is_empty(),
             "both searches should return results"
         );
+        // 1 stop-points fetch + 3 hub fetches (HUBBAN, HUBWHC, HUBTCR) on the
+        // cold load; the second search hits the cache and adds 0.
         assert_eq!(
             count.load(Ordering::SeqCst),
-            1,
-            "two search_stations calls should result in exactly one fetch",
+            4,
+            "two search_stations calls should share a single stop-points load (1 + 3 hub fetches)",
         );
     }
 
@@ -718,10 +720,13 @@ mod tests {
         client.invalidate_stop_points_cache();
         client.search_stations("belsize").await.unwrap();
 
+        // First load: 1 stop-points + 3 hub fetches = 4.
+        // Invalidation clears only stop_points_cache; hub_lines_cache stays warm.
+        // Refetch: 1 stop-points + 0 hub fetches = 1. Total: 5.
         assert_eq!(
             count.load(Ordering::SeqCst),
-            2,
-            "invalidating the cache should force a refetch",
+            5,
+            "invalidating the cache forces a stop-points refetch; hub lines stay cached",
         );
     }
 
@@ -737,10 +742,11 @@ mod tests {
         let _ = client.search_stations("victoria").await.unwrap();
         let _ = client.search_stations("king").await.unwrap();
 
+        // 1 stop-points fetch + 3 hub fetches on warm; both searches are cache hits.
         assert_eq!(
             count.load(Ordering::SeqCst),
-            1,
-            "warm + two searches should total one fetch",
+            4,
+            "warm + two searches should total one stop-points fetch plus three hub fetches",
         );
     }
 
@@ -815,10 +821,11 @@ mod tests {
         let _ = client.search_stations("victoria").await.unwrap();
         let _ = client.search_stations("oxford").await.unwrap();
 
+        // Cold load: 1 stop-points + 3 hub fetches = 4; both subsequent searches are cache hits.
         assert_eq!(
             count.load(Ordering::SeqCst),
-            1,
-            "three searches against the full fixture should share one fetch"
+            4,
+            "three searches against the full fixture should share one stop-points load"
         );
     }
 
@@ -831,10 +838,372 @@ mod tests {
         client.warm_stop_points_cache().await.unwrap();
         client.warm_stop_points_cache().await.unwrap();
 
+        // First warm: 1 stop-points + 3 hub fetches = 4. Subsequent warms are cache hits.
         assert_eq!(
             count.load(Ordering::SeqCst),
-            1,
+            4,
             "repeated warm calls within the TTL should not refetch",
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // Hub line merge — multi-mode stations get DLR / Elizabeth / Overground chips
+    // -------------------------------------------------------------------------
+    //
+    // When a tube station carries a `hubNaptanCode`, `stop_points_cached` must
+    // fetch the hub's child stop-points and merge their lines into the station's
+    // `Station.lines`. This is the data the Settings chip UI renders for the
+    // line-filter.
+
+    fn write_hub_stop_points_fixture(dir: &std::path::Path, body: serde_json::Value) {
+        write_stop_points_fixture(dir, body);
+    }
+
+    fn write_hub_fixture(dir: &std::path::Path, hub_id: &str, body: serde_json::Value) {
+        let hub_dir = dir.join("stop-point");
+        std::fs::create_dir_all(&hub_dir).unwrap();
+        std::fs::write(
+            hub_dir.join(format!("{hub_id}.json")),
+            serde_json::to_string(&body).unwrap(),
+        )
+        .unwrap();
+    }
+
+    #[tokio::test]
+    async fn hub_lines_merged_into_station_lines_synthetic() {
+        // A station with hubNaptanCode plus a hub fixture that adds a DLR
+        // child. After search_stations the Station.lines must contain the DLR
+        // line from the hub alongside the tube lines from lineModeGroups.
+        let dir = tempfile::tempdir().unwrap();
+        write_hub_stop_points_fixture(
+            dir.path(),
+            serde_json::json!({
+                "total": 1,
+                "stopPoints": [{
+                    "id": "940GZZLUBNK",
+                    "commonName": "Bank Underground Station",
+                    "modes": ["tube"],
+                    "lat": 51.51225,
+                    "lon": -0.087792,
+                    "hubNaptanCode": "HUBBAN",
+                    "lineModeGroups": [{
+                        "lineIdentifier": ["central", "waterloo-city", "northern"]
+                    }]
+                }]
+            }),
+        );
+        write_hub_fixture(
+            dir.path(),
+            "HUBBAN",
+            serde_json::json!({
+                "id": "HUBBAN",
+                "children": [
+                    {
+                        "id": "940GZZLUBNK",
+                        "modes": ["tube"],
+                        "lineModeGroups": [{"modeName": "tube", "lineIdentifier": ["central","waterloo-city","northern"]}]
+                    },
+                    {
+                        "id": "940GZZDLBNK",
+                        "modes": ["dlr"],
+                        "lineModeGroups": [{"modeName": "dlr", "lineIdentifier": ["dlr"]}]
+                    }
+                ]
+            }),
+        );
+
+        let client = TflClient::new(FixtureTflHttp::new(dir.path()));
+        let results = client
+            .search_stations("bank")
+            .await
+            .expect("search should succeed");
+
+        let bank = results
+            .iter()
+            .find(|s| s.id == "940GZZLUBNK")
+            .expect("Bank must be in results");
+
+        let line_ids: Vec<&str> = bank.lines.iter().map(|l| l.id.as_str()).collect();
+        assert!(
+            line_ids.contains(&"central"),
+            "tube lines must still be present, got {line_ids:?}"
+        );
+        assert!(
+            line_ids.contains(&"dlr"),
+            "DLR from hub child must be merged in, got {line_ids:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn hub_merge_deduplicates_lines_present_in_both_parent_and_hub() {
+        // If the hub child repeats a line already in the tube parent's
+        // lineModeGroups, the merged Station.lines must not contain duplicates.
+        let dir = tempfile::tempdir().unwrap();
+        write_hub_stop_points_fixture(
+            dir.path(),
+            serde_json::json!({
+                "total": 1,
+                "stopPoints": [{
+                    "id": "940GZZLUBNK",
+                    "commonName": "Bank Underground Station",
+                    "modes": ["tube"],
+                    "lat": 51.51225,
+                    "lon": -0.087792,
+                    "hubNaptanCode": "HUBBAN",
+                    "lineModeGroups": [{
+                        "lineIdentifier": ["central", "northern"]
+                    }]
+                }]
+            }),
+        );
+        write_hub_fixture(
+            dir.path(),
+            "HUBBAN",
+            serde_json::json!({
+                "id": "HUBBAN",
+                "children": [
+                    {
+                        "id": "940GZZLUBNK",
+                        "modes": ["tube"],
+                        "lineModeGroups": [{"modeName": "tube", "lineIdentifier": ["central","northern"]}]
+                    },
+                    {
+                        "id": "940GZZDLBNK",
+                        "modes": ["dlr"],
+                        // hub child also lists "central" — must not duplicate
+                        "lineModeGroups": [{"modeName": "dlr", "lineIdentifier": ["dlr","central"]}]
+                    }
+                ]
+            }),
+        );
+
+        let client = TflClient::new(FixtureTflHttp::new(dir.path()));
+        let results = client
+            .search_stations("bank")
+            .await
+            .expect("search should succeed");
+
+        let bank = results.iter().find(|s| s.id == "940GZZLUBNK").unwrap();
+        let central_count = bank.lines.iter().filter(|l| l.id == "central").count();
+        assert_eq!(
+            central_count,
+            1,
+            "central must appear exactly once; got lines: {:?}",
+            bank.lines.iter().map(|l| &l.id).collect::<Vec<_>>()
+        );
+    }
+
+    #[tokio::test]
+    async fn hub_merge_missing_hub_fixture_falls_back_gracefully() {
+        // A station with hubNaptanCode but no hub fixture must not error —
+        // the tube-only lines from lineModeGroups still show up.
+        let dir = tempfile::tempdir().unwrap();
+        write_hub_stop_points_fixture(
+            dir.path(),
+            serde_json::json!({
+                "total": 1,
+                "stopPoints": [{
+                    "id": "940GZZLUBNK",
+                    "commonName": "Bank Underground Station",
+                    "modes": ["tube"],
+                    "lat": 51.51225,
+                    "lon": -0.087792,
+                    "hubNaptanCode": "HUBBAN",
+                    "lineModeGroups": [{
+                        "lineIdentifier": ["central", "northern"]
+                    }]
+                }]
+            }),
+        );
+        // intentionally omit the HUBBAN.json hub fixture
+
+        let client = TflClient::new(FixtureTflHttp::new(dir.path()));
+        let results = client
+            .search_stations("bank")
+            .await
+            .expect("missing hub fixture must not cause an error");
+
+        let bank = results.iter().find(|s| s.id == "940GZZLUBNK").unwrap();
+        let line_ids: Vec<&str> = bank.lines.iter().map(|l| l.id.as_str()).collect();
+        assert!(
+            line_ids.contains(&"central"),
+            "tube lines must still be present even when hub fixture is missing"
+        );
+    }
+
+    #[tokio::test]
+    async fn hub_merge_drops_unsupported_modes_from_hub_children() {
+        // Bus and national-rail children in the hub must not contribute
+        // their line ids — only tube/dlr/overground/elizabeth-line children.
+        let dir = tempfile::tempdir().unwrap();
+        write_hub_stop_points_fixture(
+            dir.path(),
+            serde_json::json!({
+                "total": 1,
+                "stopPoints": [{
+                    "id": "940GZZLUVIC",
+                    "commonName": "Victoria Underground Station",
+                    "modes": ["tube"],
+                    "lat": 51.495,
+                    "lon": -0.144,
+                    "hubNaptanCode": "HUBVIC",
+                    "lineModeGroups": [{
+                        "lineIdentifier": ["victoria", "district", "circle"]
+                    }]
+                }]
+            }),
+        );
+        write_hub_fixture(
+            dir.path(),
+            "HUBVIC",
+            serde_json::json!({
+                "id": "HUBVIC",
+                "children": [
+                    {
+                        "id": "940GZZLUVIC",
+                        "modes": ["tube"],
+                        "lineModeGroups": [{"modeName": "tube", "lineIdentifier": ["victoria","district","circle"]}]
+                    },
+                    {
+                        "id": "490VIC",
+                        "modes": ["bus"],
+                        "lineModeGroups": [{"modeName": "bus", "lineIdentifier": ["52","C1"]}]
+                    },
+                    {
+                        "id": "910GVIC",
+                        "modes": ["national-rail"],
+                        "lineModeGroups": [{"modeName": "national-rail", "lineIdentifier": ["gatwick-express","southern"]}]
+                    }
+                ]
+            }),
+        );
+
+        let client = TflClient::new(FixtureTflHttp::new(dir.path()));
+        let results = client
+            .search_stations("victoria")
+            .await
+            .expect("search should succeed");
+
+        let victoria = results.iter().find(|s| s.id == "940GZZLUVIC").unwrap();
+        let line_ids: Vec<&str> = victoria.lines.iter().map(|l| l.id.as_str()).collect();
+        assert!(
+            !line_ids.iter().any(|id| *id == "52" || *id == "C1"),
+            "bus line ids must be excluded, got {line_ids:?}"
+        );
+        assert!(
+            !line_ids
+                .iter()
+                .any(|id| *id == "gatwick-express" || *id == "southern"),
+            "national-rail line ids must be excluded, got {line_ids:?}"
+        );
+        assert!(
+            line_ids.contains(&"victoria"),
+            "tube lines must remain, got {line_ids:?}"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // Real-fixture integration: Bank, Whitechapel, TCR multi-mode chips
+    // -------------------------------------------------------------------------
+
+    #[tokio::test]
+    async fn search_bank_includes_dlr_chip() {
+        let client = real_client();
+        let results = client
+            .search_stations("bank")
+            .await
+            .expect("search should succeed");
+
+        let bank = results
+            .iter()
+            .find(|s| s.id == "940GZZLUBNK")
+            .expect("Bank must appear in results");
+
+        let line_ids: Vec<&str> = bank.lines.iter().map(|l| l.id.as_str()).collect();
+        assert!(
+            line_ids.contains(&"dlr"),
+            "Bank must include DLR chip after hub merge; got {line_ids:?}"
+        );
+        assert!(
+            line_ids.contains(&"central"),
+            "Bank must still include tube lines; got {line_ids:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn search_tottenham_court_road_includes_elizabeth_chip() {
+        let client = real_client();
+        let results = client
+            .search_stations("tottenham")
+            .await
+            .expect("search should succeed");
+
+        let tcr = results
+            .iter()
+            .find(|s| s.id == "940GZZLUTCR")
+            .expect("TCR must appear in results");
+
+        let line_ids: Vec<&str> = tcr.lines.iter().map(|l| l.id.as_str()).collect();
+        assert!(
+            line_ids.contains(&"elizabeth-line"),
+            "TCR must include Elizabeth chip after hub merge; got {line_ids:?}"
+        );
+        assert!(
+            line_ids.contains(&"central"),
+            "TCR must still include tube lines; got {line_ids:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn search_whitechapel_includes_elizabeth_and_mildmay_chips() {
+        let client = real_client();
+        let results = client
+            .search_stations("whitechapel")
+            .await
+            .expect("search should succeed");
+
+        let wpl = results
+            .iter()
+            .find(|s| s.id == "940GZZLUWPL")
+            .expect("Whitechapel must appear in results");
+
+        let line_ids: Vec<&str> = wpl.lines.iter().map(|l| l.id.as_str()).collect();
+        assert!(
+            line_ids.contains(&"elizabeth-line"),
+            "Whitechapel must include Elizabeth chip; got {line_ids:?}"
+        );
+        assert!(
+            line_ids.contains(&"mildmay"),
+            "Whitechapel must include Mildmay (Overground) chip; got {line_ids:?}"
+        );
+        assert!(
+            line_ids.contains(&"hammersmith-city"),
+            "Whitechapel must still include tube lines; got {line_ids:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn search_belsize_park_tube_only_unchanged() {
+        // Tube-only station without a hub must be unaffected by the merge.
+        let client = real_client();
+        let results = client
+            .search_stations("belsize")
+            .await
+            .expect("search should succeed");
+
+        let bzp = results
+            .iter()
+            .find(|s| s.id == "940GZZLUBZP")
+            .expect("Belsize Park must appear in results");
+
+        assert!(
+            bzp.hub_naptan_code.is_none(),
+            "Belsize Park must have no hub code"
+        );
+        let line_ids: Vec<&str> = bzp.lines.iter().map(|l| l.id.as_str()).collect();
+        assert!(
+            line_ids.iter().all(|id| *id == "northern"),
+            "Belsize Park must have only the Northern line, got {line_ids:?}"
         );
     }
 }

@@ -31,7 +31,10 @@ use crate::http::TflHttp;
 use std::collections::HashMap;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
-use tfl_domain::types::{Arrival, LineStatus, Station, StatusEntry, TflLine};
+use tfl_domain::types::{
+    is_supported_line_id, pretty_line_name, Arrival, LineRef, LineStatus, Station, StatusEntry,
+    TflLine,
+};
 
 /// How long a `stop-points/tube` response stays cached before the next
 /// `search_stations` call refetches. 15 minutes keeps the 16 MB payload off
@@ -63,6 +66,12 @@ pub struct TflClient<H: TflHttp> {
     /// for the lifetime of the process; TfL doesn't restructure hubs at
     /// runtime.
     hub_children_cache: Mutex<HashMap<String, Vec<String>>>,
+    /// Per-process map from a hub NaPTAN id to the merged set of
+    /// `LineRef`s served by its children. Populated lazily when
+    /// `stop_points_cached` enriches a hub station's `lines` field so
+    /// the Settings chip UI shows DLR / Elizabeth / Overground chips
+    /// alongside tube lines. Stable for the process lifetime.
+    hub_lines_cache: Mutex<HashMap<String, Vec<LineRef>>>,
 }
 
 impl<H: TflHttp> TflClient<H> {
@@ -72,6 +81,7 @@ impl<H: TflHttp> TflClient<H> {
             http,
             stop_points_cache: Mutex::new(None),
             hub_children_cache: Mutex::new(HashMap::new()),
+            hub_lines_cache: Mutex::new(HashMap::new()),
         }
     }
 
@@ -204,6 +214,96 @@ impl<H: TflHttp> TflClient<H> {
         Ok(children)
     }
 
+    /// Return the merged set of lines served by a hub's children, for use in
+    /// the Settings chip UI. Reads `lineModeGroups` from every child whose
+    /// `modes` list contains a mode we surface (tube / DLR / Overground /
+    /// Elizabeth), then deduplicates by line id and filters through
+    /// `is_supported_line_id`.
+    ///
+    /// Failures are silenced and return an empty `Vec` — a missing hub
+    /// fixture or a transient 404 should not block the stop-points load.
+    /// Result is cached per hub id for the process lifetime.
+    async fn hub_lines_cached(&self, hub_id: &str) -> Vec<LineRef> {
+        if let Ok(guard) = self.hub_lines_cache.lock() {
+            if let Some(cached) = guard.get(hub_id) {
+                return cached.clone();
+            }
+        }
+
+        let value = match self.http.fetch("stop-point", hub_id).await {
+            Ok(v) => v,
+            Err(_) => return vec![],
+        };
+
+        let mut seen = std::collections::HashSet::new();
+        let lines: Vec<LineRef> = value
+            .get("children")
+            .and_then(|v| v.as_array())
+            .map(|arr| {
+                arr.iter()
+                    .filter(|c| {
+                        c.get("modes")
+                            .and_then(|m| m.as_array())
+                            .map(|m| {
+                                m.iter().any(|mode| {
+                                    matches!(
+                                        mode.as_str(),
+                                        Some("tube")
+                                            | Some("dlr")
+                                            | Some("overground")
+                                            | Some("elizabeth-line")
+                                    )
+                                })
+                            })
+                            .unwrap_or(false)
+                    })
+                    .flat_map(|c| {
+                        c.get("lineModeGroups")
+                            .and_then(|g| g.as_array())
+                            .map(|groups| {
+                                groups
+                                    .iter()
+                                    .filter(|g| {
+                                        let mode = g
+                                            .get("modeName")
+                                            .and_then(|m| m.as_str())
+                                            .unwrap_or("");
+                                        mode.is_empty()
+                                            || matches!(
+                                                mode,
+                                                "tube" | "dlr" | "overground" | "elizabeth-line"
+                                            )
+                                    })
+                                    .flat_map(|g| {
+                                        g.get("lineIdentifier")
+                                            .and_then(|l| l.as_array())
+                                            .map(|ids| {
+                                                ids.iter()
+                                                    .filter_map(|id| id.as_str().map(String::from))
+                                                    .collect::<Vec<_>>()
+                                            })
+                                            .unwrap_or_default()
+                                    })
+                                    .collect::<Vec<_>>()
+                            })
+                            .unwrap_or_default()
+                    })
+                    .filter(|id| is_supported_line_id(id))
+                    .filter(|id| seen.insert(id.clone()))
+                    .map(|id| {
+                        let name = pretty_line_name(&id).to_string();
+                        LineRef { id, name }
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        if let Ok(mut guard) = self.hub_lines_cache.lock() {
+            guard.insert(hub_id.to_string(), lines.clone());
+        }
+        lines
+    }
+
     /// Fetch the current status for a tube line.
     ///
     /// Issues one request for all tube lines (`line-status/tube`) and finds
@@ -325,7 +425,34 @@ impl<H: TflHttp> TflClient<H> {
 
         let value = self.http.fetch("stop-points", "tube").await?;
         let stop_points_value = value.get("stopPoints").unwrap_or(&value).clone();
-        let stations: Vec<Station> = serde_json::from_value(stop_points_value)?;
+        let mut stations: Vec<Station> = serde_json::from_value(stop_points_value)?;
+
+        // For multi-mode stations that carry a hub NaPTAN code, merge lines
+        // from sibling stop-points (DLR, Elizabeth, Overground) so the
+        // Settings chip UI shows all lines, not just the tube parent's lines.
+        let hub_jobs: Vec<(usize, String)> = stations
+            .iter()
+            .enumerate()
+            .filter_map(|(i, s)| s.hub_naptan_code.clone().map(|hub_id| (i, hub_id)))
+            .collect();
+
+        if !hub_jobs.is_empty() {
+            let hub_results =
+                futures::future::join_all(hub_jobs.iter().map(|(i, hub_id)| async move {
+                    let lines = self.hub_lines_cached(hub_id).await;
+                    (*i, lines)
+                }))
+                .await;
+
+            for (i, hub_lines) in hub_results {
+                let station = &mut stations[i];
+                for line in hub_lines {
+                    if !station.lines.iter().any(|l| l.id == line.id) {
+                        station.lines.push(line);
+                    }
+                }
+            }
+        }
 
         match self.stop_points_cache.lock() {
             Ok(mut guard) => {

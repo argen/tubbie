@@ -10,7 +10,7 @@
 //! Whitelist coverage: tube + DLR + London Overground (legacy + the six
 //! named lines introduced Nov 2024) + Elizabeth.
 
-use tfl_domain::{is_supported_line_id, Station};
+use tfl_domain::{is_supported_line_id, LineRef, Station};
 
 #[test]
 fn is_supported_line_id_accepts_every_surfaced_line() {
@@ -119,4 +119,55 @@ fn station_deserialize_filters_explicit_lines_array_too() {
     let s: Station = serde_json::from_value(json).expect("Station must parse");
     let ids: Vec<&str> = s.lines.iter().map(|l| l.id.as_str()).collect();
     assert_eq!(ids, vec!["victoria", "district"]);
+}
+
+#[test]
+fn station_with_multi_mode_lines_serializes_all_modes() {
+    // After a hub merge the client adds DLR / Elizabeth / Overground LineRefs
+    // directly to Station.lines. Verify the domain type carries them through
+    // serialization without stripping any supported-mode line.
+    let station = Station {
+        id: "940GZZLUBNK".to_string(),
+        common_name: "Bank Underground Station".to_string(),
+        modes: vec!["tube".to_string(), "dlr".to_string()],
+        lat: 51.51225,
+        lon: -0.087792,
+        lines: vec![
+            LineRef {
+                id: "central".to_string(),
+                name: "Central".to_string(),
+            },
+            LineRef {
+                id: "northern".to_string(),
+                name: "Northern".to_string(),
+            },
+            LineRef {
+                id: "waterloo-city".to_string(),
+                name: "Waterloo & City".to_string(),
+            },
+            LineRef {
+                id: "dlr".to_string(),
+                name: "DLR".to_string(),
+            },
+        ],
+        hub_naptan_code: Some("HUBBAN".to_string()),
+    };
+
+    let json = serde_json::to_value(&station).expect("Station must serialize");
+    let lines = json
+        .get("lines")
+        .and_then(|v| v.as_array())
+        .expect("lines must be an array");
+
+    let ids: Vec<&str> = lines
+        .iter()
+        .filter_map(|l| l.get("id").and_then(|v| v.as_str()))
+        .collect();
+
+    assert!(ids.contains(&"central"), "tube line must be present");
+    assert!(
+        ids.contains(&"dlr"),
+        "DLR line must be present after hub merge"
+    );
+    assert_eq!(ids.len(), 4, "all four lines must serialize; got {ids:?}");
 }
