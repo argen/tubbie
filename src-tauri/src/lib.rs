@@ -99,30 +99,44 @@ async fn spawn_stream_task(
 
     // Use tokio::task::spawn so we get a JoinHandle with abort_handle().
     let join_handle = tokio::task::spawn(async move {
+        // Track whether the previous tick errored so we don't spam the log
+        // when TfL is rate-limiting and every poll fails.
+        let mut prev_was_err = false;
         loop {
             match stream.next().await {
                 Some(Ok(board)) => {
+                    if prev_was_err {
+                        eprintln!("[tubbie] stream tick recovered");
+                        prev_was_err = false;
+                    }
                     if let Err(e) = app.emit("board://updated", &board) {
                         eprintln!("[tubbie] Failed to emit board://updated: {e}");
                     }
                 }
                 Some(Err(e)) => {
-                    // BoardService::stream handles stale-data fallback internally.
-                    // Err only occurs when there is no last-ok board. The stream
-                    // terminates after emitting this error item.
-                    eprintln!("[tubbie] Stream fatal error (no last-ok board): {e}");
-                    break;
+                    // BoardService::stream is infinite — on fetch failure with
+                    // no last-ok board it emits the error and keeps polling.
+                    // Breaking here would kill the task and the watcher would
+                    // respawn it 2 s later, hammering TfL straight through any
+                    // 429 cooldown. Log once per streak and let poll_seconds
+                    // throttle retries.
+                    if !prev_was_err {
+                        eprintln!("[tubbie] stream tick failed (no last-ok board): {e}");
+                        prev_was_err = true;
+                    }
                 }
                 None => {
-                    // Stream exhausted after a fatal error.
-                    eprintln!("[tubbie] Board stream ended.");
+                    // Defensive: BoardService::stream is infinite. If a future
+                    // change ever lets it terminate, fall through so the
+                    // watcher can respawn.
+                    eprintln!("[tubbie] Board stream ended unexpectedly.");
                     break;
                 }
             }
         }
         // Clear the abort handle so the watcher loop detects the task has
-        // ended and schedules a restart — covers natural termination, panics,
-        // and any future code path that lets the task die.
+        // ended and schedules a restart — covers panics and any future code
+        // path that lets the task die.
         eprintln!("[tubbie] stream task ended; scheduling restart");
         *stream_abort_clone.write().await = None;
     });
