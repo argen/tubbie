@@ -1,8 +1,17 @@
-# Tubbie
+<h1>
+  <img src="docs/assets/logo.png" alt="" width="48" align="left" />
+  Tubbie
+</h1>
 
-A desktop dot-matrix arrivals board for the London Underground, powered by [TfL's Unified API](https://api.tfl.gov.uk). Built with Tauri v2, SvelteKit, and Rust.
+> A desktop dot-matrix arrivals board for the London Underground, powered by [TfL's Unified API](https://api.tfl.gov.uk). Built with Tauri v2, SvelteKit, and Rust.
 
-<!-- TODO: screenshot -->
+[![CI](https://github.com/argen/tubbie/actions/workflows/ci.yml/badge.svg)](https://github.com/argen/tubbie/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+![Platform: macOS](https://img.shields.io/badge/platform-macOS-lightgrey)
+
+<p align="center">
+  <img src="docs/assets/screenshot.png" alt="Tubbie showing live northbound and southbound arrivals at Warren Street" width="720" />
+</p>
 
 ## What it is
 
