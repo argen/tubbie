@@ -1,0 +1,73 @@
+version: 2
+updates:
+  # Rust workspace
+  - package-ecosystem: cargo
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    target-branch: main
+    labels: ["dependencies", "rust"]
+    cooldown:
+      default-days: 3
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      tauri:
+        patterns: ["tauri*", "wry", "tao", "muda", "tray-icon"]
+      rust-minor:
+        update-types: ["minor", "patch"]
+        exclude-patterns: ["tauri*", "wry", "tao", "muda", "tray-icon"]
+      cargo-security:
+        applies-to: security-updates
+        patterns: ["*"]
+    ignore:
+      # GHSA-wrw7-89jp-8q8g — VariantStrIter unsoundness in glib < 0.20.
+      # Linux-runtime-only via gtk 0.18 → tauri/wry. tubbie does not call
+      # the affected API; no fix until Tauri ecosystem bumps gtk to 0.20+.
+      # Re-triage: next Tauri minor, or 2026-07-25 (90d), whichever first.
+      - dependency-name: "glib"
+      - dependency-name: "gtk"
+      # GHSA-cq8v-f236-94qc — rand 0.7.3 unsound when a custom log impl
+      # hijacks rand::rng(). Build-time only via phf_generator → selectors
+      # → kuchikiki → tauri-utils. Advisory preconditions absent in our
+      # build env. See SECURITY.md for [patch.crates-io] escape hatch.
+      - dependency-name: "phf_generator"
+
+  # Frontend
+  - package-ecosystem: npm
+    directory: "/web"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    versioning-strategy: increase-if-necessary
+    target-branch: main
+    labels: ["dependencies", "web"]
+    cooldown:
+      default-days: 3
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      sveltekit:
+        patterns: ["@sveltejs/*", "svelte", "svelte-*"]
+      js-minor:
+        update-types: ["minor", "patch"]
+        exclude-patterns: ["@sveltejs/*", "svelte", "svelte-*"]
+      npm-security:
+        applies-to: security-updates
+        patterns: ["*"]
+
+  # CI workflows
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+    target-branch: main
+    labels: ["dependencies", "ci"]
+    commit-message:
+      prefix: "chore(ci)"
+    groups:
+      actions-security:
+        applies-to: security-updates
+        patterns: ["*"]

@@ -1,0 +1,92 @@
+# cargo-deny config — see https://embarkstudios.github.io/cargo-deny/checks/cfg.html
+#
+# Run locally with: cargo install --locked cargo-deny && cargo deny check
+#
+# This file is the in-tree source of truth for accepted-risk advisories
+# and the workspace's license / source allowlist. SECURITY.md mirrors
+# the rationale for human readers.
+
+[graph]
+all-features = true
+
+[output]
+feature-depth = 1
+
+[advisories]
+version = 2
+db-urls = ["https://github.com/rustsec/advisory-db"]
+yanked = "deny"
+ignore = [
+  # ─── Unsoundness, mirrored in .github/dependabot.yml ignore: ─────
+  # See SECURITY.md "Accepted-risk register" — re-triage 2026-07-25.
+  { id = "RUSTSEC-2024-0429", reason = "glib VariantStrIter unsoundness; not called by tubbie. Linux-runtime via gtk 0.18 only; no fix until Tauri ecosystem bumps gtk to 0.20+." },
+  { id = "RUSTSEC-2026-0097", reason = "rand 0.7.3 unsound with custom log impl. Build-time only via phf_generator → tauri-utils; advisory preconditions absent." },
+  # ─── Unmaintained crates pulled in transitively by Tauri 2.10 ────
+  # All of these flow from tauri-utils 2.8.3 / gtk 0.18 stack. They
+  # will resolve when Tauri bumps; tracked alongside RUSTSEC-2024-0429.
+  { id = "RUSTSEC-2024-0370", reason = "proc-macro-error unmaintained; transitive via Tauri's proc-macro stack." },
+  { id = "RUSTSEC-2025-0080", reason = "unic-common unmaintained; via urlpattern → tauri-utils." },
+  { id = "RUSTSEC-2025-0098", reason = "unic-ucd-version unmaintained; via urlpattern → tauri-utils." },
+  { id = "RUSTSEC-2025-0100", reason = "unic-ucd-ident unmaintained; via urlpattern → tauri-utils." },
+  { id = "RUSTSEC-2025-0081", reason = "unic-char-property unmaintained; via urlpattern → tauri-utils." },
+  { id = "RUSTSEC-2025-0075", reason = "unic-char-range unmaintained; via urlpattern → tauri-utils." },
+  { id = "RUSTSEC-2025-0057", reason = "fxhash unmaintained; via Tauri transitive (selectors/cssparser)." },
+  # gtk-rs GTK3 bindings — multiple advisories for the same family,
+  # all blocked on Tauri 2 bumping to gtk4. Resolves together.
+  { id = "RUSTSEC-2024-0411", reason = "gtk-rs (atk) unmaintained; pinned by Tauri 2.10." },
+  { id = "RUSTSEC-2024-0412", reason = "gtk-rs (atk-sys) unmaintained; pinned by Tauri 2.10." },
+  { id = "RUSTSEC-2024-0413", reason = "gtk-rs (gdk) unmaintained; pinned by Tauri 2.10." },
+  { id = "RUSTSEC-2024-0414", reason = "gtk-rs (gdk-sys) unmaintained; pinned by Tauri 2.10." },
+  { id = "RUSTSEC-2024-0415", reason = "gtk-rs (gdkx11) unmaintained; pinned by Tauri 2.10." },
+  { id = "RUSTSEC-2024-0416", reason = "gtk-rs (gdkx11-sys) unmaintained; pinned by Tauri 2.10." },
+  { id = "RUSTSEC-2024-0417", reason = "gtk-rs (gtk) unmaintained; pinned by Tauri 2.10." },
+  { id = "RUSTSEC-2024-0418", reason = "gtk-rs (gdk-pixbuf) unmaintained; pinned by Tauri 2.10." },
+  { id = "RUSTSEC-2024-0419", reason = "gtk-rs (gtk-sys) unmaintained; pinned by Tauri 2.10." },
+  { id = "RUSTSEC-2024-0420", reason = "gtk-rs (pango) unmaintained; pinned by Tauri 2.10." },
+]
+
+[licenses]
+version = 2
+confidence-threshold = 0.93
+# Workspace crates are unpublished (publish = false in each Cargo.toml).
+# Skip license checks on them — license decisions for tubbie itself live
+# in the repo-root LICENSE file, not in cargo-deny.
+private = { ignore = true }
+allow = [
+  "MIT",
+  "Apache-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "ISC",
+  "Unicode-3.0",
+  "MPL-2.0",
+  "Zlib",
+  "CC0-1.0",
+  "BSL-1.0",
+  "0BSD",
+]
+# Surface licenses we deliberately accept on a per-crate basis here.
+# Empty by default — drift gets surfaced on first CI run.
+exceptions = []
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+# Path-only intra-workspace deps (`{ path = "../foo" }`) appear as
+# wildcards to cargo-deny. They are safe — the version is fixed by
+# the lockfile of a single workspace.
+allow-wildcard-paths = true
+highlight = "all"
+# Crates explicitly forbidden. Empty until a real reason exists.
+deny = []
+# Per-crate skip rules for known-duplicates outside our control (e.g.
+# Tauri's transitive graph). Add with rationale when CI flags them.
+skip = []
+skip-tree = []
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []
