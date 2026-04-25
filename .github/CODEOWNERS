@@ -1,0 +1,16 @@
+# Default owner for everything in the repo.
+# Required reviews routing once branch protection is enabled.
+*                       @argen
+
+# Pipeline-critical paths (per CLAUDE.md): require explicit review on
+# any change here, even from the default owner — they're load-bearing
+# and have a history of subtle breakage.
+/src-tauri/src/lib.rs            @argen
+/src-tauri/src/commands.rs       @argen
+/crates/tfl-board/src/service.rs @argen
+/web/src/lib/stores/board.ts     @argen
+
+# CI / supply-chain config — security-sensitive.
+/.github/                        @argen
+/deny.toml                       @argen
+/SECURITY.md                     @argen
