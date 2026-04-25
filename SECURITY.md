@@ -8,7 +8,7 @@ within **5 business days** and aim for a fix or mitigation plan within
 **30 days** for high-severity reports.
 
 1. **Preferred** — GitHub's [private vulnerability reporting](https://github.com/argen/tubbie/security/advisories/new).
-2. **Fallback** — email `bbelcastro@gmail.com` with `[tubbie security]`
+2. **Fallback** — email `iam[at]brunobelcastro.com` with `[tubbie security]`
    in the subject.
 
 If you would like credit in release notes for the fix, please say so
