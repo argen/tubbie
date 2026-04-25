@@ -1151,8 +1151,7 @@ mod tests {
         // No time advance — the filter change alone must NOT produce a new
         // emit. (The stream's CfgChanged path with !station_changed `continue`s
         // and waits for the next interval tick.)
-        let immediate =
-            tokio::time::timeout(Duration::from_millis(50), stream.next()).await;
+        let immediate = tokio::time::timeout(Duration::from_millis(50), stream.next()).await;
         assert!(
             immediate.is_err(),
             "filter change must NOT trigger an immediate emit \
