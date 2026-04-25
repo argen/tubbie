@@ -659,4 +659,70 @@ mod tests {
         assert_eq!(log[0], "STATION_A");
         assert_eq!(log[1], "STATION_B");
     }
+
+    // -----------------------------------------------------------------------
+    // Test (bugfix): station_id change forces an immediate refresh
+    // -----------------------------------------------------------------------
+
+    /// When the user picks a new station, the next emitted board must be for
+    /// the new station regardless of where in the poll interval we were.
+    /// Sub-`poll_seconds` waits otherwise leave the user staring at the old
+    /// station's stale data for up to `poll_seconds` after a deliberate
+    /// action.
+    ///
+    /// With `poll_seconds: 30` and only 100 ms of advance after the cfg
+    /// publish, the periodic tick must NOT be what wakes the next emit —
+    /// the station change itself must.
+    #[tokio::test(start_paused = true)]
+    async fn stream_refreshes_immediately_on_station_id_change() {
+        let (mock, _counter, id_log) = SeqTflHttp::new_with_id_log(vec![true, true]);
+        let client = Arc::new(TflClient::new(mock));
+        let svc = BoardService::new(client, make_clock());
+
+        let cfg_a = BoardConfig {
+            station_id: "STATION_A".to_string(),
+            line_ids: vec![],
+            directions: vec![],
+            poll_seconds: 30,
+            theme: "classic-amber".to_string(),
+        };
+        let (tx, rx) = cfg_channel(cfg_a.clone());
+        let mut stream = Box::pin(svc.stream(rx));
+
+        // First tick fires immediately and resolves to STATION_A.
+        let first = stream.next().await.expect("first item");
+        assert_eq!(
+            first.expect("first must be Ok").station_id,
+            "STATION_A",
+            "first emit is for the initial station"
+        );
+
+        // Publish station B and measure how much paused-clock time elapses
+        // before the next emit. With `start_paused`, tokio auto-advances
+        // when every task is parked on a timer, so a buggy "wait for next
+        // tick" implementation would let the clock jump nearly 30 s. The
+        // fix forces an immediate refresh — the next emit must arrive in
+        // well under one poll interval.
+        let mut cfg_b = cfg_a.clone();
+        cfg_b.station_id = "STATION_B".to_string();
+        tx.send(cfg_b).expect("send must succeed");
+
+        let before = tokio::time::Instant::now();
+        let second = stream.next().await.expect("second item");
+        let elapsed = before.elapsed();
+
+        assert_eq!(
+            second.expect("second must be Ok").station_id,
+            "STATION_B",
+            "station change must trigger an immediate refresh against the new id"
+        );
+        assert!(
+            elapsed < Duration::from_secs(5),
+            "station change should refresh within 5 s; took {elapsed:?} \
+             (poll_seconds is 30, so a buggy 'wait for next tick' shows ~30 s here)"
+        );
+
+        let log = id_log.lock().expect("id_log lock");
+        assert_eq!(log.as_slice(), &["STATION_A", "STATION_B"]);
+    }
 }
