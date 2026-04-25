@@ -29,7 +29,7 @@ use std::time::Duration;
 use tfl_client::error::TflError;
 use tfl_client::http::ReqwestTflHttp;
 use tfl_client::http::TflHttp;
-use wiremock::matchers::{method, path};
+use wiremock::matchers::{method, path, query_param};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
 // ---------------------------------------------------------------------------
@@ -393,5 +393,32 @@ async fn fetch_404_is_not_retried() {
         "expected NotFound, got: {err:?}"
     );
 
+    server.verify().await;
+}
+
+// ---------------------------------------------------------------------------
+// Item 1 — app_key query param
+// ---------------------------------------------------------------------------
+
+/// Proves that `ReqwestTflHttp::with_app_key` sends `app_key=` as a query
+/// parameter. This is the primitive the stream-client fix in lib.rs relies on.
+#[tokio::test]
+async fn with_app_key_appends_query_param() {
+    let server = MockServer::start().await;
+    let body = serde_json::json!([]);
+
+    Mock::given(method("GET"))
+        .and(path("/StopPoint/X/Arrivals"))
+        .and(query_param("app_key", "DEADBEEF"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    let client = test_client_with_key(&server, "DEADBEEF");
+    client
+        .fetch("arrivals", "X")
+        .await
+        .expect("should succeed when app_key is present");
     server.verify().await;
 }
