@@ -81,13 +81,30 @@ Alternatively, set `TFL_APP_KEY=<key>` in your shell environment before launchin
 
 ## Distribution (unsigned builds)
 
-`just build` produces an unsigned `.app` for local use. macOS Gatekeeper will quarantine it on first launch — right-click the app and choose **Open** to bypass the warning, or run:
+### Download a release
+
+Tagged builds are published to [GitHub Releases](../../releases) as unsigned `.dmg` installers for Apple Silicon. Mount the DMG, drag Tubbie to Applications, and on first launch right-click the app and choose **Open** to bypass Gatekeeper. Alternatively:
 
 ```sh
-xattr -dr com.apple.quarantine "target/release/bundle/macos/Tubbie.app"
+xattr -dr com.apple.quarantine /Applications/Tubbie.app
 ```
 
-Signed and notarized builds for public distribution are deferred to M8. See [`docs/ADR/distribution-roadmap.md`](docs/ADR/distribution-roadmap.md) for the full plan.
+### Build locally
+
+`just build` produces the same unsigned `.app` at `target/release/bundle/macos/Tubbie.app` for development use.
+
+### Cutting a release
+
+Bump `version` in `src-tauri/tauri.conf.json` to match the tag, commit, then push the tag:
+
+```sh
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+The `.github/workflows/release.yml` workflow builds the app on a `macos-14` runner and opens a **draft** release with the `.dmg` attached — review it on GitHub and click **Publish** when ready.
+
+Signed and notarized builds for one-click distribution are tracked as M8 in [`docs/ADR/distribution-roadmap.md`](docs/ADR/distribution-roadmap.md).
 
 ## TfL attribution
 
