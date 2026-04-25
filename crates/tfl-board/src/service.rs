@@ -306,6 +306,7 @@ mod tests {
     use futures::StreamExt;
     use serde_json::Value;
     use tfl_client::{clock::FakeClock, error::TflError, http::TflHttp, TflClient};
+    use tfl_domain::Direction;
     use tokio::sync::watch;
 
     // -----------------------------------------------------------------------
@@ -317,26 +318,49 @@ mod tests {
 
     /// A mock `TflHttp` whose N-th call succeeds iff `successes[N % len]` is
     /// `true`. An empty JSON array is returned on success; a 500 Http error on
-    /// failure. An `Arc<AtomicU32>` tracks the call count for assertions.
+    /// failure. An `Arc<AtomicU32>` tracks the call count for assertions, and
+    /// `id_log` records every `id` argument so tests can assert which station
+    /// the stream actually fetched after a config change.
     struct SeqTflHttp {
         successes: Vec<bool>,
         call_count: Arc<AtomicU32>,
+        id_log: Arc<std::sync::Mutex<Vec<String>>>,
     }
 
     impl SeqTflHttp {
         fn new(successes: Vec<bool>) -> (Self, Arc<AtomicU32>) {
             let counter = Arc::new(AtomicU32::new(0));
+            let id_log = Arc::new(std::sync::Mutex::new(Vec::new()));
             let mock = SeqTflHttp {
                 successes,
                 call_count: Arc::clone(&counter),
+                id_log,
             };
             (mock, counter)
+        }
+
+        /// Variant that exposes the `id_log` Arc so tests can assert the
+        /// sequence of station_ids fetched.
+        fn new_with_id_log(
+            successes: Vec<bool>,
+        ) -> (Self, Arc<AtomicU32>, Arc<std::sync::Mutex<Vec<String>>>) {
+            let counter = Arc::new(AtomicU32::new(0));
+            let id_log = Arc::new(std::sync::Mutex::new(Vec::new()));
+            let mock = SeqTflHttp {
+                successes,
+                call_count: Arc::clone(&counter),
+                id_log: Arc::clone(&id_log),
+            };
+            (mock, counter, id_log)
         }
     }
 
     impl TflHttp for SeqTflHttp {
-        async fn fetch(&self, _endpoint: &str, _id: &str) -> Result<Value, TflError> {
+        async fn fetch(&self, _endpoint: &str, id: &str) -> Result<Value, TflError> {
             let idx = self.call_count.fetch_add(1, Ordering::SeqCst) as usize;
+            if let Ok(mut log) = self.id_log.lock() {
+                log.push(id.to_string());
+            }
             if self.successes[idx % self.successes.len()] {
                 Ok(serde_json::json!([]))
             } else {
@@ -470,5 +494,169 @@ mod tests {
             stale_board.station_id, ok_board.station_id,
             "stale board must be the same station"
         );
+    }
+
+    // -----------------------------------------------------------------------
+    // Test (item 4): config-watch — directions change applies without restart
+    // -----------------------------------------------------------------------
+
+    /// Sending a new `BoardConfig` with different `directions` through the
+    /// watch channel must apply on the next tick **without** the stream task
+    /// being recreated. We assert this via the mock's call counter: starting
+    /// the stream and driving two ticks with one config change in the middle
+    /// must produce exactly two `fetch` calls — not three (which would
+    /// indicate a respawn rebuilt its caches and re-fetched immediately).
+    #[tokio::test(start_paused = true)]
+    async fn stream_picks_up_directions_change_without_restart() {
+        // All ticks succeed — we only care about call shape.
+        let (mock, counter) = SeqTflHttp::new(vec![true, true, true, true]);
+        let client = Arc::new(TflClient::new(mock));
+        let svc = BoardService::new(client, make_clock());
+
+        let initial_cfg = BoardConfig {
+            station_id: "TEST001".to_string(),
+            line_ids: vec![],
+            directions: vec![Direction::Northbound],
+            poll_seconds: 5,
+            theme: "classic-amber".to_string(),
+        };
+        let (tx, rx) = cfg_channel(initial_cfg.clone());
+        let mut stream = Box::pin(svc.stream(rx));
+
+        // First tick fires immediately.
+        let first = stream.next().await.expect("first item");
+        assert!(first.is_ok());
+        assert_eq!(
+            counter.load(Ordering::SeqCst),
+            1,
+            "first tick must have produced exactly one fetch"
+        );
+
+        // Publish a new config with a DIFFERENT directions filter — this is
+        // the "user toggled a chip" case. No abort, no restart. The stream
+        // task is still the same one we started with.
+        let mut updated = initial_cfg.clone();
+        updated.directions = vec![Direction::Southbound];
+        tx.send(updated).expect("send must succeed");
+
+        // Advance past the poll interval (5 s, with `start_paused`) so the
+        // next tick fires. The CfgChanged wake-up itself must not have
+        // produced a fetch (cheap semantic).
+        tokio::time::advance(Duration::from_secs(6)).await;
+
+        let second = stream.next().await.expect("second item");
+        assert!(second.is_ok());
+
+        // Critical assertion: only the two ticks fetched. If the stream had
+        // been respawned this would be 3+ (warm + tick + tick).
+        assert_eq!(
+            counter.load(Ordering::SeqCst),
+            2,
+            "exactly 2 fetches expected; a respawn would push this above 2"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // Test (item 4): config-watch — poll_seconds rebuilds the interval
+    // -----------------------------------------------------------------------
+
+    /// Changing `poll_seconds` mid-stream must rebuild the `Interval` so the
+    /// next tick fires at the new period. Start at 60 s, drive one tick,
+    /// publish a 10 s config, advance only 10 s, and assert the next tick
+    /// fires (i.e. the original 60 s interval was discarded).
+    #[tokio::test(start_paused = true)]
+    async fn stream_rebuilds_interval_when_poll_seconds_changes() {
+        let (mock, counter) = SeqTflHttp::new(vec![true, true, true]);
+        let client = Arc::new(TflClient::new(mock));
+        let svc = BoardService::new(client, make_clock());
+
+        let initial_cfg = BoardConfig {
+            station_id: "TEST001".to_string(),
+            line_ids: vec![],
+            directions: vec![],
+            poll_seconds: 60,
+            theme: "classic-amber".to_string(),
+        };
+        let (tx, rx) = cfg_channel(initial_cfg.clone());
+        let mut stream = Box::pin(svc.stream(rx));
+
+        // First tick (immediate).
+        let first = stream.next().await.expect("first item");
+        assert!(first.is_ok());
+        assert_eq!(counter.load(Ordering::SeqCst), 1);
+
+        // Drop poll_seconds to 10 s. The CfgChanged wake-up rebuilds the
+        // interval; the stream is now waiting for a 10 s tick, not 60 s.
+        let mut faster = initial_cfg.clone();
+        faster.poll_seconds = 10;
+        tx.send(faster).expect("send must succeed");
+
+        // 10 s elapses. With the rebuilt interval the next tick fires; with
+        // the original 60 s interval it would not.
+        tokio::time::advance(Duration::from_secs(11)).await;
+
+        let second = stream.next().await.expect(
+            "second tick must fire ~10 s after the poll_seconds change, not wait the original 60 s",
+        );
+        assert!(second.is_ok());
+        assert_eq!(
+            counter.load(Ordering::SeqCst),
+            2,
+            "tick should have fired at the new 10 s cadence"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // Test (item 4): config-watch — station_id change drops last_ok
+    // -----------------------------------------------------------------------
+
+    /// When `station_id` changes, the previous station's `last_ok` board
+    /// must be dropped — we don't want to re-emit OXC's arrivals under
+    /// "BZP" when the next refresh fails. Drive one successful refresh,
+    /// switch station_id, then fail the next refresh; assert the emitted
+    /// item is an `Err` (no stale-fallback to the old station's board).
+    #[tokio::test(start_paused = true)]
+    async fn stream_drops_last_ok_when_station_id_changes() {
+        // Call 0: success (for station A); call 1: failure (for station B).
+        let (mock, _counter, id_log) = SeqTflHttp::new_with_id_log(vec![true, false]);
+        let client = Arc::new(TflClient::new(mock));
+        let svc = BoardService::new(client, make_clock());
+
+        let cfg_a = BoardConfig {
+            station_id: "STATION_A".to_string(),
+            line_ids: vec![],
+            directions: vec![],
+            poll_seconds: 5,
+            theme: "classic-amber".to_string(),
+        };
+        let (tx, rx) = cfg_channel(cfg_a.clone());
+        let mut stream = Box::pin(svc.stream(rx));
+
+        // First tick: success — populates last_ok for STATION_A.
+        let first = stream.next().await.expect("first item");
+        let board_a = first.expect("first must be Ok");
+        assert_eq!(board_a.station_id, "STATION_A");
+
+        // Switch to STATION_B and let the next tick run (which is rigged
+        // to fail). With last_ok dropped, the failure must surface as Err
+        // — *not* a stale STATION_A board.
+        let mut cfg_b = cfg_a.clone();
+        cfg_b.station_id = "STATION_B".to_string();
+        tx.send(cfg_b).expect("send must succeed");
+
+        tokio::time::advance(Duration::from_secs(6)).await;
+        let second = stream.next().await.expect("second item");
+        assert!(
+            second.is_err(),
+            "expected Err after station_id change + fetch failure (last_ok dropped); \
+             got: {second:?}"
+        );
+
+        // Sanity: the second fetch was for the new station, proving the cfg
+        // change actually flowed through to refresh().
+        let log = id_log.lock().expect("id_log lock");
+        assert_eq!(log.len(), 2, "exactly 2 fetches");
+        assert_eq!(log[0], "STATION_A");
+        assert_eq!(log[1], "STATION_B");
     }
 }
