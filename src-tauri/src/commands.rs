@@ -206,9 +206,14 @@ pub(crate) async fn save_config_inner(cfg: &BoardConfig, state: &AppState) -> Re
         ..cfg.clone()
     };
     state.config_store.save_config(&cfg).await?;
-    // Cancel the current stream task. The watcher loop in lib.rs will detect
-    // the cleared abort handle and restart the stream with the new config.
-    state.abort_stream().await;
+    // Publish the new config to the stream task via the watch channel. The
+    // running stream picks up the change on its next tick (or immediately
+    // via `cfg_rx.changed()`) without restarting — no 16 MB stop-points
+    // re-warm, no fresh arrivals burst, and the shared client's caches
+    // stay populated. `send` only fails if every receiver has dropped, in
+    // which case the stream task is already dead and the watcher loop in
+    // `lib.rs` will respawn it.
+    let _ = state.cfg_tx.send(cfg);
     Ok(())
 }
 
@@ -387,7 +392,7 @@ mod tests {
     use std::sync::Arc;
     use tfl_board::BoardService;
     use tfl_client::{clock::FakeClock, fixture::FixtureTflHttp, TflClient};
-    use tokio::sync::RwLock;
+    use tokio::sync::{watch, RwLock};
 
     /// Path to the workspace fixtures directory (relative to this crate's manifest).
     fn fixture_dir() -> std::path::PathBuf {
@@ -398,14 +403,16 @@ mod tests {
     fn fixture_state() -> AppState {
         let clock = FakeClock::from_rfc3339("2025-01-15T10:00:00Z").unwrap();
         let http = FixtureTflHttp::new(fixture_dir());
-        let client = TflClient::new(http);
+        let client = Arc::new(TflClient::new(http));
         let board_service =
             Arc::new(BoardService::new(client, clock)) as Arc<dyn crate::state::AnyBoardService>;
         let config_store = Arc::new(MemoryConfigStore::new()) as Arc<dyn crate::state::ConfigStore>;
+        let (cfg_tx, _cfg_rx) = watch::channel::<BoardConfig>(crate::state::default_board_config());
         AppState {
             board_service,
             config_store,
             stream_abort: Arc::new(RwLock::new(None)),
+            cfg_tx: Arc::new(cfg_tx),
             display_mode: "window".to_string(),
         }
     }

@@ -24,6 +24,7 @@
 //! next `await` suspension point. No `tokio::spawn` is used; no tasks outlive
 //! the stream.
 
+use std::sync::Arc;
 use std::time::Duration;
 
 use futures::stream::{self, Stream};
@@ -40,14 +41,21 @@ use crate::filter::apply_filters;
 ///
 /// Inject a `FixtureTflHttp` + `FakeClock` for offline tests;
 /// inject `ReqwestTflHttp` + `SystemClock` for production use.
+///
+/// The TfL client is held as an `Arc` so a single client (with its caches —
+/// `stop_points_cache`, `hub_children_cache`, `line_status_cache`) can be
+/// shared between the on-demand command path (`AppState::board_service`)
+/// and the polling stream task. Sharing the client is what lets
+/// `save_config` mutate stream behaviour without a 16 MB stop-points
+/// re-warm on every chip click.
 pub struct BoardService<H: TflHttp, C: Clock> {
-    client: TflClient<H>,
+    client: Arc<TflClient<H>>,
     clock: C,
 }
 
 impl<H: TflHttp, C: Clock> BoardService<H, C> {
     /// Create a new `BoardService` wrapping the given client and clock.
-    pub fn new(client: TflClient<H>, clock: C) -> Self {
+    pub fn new(client: Arc<TflClient<H>>, clock: C) -> Self {
         Self { client, clock }
     }
 }
@@ -95,62 +103,117 @@ impl<H: TflHttp + 'static, C: Clock + 'static> BoardService<H, C> {
         Ok(board)
     }
 
-    /// Produce an infinite stream of `Board` snapshots.
+    /// Produce an infinite stream of `Board` snapshots driven by a live
+    /// config channel.
     ///
-    /// - Emits a board immediately on subscription.
-    /// - Then emits on each interval (default `cfg.poll_seconds`).
-    /// - `MissedTickBehavior::Skip` — if a refresh outlasts one interval, the
-    ///   missed tick is dropped. At most one refresh is in flight at a time.
-    /// - On fetch failure, re-emits the last-known board with `stale_since` set.
-    ///   On fetch failure with no last-ok, the error is emitted and the stream
-    ///   KEEPS POLLING. The `poll_seconds` interval provides rate-limiting between
-    ///   retries.
-    /// - Dropping the stream cancels the in-flight refresh future. No tasks leak.
-    pub fn stream(self, cfg: BoardConfig) -> impl Stream<Item = Result<Board, BoardError>> + Send {
-        let poll_dur = Duration::from_secs(u64::from(cfg.poll_seconds).max(1));
+    /// The stream observes `cfg_rx` and applies non-`station_id` config
+    /// changes (theme, line filter, directions, `poll_seconds`) on the next
+    /// tick *without* respawning. This is what lets the Settings UI
+    /// chip-toggle 12 lines in 1 s without triggering 12 stop-points
+    /// re-warms or 12 fresh arrivals fetches.
+    ///
+    /// Per-tick semantics:
+    /// - Wait for the next interval tick **or** a `cfg_rx.changed()`
+    ///   notification (`tokio::select!`).
+    /// - If `poll_seconds` changed, rebuild the `Interval` so the next tick
+    ///   honours the new period.
+    /// - If `station_id` changed, drop `last_ok` so the previous station's
+    ///   data isn't re-emitted under the new station_id.
+    /// - On a tick: refresh + emit (`MissedTickBehavior::Skip` keeps at most
+    ///   one refresh in flight). On failure with a `last_ok`, re-emit it
+    ///   marked stale; on failure with no `last_ok`, emit the error and
+    ///   keep polling.
+    /// - On a `CfgChanged` wake-up, do **not** issue a fresh fetch — just
+    ///   continue. The next tick will refresh against the new config. This
+    ///   "cheap" semantic avoids latency-shifting work onto every save and
+    ///   keeps the UI fully responsive on rapid chip toggles. Filter
+    ///   changes appear within at most `poll_seconds` of the toggle.
+    /// - Dropping the stream cancels any in-flight refresh future at its
+    ///   next `await`. No tasks leak. The stream ends only when every
+    ///   `cfg_tx` (the watch sender) is dropped.
+    pub fn stream(
+        self,
+        cfg_rx: tokio::sync::watch::Receiver<BoardConfig>,
+    ) -> impl Stream<Item = Result<Board, BoardError>> + Send {
+        let initial_cfg = cfg_rx.borrow().clone();
+        let initial_dur = Duration::from_secs(u64::from(initial_cfg.poll_seconds).max(1));
+        let mut ivl = interval(initial_dur);
+        ivl.set_missed_tick_behavior(MissedTickBehavior::Skip);
 
         stream::unfold(
-            // State: (service, config, interval, last_ok_board)
-            (
-                self,
-                cfg,
-                {
-                    let mut ivl = interval(poll_dur);
-                    ivl.set_missed_tick_behavior(MissedTickBehavior::Skip);
-                    ivl
-                },
-                None::<Board>,
-            ),
-            |(svc, cfg, mut ivl, last_ok)| async move {
-                // Wait for the next tick (first tick fires immediately).
-                ivl.tick().await;
+            // State: (service, current cfg, interval, last_ok_board, cfg_rx)
+            (self, initial_cfg, ivl, None::<Board>, cfg_rx),
+            |(svc, mut cur_cfg, mut ivl, mut last_ok, mut cfg_rx)| async move {
+                // Drive forward until we have something to emit. CfgChanged
+                // wake-ups apply config-driven side effects (interval rebuild,
+                // last_ok drop on station_id change) but do **not** issue a
+                // fetch — the next interval tick refreshes against the new
+                // cfg. This is the "cheap" option from the design: it
+                // amortises a click-burst into at most one refresh per
+                // poll_seconds, instead of one per save_config.
+                loop {
+                    let outcome = tokio::select! {
+                        _ = ivl.tick() => TickOutcome::Tick,
+                        changed = cfg_rx.changed() => match changed {
+                            Ok(()) => TickOutcome::CfgChanged,
+                            // All senders dropped — terminate the stream.
+                            Err(_) => return None,
+                        },
+                    };
 
-                match svc.refresh(&cfg).await {
-                    Ok(mut board) => {
-                        // Success: clear stale_since, record as last_ok.
-                        board.stale_since = None;
-                        let emit = board.clone();
-                        Some((Ok(emit), (svc, cfg, ivl, Some(board))))
+                    // `borrow()` always returns the freshest value, even if
+                    // multiple `send`s have stacked since the wake-up.
+                    let new_cfg: BoardConfig = cfg_rx.borrow().clone();
+
+                    if new_cfg.poll_seconds != cur_cfg.poll_seconds {
+                        let new_dur = Duration::from_secs(u64::from(new_cfg.poll_seconds).max(1));
+                        ivl = interval(new_dur);
+                        ivl.set_missed_tick_behavior(MissedTickBehavior::Skip);
                     }
-                    Err(e) => {
-                        if let Some(mut stale) = last_ok {
-                            // We have a previous good board — mark it stale and re-emit.
-                            // Only set stale_since if not already set (first failure).
-                            if stale.stale_since.is_none() {
-                                stale.stale_since = Some(svc.clock.now());
+                    if new_cfg.station_id != cur_cfg.station_id {
+                        // Drop stale data for the previous station; the next
+                        // refresh produces a fresh board for the new station.
+                        last_ok = None;
+                    }
+                    cur_cfg = new_cfg;
+
+                    if matches!(outcome, TickOutcome::CfgChanged) {
+                        // Loop again — wait for either the next tick or a
+                        // further config change. No item emitted yet.
+                        continue;
+                    }
+
+                    // TickOutcome::Tick — refresh and emit.
+                    match svc.refresh(&cur_cfg).await {
+                        Ok(mut board) => {
+                            board.stale_since = None;
+                            let emit = board.clone();
+                            return Some((Ok(emit), (svc, cur_cfg, ivl, Some(board), cfg_rx)));
+                        }
+                        Err(e) => {
+                            if let Some(mut stale) = last_ok {
+                                if stale.stale_since.is_none() {
+                                    stale.stale_since = Some(svc.clock.now());
+                                }
+                                let emit = stale.clone();
+                                return Some((Ok(emit), (svc, cur_cfg, ivl, Some(stale), cfg_rx)));
                             }
-                            let emit = stale.clone();
-                            Some((Ok(emit), (svc, cfg, ivl, Some(stale))))
-                        } else {
-                            // No previous good board — emit the error but keep polling.
-                            // The next tick will retry; poll_seconds rate-limits retries.
-                            Some((Err(e), (svc, cfg, ivl, None)))
+                            return Some((Err(e), (svc, cur_cfg, ivl, None, cfg_rx)));
                         }
                     }
                 }
             },
         )
     }
+}
+
+/// Why the unfold step woke up — used to drive the per-tick branch.
+#[derive(Copy, Clone, Debug)]
+enum TickOutcome {
+    /// The interval timer fired.
+    Tick,
+    /// `cfg_rx.changed()` resolved — a new `BoardConfig` is in the channel.
+    CfgChanged,
 }
 
 // ---------------------------------------------------------------------------
@@ -243,6 +306,7 @@ mod tests {
     use futures::StreamExt;
     use serde_json::Value;
     use tfl_client::{clock::FakeClock, error::TflError, http::TflHttp, TflClient};
+    use tokio::sync::watch;
 
     // -----------------------------------------------------------------------
     // Minimal mock TflHttp that returns a pre-programmed sequence of results.
@@ -298,6 +362,13 @@ mod tests {
         FakeClock::from_rfc3339("2026-04-24T12:00:00Z").unwrap()
     }
 
+    /// Build a watch channel seeded with `cfg`. Returns the sender (kept by
+    /// the caller so it can publish updates) and the receiver (passed into
+    /// `BoardService::stream`).
+    fn cfg_channel(cfg: BoardConfig) -> (watch::Sender<BoardConfig>, watch::Receiver<BoardConfig>) {
+        watch::channel(cfg)
+    }
+
     // -----------------------------------------------------------------------
     // Test: stream retries after initial fetch failure (the bug fix)
     // -----------------------------------------------------------------------
@@ -308,10 +379,11 @@ mod tests {
     async fn stream_retries_after_initial_failure() {
         // Call 0: error; call 1: success.
         let (mock, _counter) = SeqTflHttp::new(vec![false, true]);
-        let client = TflClient::new(mock);
+        let client = Arc::new(TflClient::new(mock));
         let svc = BoardService::new(client, make_clock());
 
-        let mut stream = Box::pin(svc.stream(make_cfg()));
+        let (_tx, rx) = cfg_channel(make_cfg());
+        let mut stream = Box::pin(svc.stream(rx));
 
         // First item: should be an error (no last_ok yet).
         let first = stream.next().await.expect("stream must not terminate");
@@ -343,10 +415,11 @@ mod tests {
     #[tokio::test(start_paused = true)]
     async fn stream_keeps_emitting_errors_without_last_ok() {
         let (mock, _counter) = SeqTflHttp::new(vec![false]);
-        let client = TflClient::new(mock);
+        let client = Arc::new(TflClient::new(mock));
         let svc = BoardService::new(client, make_clock());
 
-        let mut stream = Box::pin(svc.stream(make_cfg()));
+        let (_tx, rx) = cfg_channel(make_cfg());
+        let mut stream = Box::pin(svc.stream(rx));
 
         // Collect three consecutive error items.
         for i in 0..3u32 {
@@ -369,10 +442,11 @@ mod tests {
     async fn stream_emits_stale_board_after_success_then_failure() {
         // Call 0: success; call 1: failure.
         let (mock, _counter) = SeqTflHttp::new(vec![true, false]);
-        let client = TflClient::new(mock);
+        let client = Arc::new(TflClient::new(mock));
         let svc = BoardService::new(client, make_clock());
 
-        let mut stream = Box::pin(svc.stream(make_cfg()));
+        let (_tx, rx) = cfg_channel(make_cfg());
+        let mut stream = Box::pin(svc.stream(rx));
 
         // First item: success.
         let first = stream.next().await.expect("stream must not terminate");

@@ -20,7 +20,10 @@ use serde_json::Value;
 use tfl_board::{BoardConfig, BoardError, BoardService};
 use tfl_client::{clock::Clock, http::TflHttp};
 use tfl_domain::{Board, LineStatus, Station};
-use tokio::{sync::RwLock, task::AbortHandle};
+use tokio::{
+    sync::{watch, RwLock},
+    task::AbortHandle,
+};
 
 // ---------------------------------------------------------------------------
 // ConfigStore trait
@@ -211,10 +214,20 @@ pub struct AppState {
 
     /// Handle to the running stream task.
     ///
-    /// Holds `Some(handle)` when a stream task is active. Set to `None` and
-    /// the task aborted when `save_config` is called (stream restarts with
-    /// new config from `lib.rs`). Also aborted on window close.
+    /// Holds `Some(handle)` when a stream task is active. Routine config
+    /// changes no longer abort the stream — the task observes the new
+    /// `BoardConfig` via `cfg_tx`/`cfg_rx` and applies it on the next tick.
+    /// The handle is cleared and the task aborted on window close
+    /// (`WindowEvent::Destroyed`) or by the panic-recovery watcher in
+    /// `lib.rs::run` when the task ends unexpectedly.
     pub stream_abort: Arc<RwLock<Option<AbortHandle>>>,
+
+    /// Sender end of the live `BoardConfig` watch channel. The stream task
+    /// holds the corresponding `Receiver` and re-reads the config on every
+    /// tick (and on `changed()`), so writing here applies the new config
+    /// without a stream restart. `save_config_inner` calls `send` after the
+    /// store write completes.
+    pub cfg_tx: Arc<watch::Sender<BoardConfig>>,
 
     /// Display mode resolved at startup (`"window"` or `"menubar"`).
     /// Captured here so window-event handlers can branch on it without
@@ -225,9 +238,10 @@ pub struct AppState {
 impl AppState {
     /// Abort the current stream task (if any).
     ///
-    /// Clearing the abort handle signals the watcher loop in `lib.rs` to
-    /// restart the stream with the latest config from the store.
-    /// This is async because `RwLock::write` is async.
+    /// Used on window close (`WindowEvent::Destroyed`) so the background
+    /// task does not outlive the Tauri window. Routine config changes do
+    /// **not** call this — they `cfg_tx.send(..)` instead and the stream
+    /// applies the change on its next tick.
     pub async fn abort_stream(&self) {
         if let Some(handle) = self.stream_abort.write().await.take() {
             handle.abort();

@@ -23,9 +23,12 @@
 //!
 //! When `save_config` is called:
 //!   1. The new config is persisted to the store.
-//!   2. `AppState::abort_stream()` cancels the running task (clears handle).
-//!   3. A watcher loop (running in its own task) detects the `None` abort handle
-//!      and spawns a fresh task with the latest config from the store.
+//!   2. `AppState::cfg_tx.send(new_cfg)` publishes it to the running stream
+//!      task; the task picks up the change on its next tick (or earlier via
+//!      `cfg_rx.changed()`) without restarting. No 16 MB stop-points
+//!      re-warm, no fresh arrivals burst, caches stay populated.
+//!   3. A panic-recovery watcher loop polls `AbortHandle::is_finished()`
+//!      every 2 s and respawns the task only if it has died.
 //!
 //! On `WindowEvent::Destroyed`, the abort handle is cancelled, cleanly
 //! stopping the stream task before the Tauri runtime exits.
@@ -56,55 +59,30 @@ use commands::{
 use state::{AnyBoardService, AppState};
 use store_impl::StorePluginConfigStore;
 
-/// Spawn a stream task for the latest config, storing its `AbortHandle` in
-/// `stream_abort`.
+/// Spawn a stream task that emits `board://updated` Tauri events.
 ///
-/// `app_key` is the persisted TfL API key, if any.  Passing it here ensures
-/// the stream's HTTP client operates under the registered 500 req/min bucket
-/// rather than the anonymous 50 req/min bucket — the single biggest leverage
-/// point for rate-limit reduction.
+/// The task observes config changes via `cfg_rx` (a `watch::Receiver`) so
+/// non-`station_id` updates (theme, directions, line filter, poll_seconds)
+/// apply on the next tick without restarting the task. The watcher loop in
+/// `run()` retains `is_finished()` checks as a panic-recovery safety net only.
 ///
-/// Called at startup and whenever the abort handle is cleared (config change).
+/// Reuses the shared `Arc<TflClient<ReqwestTflHttp>>` from `AppState` so the
+/// stream and the on-demand command path share a single set of caches
+/// (`stop_points_cache`, `hub_children_cache`, `line_status_cache`) and one
+/// HTTP client (one connection pool, one 429 cooldown gate).
 async fn spawn_stream_task(
     app_handle: tauri::AppHandle,
-    config_store: Arc<dyn state::ConfigStore>,
+    client: Arc<TflClient<ReqwestTflHttp>>,
+    cfg_rx: tokio::sync::watch::Receiver<BoardConfig>,
     stream_abort: Arc<RwLock<Option<AbortHandle>>>,
-    app_key: Option<String>,
 ) {
-    // Load the latest config from the store every time we (re-)start.
-    let cfg: BoardConfig = match config_store.load_config().await {
-        Ok(c) => c,
-        Err(e) => {
-            eprintln!("[tubbie] Failed to load config for stream task: {e}");
-            return;
-        }
-    };
-
     let app = app_handle.clone();
 
-    // Build a fresh concrete BoardService for this stream instance.
-    // We cannot call .stream() through the AnyBoardService trait object because
-    // stream() consumes self and returns an impl Stream — impossible to make
-    // object-safe. The service is cheap to construct (no state, just an HTTP
-    // client wrapper).
-    //
-    // Use the persisted app_key so the stream runs under the registered
-    // 500 req/min bucket instead of the anonymous 50 req/min bucket.
-    let http = match app_key {
-        Some(key) => ReqwestTflHttp::with_app_key(key),
-        None => ReqwestTflHttp::new(),
-    };
-    let client = TflClient::new(http);
-    // The stop-points cache is per-client and the AppState client's cache
-    // (warmed at startup) is unreachable from here. Warm this stream's
-    // own cache so the first `get_arrivals` call can resolve the station's
-    // `hubNaptanCode` and fan out to DLR / Overground / Elizabeth siblings
-    // at multi-mode hubs (Bank, TCR, Whitechapel, Stratford…).
-    if let Err(e) = client.warm_stop_points_cache().await {
-        eprintln!("[tubbie] stream task: failed to warm stop-points cache: {e}");
-    }
-    let service = BoardService::new(client, SystemClock);
-    let mut stream = Box::pin(service.stream(cfg));
+    // Build a BoardService over the shared client. Cheap — `BoardService`
+    // is just `Arc<TflClient>` + `Clock`. Construction does no I/O; the
+    // shared client's caches are warmed once at startup by AppState.
+    let service = BoardService::new(Arc::clone(&client), SystemClock);
+    let mut stream = Box::pin(service.stream(cfg_rx));
 
     // Clone the Arc so the spawned task can clear its own handle when it ends.
     let stream_abort_clone = Arc::clone(&stream_abort);
@@ -328,21 +306,56 @@ pub fn run() {
                 None => ReqwestTflHttp::new(),
             };
 
-            let client = TflClient::new(http);
-            let board_service =
-                Arc::new(BoardService::new(client, SystemClock)) as Arc<dyn AnyBoardService>;
+            let client = Arc::new(TflClient::new(http));
+            let board_service = Arc::new(BoardService::new(Arc::clone(&client), SystemClock))
+                as Arc<dyn AnyBoardService>;
             let config_store = Arc::new(store) as Arc<dyn state::ConfigStore>;
             let stream_abort: Arc<RwLock<Option<AbortHandle>>> = Arc::new(RwLock::new(None));
 
-            // Spawn the initial stream task, forwarding the persisted API key
-            // so the stream client operates on the registered 500 req/min bucket.
-            let cs = Arc::clone(&config_store);
+            // Seed the watch channel from the persisted config. The channel
+            // is the live config source for the stream — `save_config`
+            // writes to it after persisting, and the stream observes changes
+            // mid-flight without restarting the task.
+            //
+            // Seeded with the documented default (Belsize Park); a one-shot
+            // task below replaces it with the persisted config as soon as
+            // the runtime is available. The stream's first tick reads from
+            // `cfg_rx.borrow()` so it'll see the persisted value too —
+            // there's no observable difference from blocking-load semantics.
+            let (cfg_tx, cfg_rx) =
+                tokio::sync::watch::channel::<BoardConfig>(state::default_board_config());
+            let cfg_tx = Arc::new(cfg_tx);
+
+            // One-shot loader: replace the default-seeded config with the
+            // persisted value. Failure here is logged and tolerated — the
+            // stream still runs against the default until save_config fires.
+            let cs_load = Arc::clone(&config_store);
+            let cfg_tx_load = Arc::clone(&cfg_tx);
+            tauri::async_runtime::spawn(async move {
+                match cs_load.load_config().await {
+                    Ok(cfg) => {
+                        let _ = cfg_tx_load.send(cfg);
+                    }
+                    Err(e) => eprintln!("[tubbie] Failed to load initial config: {e}"),
+                }
+            });
+
+            // Spawn the initial stream task. Reuses the shared client so the
+            // stream task and the on-demand command path share one set of
+            // caches (no 16 MB stop-points re-warm per save_config).
+            let stream_client = Arc::clone(&client);
             let sa = Arc::clone(&stream_abort);
             let ah = app.handle().clone();
-            let key_for_stream = stream_app_key.clone();
+            let initial_cfg_rx = cfg_rx.clone();
             tauri::async_runtime::spawn(async move {
-                spawn_stream_task(ah, cs, sa, key_for_stream).await;
+                spawn_stream_task(ah, stream_client, initial_cfg_rx, sa).await;
             });
+
+            // The stream client now reuses the AppState client, so the saved
+            // app_key already routed through `with_app_key` above is what the
+            // stream sees. `stream_app_key` is no longer threaded into the
+            // stream task — drop it.
+            let _ = stream_app_key;
 
             // Pre-warm the stop-points cache so the first settings search is
             // instant rather than paying ~1-2s for the 16 MB /StopPoint/Mode/tube
@@ -355,14 +368,14 @@ pub fn run() {
                 }
             });
 
-            // Watcher loop: restarts the stream when the abort handle is
-            // cleared (e.g. after save_config cancels the previous task).
-            // The saved_key is cloned once here so restarts also benefit from
-            // the registered 500 req/min bucket.
-            let cs2 = Arc::clone(&config_store);
+            // Watcher loop: panic-recovery only. Routine config changes flow
+            // through `cfg_tx` and the running stream picks them up on its
+            // next tick — no respawn. This loop restarts the task only when
+            // it dies (panic, or `WindowEvent::Destroyed` on shutdown).
             let sa2 = Arc::clone(&stream_abort);
             let ah2 = app.handle().clone();
-            let key_for_watcher = stream_app_key;
+            let watcher_client = Arc::clone(&client);
+            let watcher_cfg_rx = cfg_rx.clone();
             tauri::async_runtime::spawn(async move {
                 loop {
                     tokio::time::sleep(std::time::Duration::from_secs(2)).await;
@@ -384,13 +397,15 @@ pub fn run() {
                         }
                     };
                     if needs_restart {
-                        // Task was aborted or ended (config change or fatal stream
-                        // error). Restart with the current store config.
+                        // Task panicked or was explicitly aborted (window
+                        // close). Restart with the live cfg_rx and the
+                        // shared client — caches stay warm across the
+                        // respawn.
                         spawn_stream_task(
                             ah2.clone(),
-                            Arc::clone(&cs2),
+                            Arc::clone(&watcher_client),
+                            watcher_cfg_rx.clone(),
                             Arc::clone(&sa2),
-                            key_for_watcher.clone(),
                         )
                         .await;
                     }
@@ -401,6 +416,7 @@ pub fn run() {
                 board_service,
                 config_store,
                 stream_abort,
+                cfg_tx,
                 display_mode: display_mode.clone(),
             });
 
