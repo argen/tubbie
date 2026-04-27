@@ -9,10 +9,12 @@ import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import {
   type Board,
   type BoardConfig,
+  type BoardErrorPayload,
   type LineStatus,
   type Station,
   isBoard,
   isBoardConfig,
+  isBoardErrorPayload,
   isLineStatus,
   isStation,
 } from './types.js';
@@ -133,6 +135,24 @@ export async function saveDisplayMode(mode: DisplayMode): Promise<string> {
 export async function onBoardUpdated(handler: (board: Board) => void): Promise<UnlistenFn> {
   return listen<unknown>('board://updated', (event) => {
     if (isBoard(event.payload)) {
+      handler(event.payload);
+    }
+  });
+}
+
+/**
+ * Subscribe to the `board://error` event. The Rust stream task emits this
+ * once per fresh error streak when there is no last-ok board to fall back to —
+ * the renderer is the only place a user can find out that polling is broken,
+ * so we surface it as `boardError` and let the existing error UI take over.
+ *
+ * @returns an unlisten function — call it to stop listening.
+ */
+export async function onBoardError(
+  handler: (payload: BoardErrorPayload) => void,
+): Promise<UnlistenFn> {
+  return listen<unknown>('board://error', (event) => {
+    if (isBoardErrorPayload(event.payload)) {
       handler(event.payload);
     }
   });

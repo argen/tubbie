@@ -36,15 +36,15 @@ How the pieces of tubbie fit together. For *why* individual decisions were made,
 - **`tfl-client`** — the `TflHttp` trait (transport seam), its two impls (`ReqwestTflHttp` live, `FixtureTflHttp` offline), the `Clock` trait + impls, `TflError`, and `TflClient<H>` with `get_arrivals` / `search_stations` / `get_line_status`.
 - **`tfl-board`** — `BoardService<H, C>` with one-shot `refresh()` and a polling `stream()` (missed-tick-skip, stale-data fallback, deterministic termination after fatal error). Owns no state beyond what lives inside the stream's unfold closure.
 - **`fixture-recorder`** — dev-only binary. Hits the live TfL API anonymously, sanitises `app_key` out of URLs, writes atomically via `.tmp` + rename, trims the bloated stop-points response to the fields we actually use.
-- **`src-tauri`** — Tauri v2 shell. Constructs `AppState { board_service, config_store }` at startup, registers commands, spawns the polling stream and re-emits boards as `board://updated` events, aborts the stream cleanly on window close or config change.
-- **`web/`** — SvelteKit single-page app bundled by `adapter-static`. Subscribes to `board://updated`, seeds via a one-shot `get_board` on startup, debounces `search_stations` with cancel-in-flight, switches themes by toggling CSS custom properties.
+- **`src-tauri`** — Tauri v2 shell. Constructs `AppState { board_service, config_store }` at startup, registers commands, spawns the polling stream and re-emits boards as `board://updated` events. On a fresh stream-error streak with no last-ok board, it also emits `board://error` (`{ message: string }`) once per streak so the renderer can surface "we have nothing to show" without staring at a forever-loading state. Aborts the stream cleanly on window close or config change.
+- **`web/`** — SvelteKit single-page app bundled by `adapter-static`. Subscribes to `board://updated` + `board://error`, seeds via a one-shot `get_board` on startup, debounces `search_stations` with cancel-in-flight, switches themes by toggling CSS custom properties.
 
 ## Data flow (steady state)
 
 1. User launches app. `src-tauri/src/lib.rs::run()` loads `BoardConfig` from `tauri-plugin-store`, constructs `ReqwestTflHttp` (anonymous or keyed from the store), and spawns a task that polls `BoardService::stream(config)`.
 2. Each emitted `Board` is serialised and `emit("board://updated", &board)` is fired to the main window.
 3. The frontend's `+layout.svelte` registered a `listen("board://updated")` before the seed fetch; events land in `$board` (Svelte 5 `$state`).
-4. `<Board>` renders platforms as columns or rows; `<ArrivalRow>` is keyed on arrival id so only changed rows re-render.
+4. `<Board>` renders platforms as columns or rows; `<ArrivalRow>` is keyed on `(line_id, platform_name, expected_arrival)` so the same logical train is stable across polls. The composite key is a deliberate choice: TfL's `Arrival.id` is **not** a unique identifier (observed at Chalk Farm: 10 distinct trains all returned with `id=1731547612`), so a naive `(arrival.id)` key would crash Svelte's keyed-each with `each_key_duplicate` whenever a station's predictions collide. `PlatformColumn.svelte` also dedupes defensively at the keyed-each boundary by the same composite, so any future surprise in the data shape can't re-introduce that crash.
 5. `<LineStatusTicker>` subscribes to the same emissions (line-status is embedded in the `Board` payload); disruption text is rendered as plain text and CSS-marquee-animated.
 6. On `prefers-reduced-motion: reduce`, a shared `reducedMotion` store short-circuits each animation to a static state change — enforced by DOM tests.
 
@@ -68,7 +68,8 @@ How the pieces of tubbie fit together. For *why* individual decisions were made,
 - `TflError::{NotFound, InvalidRequest, Parse, ParseAt, Transport, RateLimited, Http}` — consumed by `TflClient` callers. `Transport`'s `Display` has the query string stripped; URL never leaks `app_key`.
 - `BoardError` wraps `TflError` where board-layer callers need a distinct type.
 - Tauri commands convert errors to `Result<T, String>` at the IPC boundary, using `Display` (already redacted).
-- Stream errors fall through as stale-state emissions when a prior board exists; they only surface as `Err(BoardError)` if there's nothing to fall back on, and the stream terminates cleanly after that.
+- Stream errors fall through as stale-state emissions when a prior board exists. When there is no last-ok board the stream's `Err(BoardError)` is logged once per streak by `spawn_stream_task` and emitted to the renderer as a `board://error` event so the user can see _something_ instead of a forever-loading state. Recovery is implicit: the next successful tick emits `board://updated`, which the frontend's `applyBoard` already uses to clear `boardError`.
+- The stop-points cache warm task at startup awaits the first `board://updated` (or an 8 s fallback) before firing. The `/StopPoint/Mode/tube` endpoint is TfL's most aggressively rate-limited route; firing it concurrently with the stream's first `/Arrivals` fetch could 429 and set the shared `cooldown_until` gate, blocking the stream's first emit for nothing — the user is staring at the board on launch, not at settings.
 
 ## Security surfaces
 
