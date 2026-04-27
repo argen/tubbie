@@ -252,13 +252,34 @@ pub(crate) fn validate_display_mode(mode: &str) -> Result<(), String> {
     }
 }
 
+/// Persist a new display mode and update the live `AppState.display_mode`
+/// lock so any reader (e.g. the `Focused(false)` click-away handler) sees
+/// the new value immediately.
+///
+/// **Does not run UI side-effects.** The Tauri command wrapper is
+/// responsible for calling `crate::apply_display_mode_effects` after this
+/// returns, so the swap (tray, dock icon, window chrome) takes effect
+/// without requiring a process restart. Splitting it this way keeps the
+/// inner function unit-testable without a real Tauri `AppHandle`.
+///
+/// Returns the previous mode so the caller can decide whether the UI
+/// effects need to run at all (no-op when unchanged).
 pub(crate) async fn save_display_mode_inner(
     mode: &str,
     state: &AppState,
 ) -> Result<String, String> {
     validate_display_mode(mode)?;
     state.config_store.save_display_mode(mode).await?;
-    Ok("restart to apply".to_string())
+    let prev = {
+        let mut cur = state
+            .display_mode
+            .write()
+            .map_err(|e| format!("display_mode lock poisoned: {e}"))?;
+        let prev = cur.clone();
+        *cur = mode.to_string();
+        prev
+    };
+    Ok(prev)
 }
 
 pub(crate) async fn load_display_mode_inner(state: &AppState) -> Result<String, String> {
@@ -365,14 +386,29 @@ pub async fn get_line_status(
     get_line_status_inner(&line_id, &state).await
 }
 
-/// Persist the display mode (`"window"` or `"menubar"`).
+/// Persist the display mode (`"window"` or `"menubar"`) and apply it
+/// live — tray icon appears/disappears, dock icon toggles, window chrome
+/// + size + always-on-top reconfigure, click-away behaviour tracks the
+/// new mode — without a process restart.
 ///
-/// Returns `"restart to apply"` — the window decorations and tray icon
-/// are decided once at startup, so the renderer must prompt the user to
-/// quit and relaunch before the new mode takes effect.
+/// Returns `"saved"` so the renderer can show a transient confirmation
+/// chip; the actual mode change is reflected by the `displayMode` store
+/// updating immediately.
 #[tauri::command]
-pub async fn save_display_mode(mode: String, state: State<'_, AppState>) -> Result<String, String> {
-    save_display_mode_inner(&mode, &state).await
+pub async fn save_display_mode(
+    mode: String,
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+) -> Result<String, String> {
+    let prev = save_display_mode_inner(&mode, &state).await?;
+    if prev != mode {
+        // Hops to the macOS main thread internally — never call the
+        // `_sync` variant from here. The Cocoa APIs reached by
+        // `set_activation_policy` / tray remove / window resize all
+        // assert main-thread-only and crash the process otherwise.
+        crate::apply_display_mode_effects(&app, &mode).await?;
+    }
+    Ok("saved".to_string())
 }
 
 /// Load the persisted display mode. Defaults to `"window"`.
@@ -422,7 +458,7 @@ mod tests {
             config_store,
             stream_abort: Arc::new(RwLock::new(None)),
             cfg_tx: Arc::new(cfg_tx),
-            display_mode: "window".to_string(),
+            display_mode: Arc::new(std::sync::RwLock::new("window".to_string())),
             lifecycle: Arc::new(LifecyclePhase::always_active()),
         }
     }
@@ -469,7 +505,7 @@ mod tests {
             config_store,
             stream_abort: Arc::new(RwLock::new(None)),
             cfg_tx,
-            display_mode: "window".to_string(),
+            display_mode: Arc::new(std::sync::RwLock::new("window".to_string())),
             lifecycle,
         };
 
@@ -1284,10 +1320,10 @@ mod tests {
     #[tokio::test]
     async fn save_and_load_display_mode_round_trips() {
         let state = fixture_state();
-        let msg = save_display_mode_inner("menubar", &state)
+        let prev = save_display_mode_inner("menubar", &state)
             .await
             .expect("should save");
-        assert_eq!(msg, "restart to apply");
+        assert_eq!(prev, "window", "should report previous mode for caller");
         let mode = load_display_mode_inner(&state).await.expect("should load");
         assert_eq!(mode, "menubar");
     }
@@ -1299,5 +1335,104 @@ mod tests {
             .await
             .expect_err("should reject unknown mode");
         assert!(err.contains("validation:"), "error: {err}");
+    }
+
+    /// `save_display_mode_inner` MUST mutate the live `AppState.display_mode`
+    /// lock, not just persist to the store. The runtime focus-handler in
+    /// `lib.rs` reads through this lock to decide click-away behaviour, so
+    /// a stale value here is what regresses live-toggle into the previous
+    /// "restart to apply" UX.
+    #[tokio::test]
+    async fn save_display_mode_updates_live_state_lock() {
+        let state = fixture_state();
+        // Sanity: starting in window mode.
+        assert_eq!(
+            state
+                .display_mode
+                .read()
+                .expect("lock not poisoned")
+                .as_str(),
+            "window"
+        );
+
+        save_display_mode_inner("menubar", &state)
+            .await
+            .expect("save should succeed");
+
+        assert_eq!(
+            state
+                .display_mode
+                .read()
+                .expect("lock not poisoned")
+                .as_str(),
+            "menubar",
+            "live display_mode lock must reflect the saved mode"
+        );
+    }
+
+    /// Validation runs before any mutation, so an invalid mode must NOT
+    /// touch the live state lock or persist anything. Without this guard,
+    /// a renderer-side type confusion could slip an unrecognised value past
+    /// the IPC boundary and silently corrupt the runtime state.
+    #[tokio::test]
+    async fn save_display_mode_invalid_value_does_not_mutate_state() {
+        let state = fixture_state();
+        save_display_mode_inner("menubar", &state)
+            .await
+            .expect("baseline save should succeed");
+        assert_eq!(
+            state
+                .display_mode
+                .read()
+                .expect("lock not poisoned")
+                .as_str(),
+            "menubar"
+        );
+
+        let _ = save_display_mode_inner("popover", &state)
+            .await
+            .expect_err("invalid mode should be rejected");
+
+        assert_eq!(
+            state
+                .display_mode
+                .read()
+                .expect("lock not poisoned")
+                .as_str(),
+            "menubar",
+            "rejected save must leave the live lock untouched"
+        );
+        let persisted = load_display_mode_inner(&state).await.unwrap();
+        assert_eq!(
+            persisted, "menubar",
+            "rejected save must not have written to the store either"
+        );
+    }
+
+    /// Calling `save_display_mode_inner` with the current mode must succeed
+    /// and report the same value as the "previous" mode — this is how the
+    /// Tauri command wrapper detects "no UI work needed" and skips the
+    /// expensive tray/window swap. A regression here would either error
+    /// out (bad UX on every Settings re-open) or trigger redundant UI
+    /// thrash on every save.
+    #[tokio::test]
+    async fn save_display_mode_idempotent_when_mode_unchanged() {
+        let state = fixture_state();
+        save_display_mode_inner("menubar", &state).await.unwrap();
+
+        let prev = save_display_mode_inner("menubar", &state)
+            .await
+            .expect("re-saving the same mode must succeed");
+        assert_eq!(prev, "menubar", "previous == current when unchanged");
+
+        assert_eq!(
+            state
+                .display_mode
+                .read()
+                .expect("lock not poisoned")
+                .as_str(),
+            "menubar",
+            "idempotent save leaves the live lock at the same value"
+        );
     }
 }

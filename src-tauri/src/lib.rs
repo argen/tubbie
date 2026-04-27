@@ -39,7 +39,7 @@ pub mod commands;
 pub mod state;
 pub mod store_impl;
 
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, RwLock as StdRwLock};
 use std::time::Duration;
 
 use futures::StreamExt;
@@ -327,6 +327,211 @@ fn strip_native_chrome(window: &tauri::WebviewWindow) {
     }
 }
 
+/// Reset a window's macOS style mask back to borderless.
+///
+/// Counterpart to [`strip_native_chrome`]. Used when transitioning from
+/// window mode → menubar mode at runtime: `set_decorations(false)` *should*
+/// take care of this, but the prior `strip_native_chrome` call set an
+/// explicit style mask via `setStyleMask:` and Cocoa retains it until we
+/// override. Without this helper, the menubar popover can render with a
+/// stale title-bar style and feel "off" until the next launch.
+///
+/// `NSWindowStyleMaskBorderless == 0` — equivalent to `setStyleMask: 0`
+/// in objc.
+#[cfg(target_os = "macos")]
+#[allow(unsafe_code)]
+fn restore_borderless_chrome(window: &tauri::WebviewWindow) {
+    use objc2::msg_send;
+    use objc2::runtime::AnyObject;
+
+    let Ok(ptr) = window.ns_window() else {
+        return;
+    };
+    if ptr.is_null() {
+        return;
+    }
+
+    const BORDERLESS: usize = 0;
+
+    unsafe {
+        let ns_window = &*(ptr as *const AnyObject);
+        let _: () = msg_send![ns_window, setStyleMask: BORDERLESS];
+    }
+}
+
+/// Tray icon id reused across builds. Lets us look up / remove the tray
+/// when the user toggles display mode at runtime.
+const TRAY_ID: &str = "tubbie-tray";
+
+/// Build the menu-bar tray icon (idempotent).
+///
+/// Returns `Ok(())` immediately if a tray with [`TRAY_ID`] already exists —
+/// safe to call repeatedly when toggling into menubar mode multiple times.
+fn build_tray(app: &tauri::AppHandle) -> Result<(), tauri::Error> {
+    if app.tray_by_id(TRAY_ID).is_some() {
+        return Ok(());
+    }
+
+    let settings_item = MenuItemBuilder::with_id("settings", "Settings…").build(app)?;
+    let about_item = PredefinedMenuItem::about(
+        app,
+        Some("About Tubbie"),
+        Some(tauri::menu::AboutMetadata {
+            name: Some("Tubbie".into()),
+            copyright: Some("© 2026 Bruno Belcastro".into()),
+            ..Default::default()
+        }),
+    )?;
+    let quit_item = PredefinedMenuItem::quit(app, Some("Quit Tubbie"))?;
+    let tray_menu = MenuBuilder::new(app)
+        .item(&settings_item)
+        .separator()
+        .item(&about_item)
+        .separator()
+        .item(&quit_item)
+        .build()?;
+
+    let _tray = TrayIconBuilder::with_id(TRAY_ID)
+        .icon(tauri::include_image!("icons/tray-icon.png"))
+        .icon_as_template(true)
+        .menu(&tray_menu)
+        .show_menu_on_left_click(false)
+        .on_menu_event(|app, event| {
+            if event.id().as_ref() == "settings" {
+                if let Some(win) = app.get_webview_window("main") {
+                    let _ = win.show();
+                    let _ = win.set_focus();
+                    let _ = app.emit("tray://open-settings", ());
+                }
+            }
+        })
+        .on_tray_icon_event(|tray, event| {
+            if let TrayIconEvent::Click {
+                button: MouseButton::Left,
+                button_state: MouseButtonState::Up,
+                rect,
+                ..
+            } = event
+            {
+                let app = tray.app_handle();
+                if let Some(win) = app.get_webview_window("main") {
+                    if win.is_visible().unwrap_or(false) {
+                        let _ = win.hide();
+                    } else {
+                        show_popover(&win, rect);
+                    }
+                }
+            }
+        })
+        .build(app)?;
+
+    Ok(())
+}
+
+/// Run the UI side-effects that distinguish window mode from menubar mode.
+///
+/// **MUST run on the macOS main thread.** Every operation here ultimately
+/// reaches a Cocoa API: `NSApplication::setActivationPolicy`,
+/// `NSStatusBar::removeStatusItem` (via `TrayIcon::Drop`), `NSWindow`
+/// style mask + size + visibility. Calling any of these from a Tokio
+/// worker trips Cocoa's `BSServiceMainRunLoopQueue` barrier and crashes
+/// the process with `EXC_BREAKPOINT`. Use [`apply_display_mode_effects`]
+/// instead from any non-main-thread caller — that wrapper hops to the
+/// main thread via `run_on_main_thread`.
+///
+/// Pure side-effects: does not read or mutate `AppState`. The caller
+/// persists the new mode and updates `state.display_mode`.
+///
+/// Errors are swallowed (best-effort) for window/policy calls, matching
+/// the existing `let _ = win.set_*` pattern. A failed tray build does
+/// surface as `Err` because a missing tray in menubar mode leaves the
+/// user with no way to interact with the app.
+///
+/// Used at startup (after the persisted mode is loaded — `setup` runs
+/// on the main thread) and from `save_display_mode` (which dispatches
+/// to the main thread first) — same code path either way, so startup
+/// and live-toggle cannot drift.
+pub(crate) fn apply_display_mode_effects_sync(
+    app: &tauri::AppHandle,
+    target: &str,
+) -> Result<(), String> {
+    // 1. macOS activation policy. Accessory hides the dock icon (menubar
+    //    mode); Regular shows it (window mode). Tauri exposes
+    //    `set_activation_policy` at runtime — Apple's NSApplication
+    //    supports all transitions between Regular/Accessory/Prohibited.
+    #[cfg(target_os = "macos")]
+    {
+        let policy = if target == "menubar" {
+            tauri::ActivationPolicy::Accessory
+        } else {
+            tauri::ActivationPolicy::Regular
+        };
+        let _ = app.set_activation_policy(policy);
+    }
+
+    // 2. Tray icon. Build on the way into menubar; remove on the way out.
+    //    `build_tray` is idempotent (early-returns if the tray already
+    //    exists), so reapplying menubar mode is safe.
+    if target == "menubar" {
+        build_tray(app).map_err(|e| format!("tray build failed: {e}"))?;
+    } else {
+        let _ = app.remove_tray_by_id(TRAY_ID);
+    }
+
+    // 3. Window chrome + geometry. The static window config is borderless
+    //    + transparent + always-on-top + 380×560; window mode re-decorates
+    //    and resizes to 980×720, then strips the native chrome so our LED
+    //    title bar can take over. Going back to menubar reverses both.
+    if let Some(win) = app.get_webview_window("main") {
+        if target == "menubar" {
+            let _ = win.set_decorations(false);
+            let _ = win.set_always_on_top(true);
+            let _ = win.set_min_size(Some(LogicalSize::new(320.0, 400.0)));
+            let _ = win.set_size(LogicalSize::new(380.0, 560.0));
+            let _ = win.hide();
+            #[cfg(target_os = "macos")]
+            restore_borderless_chrome(&win);
+        } else {
+            let _ = win.set_decorations(true);
+            let _ = win.set_always_on_top(false);
+            let _ = win.set_min_size(Some(LogicalSize::new(600.0, 400.0)));
+            let _ = win.set_size(LogicalSize::new(980.0, 720.0));
+            let _ = win.center();
+            let _ = win.show();
+            let _ = win.set_focus();
+            #[cfg(target_os = "macos")]
+            strip_native_chrome(&win);
+        }
+    }
+
+    Ok(())
+}
+
+/// Apply the display-mode side-effects from any thread.
+///
+/// Hops to the macOS main thread via `run_on_main_thread` and waits on a
+/// oneshot for completion, then returns the result. Required because
+/// every Cocoa API touched by [`apply_display_mode_effects_sync`] is
+/// main-thread-only — calling them from a Tokio worker (which is where
+/// Tauri commands run) trips `BSServiceMainRunLoopQueue::assertBarrierOnQueue`
+/// and crashes the process. We learned this the hard way; do not inline
+/// the sync version into a command handler.
+pub(crate) async fn apply_display_mode_effects(
+    app: &tauri::AppHandle,
+    target: &str,
+) -> Result<(), String> {
+    let app_clone = app.clone();
+    let target_owned = target.to_string();
+    let (tx, rx) = tokio::sync::oneshot::channel::<Result<(), String>>();
+    app.run_on_main_thread(move || {
+        let res = apply_display_mode_effects_sync(&app_clone, &target_owned);
+        let _ = tx.send(res);
+    })
+    .map_err(|e| format!("dispatch to main thread failed: {e}"))?;
+    rx.await
+        .map_err(|e| format!("apply_display_mode_effects dropped before completion: {e}"))?
+}
+
 /// Application entry point. Called from `main.rs` (and mobile entry point).
 ///
 /// Registers all plugins, builds `AppState` with the live TfL client, and
@@ -342,22 +547,21 @@ pub fn run() {
             let store =
                 StorePluginConfigStore::open(app.handle()).expect("failed to open config store");
 
-            // Resolve display mode early — every conditional below (activation
-            // policy, window chrome, tray, blur-to-hide) branches on it.
-            let display_mode: String = store
+            // Resolve display mode early. We pass it to
+            // `apply_display_mode_effects` below — the single seam that owns
+            // activation policy, tray, and window chrome both at startup and
+            // at runtime when the user toggles via Settings.
+            let initial_display_mode: String = store
                 .raw_get("display_mode")
                 .and_then(|v| serde_json::from_value::<String>(v).ok())
                 .unwrap_or_else(|| state::DEFAULT_DISPLAY_MODE.to_string());
 
-            // macOS: only the menubar mode hides the dock icon. In window
-            // mode we want a normal Regular activation policy so the user
-            // sees a dock icon and can ⌘-Tab to it.
-            #[cfg(target_os = "macos")]
-            {
-                if display_mode == "menubar" {
-                    app.set_activation_policy(tauri::ActivationPolicy::Accessory);
-                }
-            }
+            // Live display-mode lock. Seeded with the persisted value; the
+            // `WindowEvent::Focused(false)` click-away handler reads it on
+            // every focus loss, and `save_display_mode` writes to it after
+            // the user toggles in Settings.
+            let display_mode_lock: Arc<StdRwLock<String>> =
+                Arc::new(StdRwLock::new(initial_display_mode.clone()));
 
             let saved_key: Option<String> = store.raw_get("tfl_app_key").and_then(|v| {
                 if v.is_null() {
@@ -497,91 +701,20 @@ pub fn run() {
                 config_store,
                 stream_abort,
                 cfg_tx,
-                display_mode: display_mode.clone(),
+                display_mode: Arc::clone(&display_mode_lock),
                 lifecycle,
             });
 
-            if display_mode == "menubar" {
-                // --- Menubar tray icon + popover behaviour -----------------
-                //
-                // Left click on the tray icon toggles the popover window,
-                // placing it anchored under the icon. Right click opens a
-                // native menu (Settings / About / Quit). Losing focus hides
-                // the popover — see the `on_window_event` handler below.
-
-                let settings_item = MenuItemBuilder::with_id("settings", "Settings…").build(app)?;
-                let about_item = PredefinedMenuItem::about(
-                    app,
-                    Some("About Tubbie"),
-                    Some(tauri::menu::AboutMetadata {
-                        name: Some("Tubbie".into()),
-                        copyright: Some("© 2026 Bruno Belcastro".into()),
-                        ..Default::default()
-                    }),
-                )?;
-                let quit_item = PredefinedMenuItem::quit(app, Some("Quit Tubbie"))?;
-                let tray_menu = MenuBuilder::new(app)
-                    .item(&settings_item)
-                    .separator()
-                    .item(&about_item)
-                    .separator()
-                    .item(&quit_item)
-                    .build()?;
-
-                let _tray = TrayIconBuilder::with_id("tubbie-tray")
-                    .icon(tauri::include_image!("icons/tray-icon.png"))
-                    .icon_as_template(true)
-                    .menu(&tray_menu)
-                    .show_menu_on_left_click(false)
-                    .on_menu_event(|app, event| {
-                        if event.id().as_ref() == "settings" {
-                            if let Some(win) = app.get_webview_window("main") {
-                                let _ = win.show();
-                                let _ = win.set_focus();
-                                let _ = app.emit("tray://open-settings", ());
-                            }
-                        }
-                    })
-                    .on_tray_icon_event(|tray, event| {
-                        if let TrayIconEvent::Click {
-                            button: MouseButton::Left,
-                            button_state: MouseButtonState::Up,
-                            rect,
-                            ..
-                        } = event
-                        {
-                            let app = tray.app_handle();
-                            if let Some(win) = app.get_webview_window("main") {
-                                if win.is_visible().unwrap_or(false) {
-                                    let _ = win.hide();
-                                } else {
-                                    show_popover(&win, rect);
-                                }
-                            }
-                        }
-                    })
-                    .build(app)?;
-            } else {
-                // --- Floating window mode -----------------------------------
-                //
-                // The static window config is tuned for the menubar popover
-                // (small, borderless, transparent, hidden on launch). For
-                // window mode we re-decorate the window so macOS reliably
-                // brings it onscreen, then strip the native chrome (title
-                // bar background, title text, traffic-light buttons) so our
-                // own LED-themed title bar in Board.svelte takes over.
-                if let Some(win) = app.get_webview_window("main") {
-                    let _ = win.set_decorations(true);
-                    let _ = win.set_always_on_top(false);
-                    let _ = win.set_min_size(Some(LogicalSize::new(600.0, 400.0)));
-                    let _ = win.set_size(LogicalSize::new(980.0, 720.0));
-                    let _ = win.center();
-                    let _ = win.show();
-                    let _ = win.set_focus();
-                    #[cfg(target_os = "macos")]
-                    strip_native_chrome(&win);
-                }
-            }
+            // Apply the persisted mode now. Setup runs on the macOS main
+            // thread, so we can call the sync version directly. The async
+            // wrapper used by `save_display_mode` would deadlock here —
+            // `run_on_main_thread` posts a user event that the main thread
+            // can only process *after* setup returns.
+            apply_display_mode_effects_sync(&app.handle().clone(), &initial_display_mode)
+                .map_err(|e| {
+                    eprintln!("[tubbie] failed to apply initial display mode: {e}");
+                    Box::<dyn std::error::Error>::from(e)
+                })?;
 
             Ok(())
         })
@@ -597,13 +730,27 @@ pub fn run() {
                         }
                     });
                 }
-                WindowEvent::Focused(false)
-                    if window.state::<AppState>().display_mode == "menubar" =>
-                {
+                WindowEvent::Focused(false) => {
                     // Click-away hides the popover only in menubar mode.
                     // In windowed mode the user expects the window to stay
                     // visible when it loses focus.
-                    let _ = window.hide();
+                    //
+                    // `try_read` rather than `read`: the live display-mode
+                    // lock is held briefly during `apply_display_mode`
+                    // transitions, and the focus event must not block the
+                    // main event loop. A contended lock is treated as
+                    // "don't hide" — safe because the swap is rare and the
+                    // user has already lost focus, so re-clicking the tray
+                    // is the worst-case UX.
+                    let should_hide = window
+                        .state::<AppState>()
+                        .display_mode
+                        .try_read()
+                        .map(|guard| guard.as_str() == "menubar")
+                        .unwrap_or(false);
+                    if should_hide {
+                        let _ = window.hide();
+                    }
                 }
                 _ => {}
             }

@@ -76,6 +76,21 @@ bottom of this doc, not just the unit tests.**
    stale clock (e.g. by re-emitting `last_ok` without bumping
    `generated_at`), the UI silently freezes.
 
+8. **Cocoa display-mode side-effects MUST run on the macOS main thread.**
+   `apply_display_mode_effects_sync` in `lib.rs` calls
+   `set_activation_policy`, `remove_tray_by_id` (whose returned
+   `TrayIcon::Drop` calls `NSStatusBar::removeStatusItem`),
+   `set_decorations`, `set_size`, etc. Each of these asserts a
+   main-thread barrier in Cocoa (`BSServiceMainRunLoopQueue::
+   assertBarrierOnQueue`) and crashes the process with `EXC_BREAKPOINT`
+   if called from a Tokio worker. Tauri commands run on Tokio. The
+   public async `apply_display_mode_effects` wrapper hops to the main
+   thread via `run_on_main_thread` + a oneshot — always call the async
+   version from any non-`setup` caller. Setup itself runs on the main
+   thread and uses the sync version directly (the async one would
+   deadlock — `run_on_main_thread` queues a user event that can only be
+   drained after setup returns).
+
 ## Test harness — the rules
 
 **Tests are not optional for this pipeline.** Visual smoke testing is
@@ -124,6 +139,10 @@ These tests must stay green or you're shipping a regression:
 | `web/src/lib/__tests__/dom/PlatformColumn-duplicate-ids.dom.test.ts` | renders all distinct trains when ids collide / dedupes on full composite | TfL non-unique `Arrival.id` + defensive each-key dedup |
 | `crates/tfl-board/src/service.rs`                             | `build_board_preserves_distinct_arrivals_with_same_id`  | no silent dedup-by-id           |
 | `web/src/lib/__tests__/dom/board-error-event.dom.test.ts`     | board://error → boardError when no board; preserves existing | stream-error propagation contract |
+| `src-tauri/src/commands.rs`                                   | `save_display_mode_updates_live_state_lock`              | live display_mode lock matches saved value |
+| `src-tauri/src/commands.rs`                                   | `save_display_mode_invalid_value_does_not_mutate_state`  | rejected save leaves runtime + store untouched |
+| `src-tauri/src/commands.rs`                                   | `save_display_mode_idempotent_when_mode_unchanged`       | re-saving current mode is a no-op |
+| `web/src/lib/__tests__/dom/settings-display-mode-live.dom.test.ts` | radio reflects $displayMode; save updates store; rejection rolls back; same-mode click is a no-op | live-toggle UI contract |
 
 If you add a new failure mode, add a test row here.
 
@@ -148,6 +167,21 @@ Before reporting work as complete:
      in turn (B briefly visible, then A).
    - Drop poll_seconds via slider 30 → 60. Next tick fires ~60 s
      later. No stream restart in logs.
+   - **Display-mode live toggle** (only for `apply_display_mode_effects`
+     / `save_display_mode` / `display_mode` lock changes):
+     - Launch in window mode. Open Settings → switch to "Menu bar
+       popover". Within ~1 s: dock icon disappears, window hides, tray
+       icon appears in the menu bar. Left-click tray → popover shows
+       under the icon at 380×560.
+     - Switch back via Settings → "Floating window". Within ~1 s: tray
+       icon disappears, dock icon reappears, window shows at 980×720
+       centered with the LED title bar (no native chrome).
+     - Toggle 5× rapidly. No crashes, no duplicate trays, final state
+       matches the last toggle.
+     - Switch mode while the stream is mid-tick. `board://updated`
+       MUST keep flowing — the mode swap touches no stream state.
+     - Switch mode, then change station. `save_config` still works
+       (no lock starvation, no leaked Arc cycle).
 
 ## Branching rules (also in `~/.claude/CLAUDE.md`)
 

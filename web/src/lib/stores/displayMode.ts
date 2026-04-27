@@ -7,8 +7,10 @@
  * chrome (rounded popover card vs. plain board) and density (rows per
  * direction) accordingly.
  *
- * Saving a new mode from Settings persists to the store but does NOT
- * mutate this store value — the change only takes effect on restart.
+ * Saving a new mode from Settings persists to the store AND mutates this
+ * store value — the Rust side now applies the swap (tray, dock icon,
+ * window chrome) live, so the renderer should reflect the change
+ * immediately rather than waiting for a restart.
  */
 
 import { writable } from 'svelte/store';
