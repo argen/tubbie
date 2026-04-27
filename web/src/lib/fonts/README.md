@@ -16,6 +16,15 @@ and loaded via `@font-face` with `font-display: block` in `app.css`.
   closest match to a real dot-matrix transit display. `Square` and `Circle` are retained
   as fallbacks so any codepoint missing from Grid degrades gracefully without layout shift.
 
+## Geist Mono
+
+- **File**: `GeistMono-Regular.woff2`
+- **Authors**: Vercel
+- **Source**: https://github.com/vercel/geist-font (main branch)
+- **Licence**: SIL Open Font Licence 1.1 — https://openfontlicense.org/open-font-license-official-text/
+- **Use in tubbie**: backing font for `--font-ui` — used on settings chrome
+  where the dot-matrix glyph density hurts legibility. Same family as Geist Pixel for visual cohesion.
+
 ## VT323
 
 - **File**: `VT323.woff2`
