@@ -39,13 +39,14 @@ pub mod commands;
 pub mod state;
 pub mod store_impl;
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use futures::StreamExt;
 use tauri::{
     menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    Emitter, LogicalSize, Manager, PhysicalPosition, WindowEvent,
+    Emitter, Listener, LogicalSize, Manager, PhysicalPosition, WindowEvent,
 };
 use tfl_board::{BoardConfig, BoardService, LifecyclePhase};
 use tfl_client::{clock::SystemClock, http::ReqwestTflHttp, TflClient};
@@ -58,6 +59,42 @@ use commands::{
 };
 use state::{AnyBoardService, AppState};
 use store_impl::StorePluginConfigStore;
+
+/// Block until either a `board://updated` event arrives on `app` or
+/// `fallback` elapses, whichever happens first.
+///
+/// Used by the stop-points warm task to give the stream's first /Arrivals
+/// fetch unobstructed access to the global `cooldown_until` gate. If the
+/// warm fires first and 429s on /StopPoint/Mode/tube (TfL's most rate-
+/// limited route), the stream's first fetch sleeps behind the cooldown
+/// for nothing — the user is staring at the board, not the settings.
+///
+/// The fallback is a safety net: if the stream is permanently broken we
+/// still want the warm to fire (best-effort), rather than leave the
+/// settings cache cold forever.
+async fn wait_for_first_board_emit(app: &tauri::AppHandle, fallback: Duration) {
+    let (tx, rx) = tokio::sync::oneshot::channel::<()>();
+    let tx_slot: Arc<Mutex<Option<tokio::sync::oneshot::Sender<()>>>> =
+        Arc::new(Mutex::new(Some(tx)));
+    let tx_slot_for_listener = Arc::clone(&tx_slot);
+    // `listen_any` callback is `Fn`, not `FnMut`, so move the Sender into a
+    // Mutex<Option<...>> and `take()` it on the first hit. Subsequent hits
+    // see `None` and fall through.
+    let listener_id = app.listen_any("board://updated", move |_event| {
+        if let Ok(mut guard) = tx_slot_for_listener.lock() {
+            if let Some(s) = guard.take() {
+                let _ = s.send(());
+            }
+        }
+    });
+
+    tokio::select! {
+        _ = rx => {}
+        _ = tokio::time::sleep(fallback) => {}
+    }
+
+    app.unlisten(listener_id);
+}
 
 /// Spawn a stream task that emits `board://updated` Tauri events.
 ///
@@ -369,8 +406,21 @@ pub fn run() {
             // Pre-warm the stop-points cache so the first settings search is
             // instant rather than paying ~1-2s for the 16 MB /StopPoint/Mode/tube
             // fetch. Fire-and-forget — failure here must never block startup.
+            //
+            // Wait until the stream task has produced its first board (or an
+            // 8 s fallback elapses) before warming. The /StopPoint/Mode/tube
+            // endpoint is TfL's most aggressively rate-limited route; if it
+            // 429s and sets the shared `cooldown_until` gate before the
+            // stream's first /Arrivals fetch can run, the user stares at
+            // "Loading arrivals…" for the duration of the cooldown for no
+            // reason — settings search isn't even open. Using the existing
+            // `board://updated` event as the "first emit happened" signal
+            // keeps the plumbing minimal; the 8 s fallback ensures a
+            // permanently broken stream doesn't starve the warm forever.
             let bs = Arc::clone(&board_service);
+            let warm_app_handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
+                wait_for_first_board_emit(&warm_app_handle, Duration::from_secs(8)).await;
                 match bs.warm_stop_points_cache().await {
                     Ok(n) => eprintln!("[tubbie] stop-points cache warmed ({n} stations)"),
                     Err(e) => eprintln!("[tubbie] stop-points cache warm failed: {e}"),
