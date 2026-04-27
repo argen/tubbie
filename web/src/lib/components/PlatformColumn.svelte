@@ -33,8 +33,17 @@
     <div class="platform-col__empty" role="status" aria-live="polite">No arrivals</div>
   {:else}
     <ol class="platform-col__list" aria-label="Arrivals for {displayName}">
-      {#each arrivals as arrival (arrival.id)}
-        <ArrivalRow {arrival} rank={arrivals.indexOf(arrival) + 1} />
+      <!--
+        Key on (line_id, platform_name, expected_arrival) — NOT on `arrival.id`.
+        TfL's prediction `id` is not a unique identifier (observed at Chalk
+        Farm: 10 distinct trains all returned with `id=1731547612`); a
+        keyed-each on `arrival.id` crashes Svelte with each_key_duplicate and
+        leaves the UI stuck on the previous render. The composite below is
+        stable for one real train across polls so row enter/exit transitions
+        still work.
+      -->
+      {#each arrivals as arrival, idx (`${arrival.line_id}|${arrival.platform_name}|${arrival.expected_arrival}`)}
+        <ArrivalRow {arrival} rank={idx + 1} />
       {/each}
     </ol>
   {/if}

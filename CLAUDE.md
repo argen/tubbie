@@ -121,6 +121,8 @@ These tests must stay green or you're shipping a regression:
 | `crates/tfl-client/tests/http_retry.rs`                       | `concurrent_calls_share_429_cooldown`                    | rate-limit gate                 |
 | `web/src/lib/__tests__/dom/board-store-seed.dom.test.ts`      | latest-wins by `generated_at`                            | board store regression check    |
 | `web/src/lib/__tests__/dom/settings-debounce-persist.dom.test.ts` | chip-burst coalesces                                     | rate-limit-blowing chip clicks  |
+| `web/src/lib/__tests__/dom/PlatformColumn-duplicate-ids.dom.test.ts` | renders all distinct trains when ids collide         | TfL non-unique `Arrival.id`     |
+| `crates/tfl-board/src/service.rs`                             | `build_board_preserves_distinct_arrivals_with_same_id`  | no silent dedup-by-id           |
 
 If you add a new failure mode, add a test row here.
 

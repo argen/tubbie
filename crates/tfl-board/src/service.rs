@@ -410,6 +410,13 @@ enum TickOutcome {
 /// Directions appear in a fixed reading order; any direction with zero
 /// arrivals after filtering is omitted. Arrivals within a column are sorted
 /// ascending by `time_to_station`.
+///
+/// `Arrival.id` is NOT a stable unique identifier in TfL's API. Observed in
+/// production at Chalk Farm: every prediction in the response shared
+/// `id=1731547612` despite being 10 distinct trains (different platforms,
+/// different `expected_arrival`). Consumers must therefore key on a composite
+/// like `(line_id, platform_name, expected_arrival)`, not on `id` alone, or
+/// they will crash on the next non-unique-id station.
 fn build_board(
     station_id: &str,
     arrivals: Vec<Arrival>,
@@ -1041,5 +1048,88 @@ mod tests {
         lc.set(AppPhase::Active);
         let resumed = stream.next().await.expect("emit after returning to Active");
         assert!(resumed.is_ok(), "post-resume emit must be Ok");
+    }
+
+    // -----------------------------------------------------------------------
+    // Test: build_board preserves distinct arrivals that share an `id`
+    // -----------------------------------------------------------------------
+
+    /// `Arrival.id` is not unique in TfL's API. Production observation
+    /// (Chalk Farm, 2026-04-27): all 10 predictions in a single response
+    /// shared `id=1731547612` despite representing 10 distinct trains
+    /// (different platforms, different `expected_arrival`).
+    ///
+    /// `build_board` MUST NOT dedupe by `id` — that would silently drop real
+    /// trains. The Svelte keyed-each in `PlatformColumn.svelte` is responsible
+    /// for using a composite key (line_id + platform_name + expected_arrival)
+    /// so it does not crash on this real-world payload shape.
+    #[test]
+    fn build_board_preserves_distinct_arrivals_with_same_id() {
+        use tfl_domain::Arrival;
+
+        fn arrival(direction: Direction, expected_min: u32, time: i64) -> Arrival {
+            Arrival {
+                id: "1731547612".to_string(), // shared sentinel id (TfL bug)
+                station_name: "Chalk Farm Underground Station".to_string(),
+                platform_name: match direction {
+                    Direction::Northbound => "Northbound - Platform 1".to_string(),
+                    _ => "Southbound - Platform 2".to_string(),
+                },
+                line_id: "northern".to_string(),
+                line_name: "Northern".to_string(),
+                direction,
+                northern_branch: None,
+                destination_name: "Edgware Underground Station".to_string(),
+                towards: "Edgware via CX".to_string(),
+                current_location: "At Chalk Farm Platform 1".to_string(),
+                time_to_station: time,
+                expected_arrival: chrono::DateTime::parse_from_rfc3339(&format!(
+                    "2026-04-27T10:{expected_min:02}:24Z"
+                ))
+                .unwrap()
+                .with_timezone(&chrono::Utc),
+                naptan_id: "940GZZLUCFM".to_string(),
+            }
+        }
+
+        // Three Northbound + two Southbound, all sharing the same id.
+        let arrivals = vec![
+            arrival(Direction::Northbound, 38, 29),
+            arrival(Direction::Northbound, 44, 359),
+            arrival(Direction::Northbound, 51, 779),
+            arrival(Direction::Southbound, 44, 359),
+            arrival(Direction::Southbound, 49, 659),
+        ];
+
+        let board = build_board(
+            "940GZZLUCFM",
+            arrivals,
+            chrono::DateTime::parse_from_rfc3339("2026-04-27T10:38:00Z")
+                .unwrap()
+                .with_timezone(&chrono::Utc),
+            None,
+        );
+
+        let northbound = board
+            .platforms
+            .iter()
+            .find(|p| p.name == "Northbound")
+            .expect("Northbound column must exist");
+        let southbound = board
+            .platforms
+            .iter()
+            .find(|p| p.name == "Southbound")
+            .expect("Southbound column must exist");
+
+        assert_eq!(
+            northbound.arrivals.len(),
+            3,
+            "all three Northbound trains must be preserved despite shared id"
+        );
+        assert_eq!(
+            southbound.arrivals.len(),
+            2,
+            "both Southbound trains must be preserved despite shared id"
+        );
     }
 }
