@@ -54,4 +54,30 @@ describe('PlatformColumn — TfL non-unique-id payloads', () => {
     // One <li> per distinct prediction — none silently dropped.
     expect(list.querySelectorAll('li')).toHaveLength(4);
   });
+
+  /**
+   * Worst-case defensive guard: two arrivals colliding on the WHOLE composite
+   * key (line_id, platform_name, expected_arrival). Theoretically rare —
+   * (line, platform, expected) describes one physical train slot — but TfL has
+   * surprised us before with non-unique `id`s, so we don't want a future
+   * "non-unique composite" payload to re-introduce the each_key_duplicate
+   * crash. The component dedupes defensively at the keyed-each boundary;
+   * the second arrival is dropped and one row renders.
+   */
+  it('does not crash when two arrivals collide on the full composite key', () => {
+    const dup1 = arrival(44, 359);
+    const dup2 = { ...arrival(44, 359), towards: 'Mill Hill East' }; // same composite, different towards
+    const platform: Platform = {
+      name: 'Northbound',
+      arrivals: [dup1, dup2, arrival(51, 779)],
+    };
+
+    render(PlatformColumn, { props: { platform } });
+
+    const list = screen.getByRole('list', { name: /Arrivals for Northbound/i });
+    expect(list).toBeTruthy();
+    // 2 unique-by-composite rows: the (38, 29) wasn't included; only (44, 359)
+    // appears once and (51, 779) appears once.
+    expect(list.querySelectorAll('li')).toHaveLength(2);
+  });
 });

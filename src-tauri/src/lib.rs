@@ -60,6 +60,22 @@ use commands::{
 use state::{AnyBoardService, AppState};
 use store_impl::StorePluginConfigStore;
 
+/// RAII handle for a Tauri event listener. Calling `unlisten` in `Drop`
+/// guarantees cleanup even if the awaiting task is aborted mid-flight (window
+/// destroyed, app teardown, etc.) — without this, an aborted
+/// `wait_for_first_board_emit` would leak the listener and the closure's
+/// captured `Arc<Mutex<…>>` for the rest of the `AppHandle`'s lifetime.
+struct ListenerGuard {
+    app: tauri::AppHandle,
+    id: tauri::EventId,
+}
+
+impl Drop for ListenerGuard {
+    fn drop(&mut self) {
+        self.app.unlisten(self.id);
+    }
+}
+
 /// Block until either a `board://updated` event arrives on `app` or
 /// `fallback` elapses, whichever happens first.
 ///
@@ -87,13 +103,16 @@ async fn wait_for_first_board_emit(app: &tauri::AppHandle, fallback: Duration) {
             }
         }
     });
+    let _guard = ListenerGuard {
+        app: app.clone(),
+        id: listener_id,
+    };
 
     tokio::select! {
         _ = rx => {}
         _ = tokio::time::sleep(fallback) => {}
     }
-
-    app.unlisten(listener_id);
+    // _guard drops here, calling app.unlisten(listener_id).
 }
 
 /// Spawn a stream task that emits `board://updated` Tauri events.

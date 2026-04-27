@@ -12,7 +12,37 @@
   const { platform, maxRows = 6 }: Props = $props();
 
   const displayName = $derived(shortPlatformName(platform.name));
-  const arrivals = $derived(platform.arrivals.slice(0, maxRows));
+
+  /**
+   * The keyed-each below uses `(line_id, platform_name, expected_arrival)`
+   * as the row key. Within a real TfL response that triple is the
+   * minimum unique slot — one physical train at one platform at one moment.
+   * If TfL ever serves a payload where two predictions collide on every
+   * field of the triple (we have not observed it; its `id` already
+   * surprised us once), Svelte would throw `each_key_duplicate` and the
+   * render would freeze on the previous frame. Dedupe defensively here so
+   * a future surprise in the data shape can never re-introduce that bug.
+   * First-occurrence wins; the dropped row is invisible to the user.
+   */
+  function rowKey(a: { line_id: string; platform_name: string; expected_arrival: string }): string {
+    return `${a.line_id}|${a.platform_name}|${a.expected_arrival}`;
+  }
+  const arrivals = $derived.by(() => {
+    // `string[]` not `Set<string>`: with maxRows ≤ 6 the O(n²) lookup is
+    // trivially cheap and avoids the `svelte/prefer-svelte-reactivity` lint —
+    // the local set is never reactive (it's recreated on every $derived run)
+    // but the lint can't tell that.
+    const seen: string[] = [];
+    const out: typeof platform.arrivals = [];
+    for (const a of platform.arrivals) {
+      const k = rowKey(a);
+      if (seen.includes(k)) continue;
+      seen.push(k);
+      out.push(a);
+      if (out.length >= maxRows) break;
+    }
+    return out;
+  });
 </script>
 
 <section class="platform-col" aria-label="Platform: {displayName}">
