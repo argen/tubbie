@@ -14,8 +14,8 @@
  */
 
 import { writable, get } from 'svelte/store';
-import { onBoardUpdated, getBoard } from '$lib/ipc/commands.js';
-import type { Board } from '$lib/ipc/types.js';
+import { onBoardUpdated, onBoardError, getBoard } from '$lib/ipc/commands.js';
+import type { Board, BoardErrorPayload } from '$lib/ipc/types.js';
 import type { UnlistenFn } from '@tauri-apps/api/event';
 
 // ---------------------------------------------------------------------------
@@ -34,6 +34,7 @@ export const lastUpdateTs = writable<number>(0);
 // ---------------------------------------------------------------------------
 
 let unlisten: UnlistenFn | null = null;
+let unlistenError: UnlistenFn | null = null;
 
 /**
  * Start listening to `board://updated` events from the Rust backend.
@@ -59,10 +60,28 @@ function applyBoard(b: Board): void {
   lastUpdateTs.set(Date.now());
 }
 
+/**
+ * Surface a stream-side fetch failure to the user — but only when there is no
+ * board on screen yet. Once a board has rendered, the existing UI gates error
+ * display on `$board === null` (see `+page.svelte`), so writing the error
+ * here would be invisible at best and confusing at worst when the next
+ * successful tick arrives. The Rust side only emits this on a fresh error
+ * streak with no last-ok fallback, so it represents a real "we have nothing
+ * to show" condition.
+ */
+function applyBoardError(payload: BoardErrorPayload): void {
+  if (get(board) !== null) {
+    return;
+  }
+  boardError.set(payload.message);
+  isLoading.set(false);
+}
+
 export async function startBoardSubscription(): Promise<() => void> {
   try {
-    // 1. Register the event listener FIRST so we don't miss early emissions.
+    // 1. Register both event listeners FIRST so we don't miss early emissions.
     unlisten = await onBoardUpdated(applyBoard);
+    unlistenError = await onBoardError(applyBoardError);
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     boardError.set(`Failed to subscribe to board updates: ${msg}`);
@@ -88,6 +107,10 @@ export async function startBoardSubscription(): Promise<() => void> {
     if (unlisten) {
       unlisten();
       unlisten = null;
+    }
+    if (unlistenError) {
+      unlistenError();
+      unlistenError = null;
     }
   };
 }

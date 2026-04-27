@@ -159,3 +159,18 @@ export function isLineStatus(v: unknown): v is LineStatus {
     (v.disruption_text === null || typeof v.disruption_text === 'string')
   );
 }
+
+// ---------------------------------------------------------------------------
+// BoardErrorPayload — emitted by the Rust stream task on a fresh error streak
+// when there is no last-ok board to fall back to. Without this, the renderer
+// would have no idea that polling is failing.
+// ---------------------------------------------------------------------------
+
+export interface BoardErrorPayload {
+  message: string;
+}
+
+export function isBoardErrorPayload(v: unknown): v is BoardErrorPayload {
+  if (!isRecord(v)) return false;
+  return typeof v.message === 'string';
+}

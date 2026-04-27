@@ -111,9 +111,22 @@ async fn spawn_stream_task(
                     // respawn it 2 s later, hammering TfL straight through any
                     // 429 cooldown. Log once per streak and let poll_seconds
                     // throttle retries.
+                    //
+                    // Emit `board://error` so the renderer can surface
+                    // *something* to the user — without this the frontend has
+                    // no way to learn that polling is failing (the seed
+                    // `getBoard` IPC could resolve OK while the stream is
+                    // the source of breakage), and the user is left staring
+                    // at "Loading arrivals…" forever. Only emitted on the
+                    // streak transition so a multi-minute outage doesn't
+                    // spam the event channel.
                     if !prev_was_err {
                         eprintln!("[tubbie] stream tick failed (no last-ok board): {e}");
                         prev_was_err = true;
+                        let payload = serde_json::json!({ "message": e.to_string() });
+                        if let Err(emit_err) = app.emit("board://error", &payload) {
+                            eprintln!("[tubbie] Failed to emit board://error: {emit_err}");
+                        }
                     }
                 }
                 None => {
