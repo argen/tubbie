@@ -39,15 +39,27 @@
   font-display: block;
 }
 
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('/src/lib/fonts/GeistMono-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+
 /* ------------------------------------------------------------
    Typography tokens
-   --font-board — primary dot-matrix face used everywhere VT323
-   was used before. VT323 is retained as a fallback for one release
-   in case a Geist Pixel glyph is missing for a specific codepoint.
+   --font-board — primary dot-matrix face for the arrivals board
+   surface (Board, ticker, platform columns, ThemePicker preview
+   tiles, large brand "Tubbie" wordmark, settings section headers).
+   --font-ui — readable monospace for chrome surfaces (settings
+   controls, settings body). Geist Mono is bundled (SIL OFL);
+   falls back to system monospace.
    ------------------------------------------------------------ */
 
 :root {
   --font-board: 'Geist Pixel Grid', 'Geist Pixel Square', 'Geist Pixel Circle', 'VT323', monospace;
+  --font-ui: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 
   /* ------------------------------------------------------------
      TfL official line colours. Theme-agnostic — rendered as a

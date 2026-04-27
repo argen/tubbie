@@ -569,7 +569,7 @@
     border: 1px solid var(--stale-accent);
     border-radius: 2px;
     margin: 0.75rem 1.5rem 0;
-    font-family: var(--font-board);
+    font-family: var(--font-ui);
     font-size: 0.95rem;
     color: var(--stale-accent);
   }
@@ -603,7 +603,7 @@
   }
 
   .settings__back-btn {
-    font-family: var(--font-board);
+    font-family: var(--font-ui);
     font-size: 1rem;
     color: var(--fg);
     background: transparent;
@@ -668,7 +668,7 @@
   }
 
   .settings__current-station {
-    font-family: var(--font-board);
+    font-family: var(--font-ui);
     font-size: 0.95rem;
     margin: 0 0 0.1rem;
     display: flex;
@@ -700,7 +700,7 @@
   }
 
   .settings__chip {
-    font-family: var(--font-board);
+    font-family: var(--font-ui);
     font-size: 0.9rem;
     background: var(--chip-bg);
     color: var(--fg);
@@ -743,7 +743,7 @@
   }
 
   .settings__range-label {
-    font-family: var(--font-board);
+    font-family: var(--font-ui);
     font-size: 1rem;
     color: var(--fg);
     letter-spacing: 0.05em;
@@ -758,7 +758,7 @@
   .settings__range-bounds {
     display: flex;
     justify-content: space-between;
-    font-family: var(--font-board);
+    font-family: var(--font-ui);
     font-size: 0.75rem;
     color: var(--platform-label);
     opacity: 0.5;
@@ -766,7 +766,7 @@
 
   /* API key */
   .settings__api-status {
-    font-family: var(--font-board);
+    font-family: var(--font-ui);
     font-size: 0.95rem;
     color: var(--accent);
     margin: 0;
@@ -774,7 +774,7 @@
   }
 
   .settings__api-hint {
-    font-family: var(--font-board);
+    font-family: var(--font-ui);
     font-size: 0.85rem;
     color: var(--platform-label);
     margin: 0;
@@ -818,13 +818,13 @@
   }
 
   .settings__display-mode-label {
-    font-family: var(--font-board);
+    font-family: var(--font-ui);
     font-size: 1rem;
     color: var(--fg);
   }
 
   .settings__display-mode-hint {
-    font-family: var(--font-board);
+    font-family: var(--font-ui);
     font-size: 0.8rem;
     color: var(--platform-label);
     opacity: 0.75;
@@ -845,7 +845,7 @@
     background: var(--input-bg);
     border: 1px solid var(--input-border);
     color: var(--fg);
-    font-family: var(--font-board);
+    font-family: var(--font-ui);
     font-size: 1rem;
     padding: 0.5rem 0.75rem;
     border-radius: 2px;
@@ -859,7 +859,7 @@
   }
 
   .settings__api-reveal-btn {
-    font-family: var(--font-board);
+    font-family: var(--font-ui);
     font-size: 0.9rem;
     background: var(--chip-bg);
     color: var(--fg);
@@ -883,7 +883,7 @@
 
   /* Buttons */
   .settings__btn {
-    font-family: var(--font-board);
+    font-family: var(--font-ui);
     font-size: 1.1rem;
     padding: 0.5rem 1.5rem;
     border: none;
@@ -911,7 +911,7 @@
   }
 
   .settings__save-state {
-    font-family: var(--font-board);
+    font-family: var(--font-ui);
     font-size: 0.8rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
