@@ -90,6 +90,8 @@ const defaultHandlers: Record<string, MockInvokeHandler> = {
   load_app_key: () => null,
   has_app_key: () => false,
   get_line_status: () => sampleLineStatus,
+  load_display_mode: () => 'window',
+  save_display_mode: () => 'saved',
 };
 
 let handlers: Record<string, MockInvokeHandler> = { ...defaultHandlers };

@@ -40,12 +40,11 @@
   let appKeyStatus = $state<string | null>(null);
   let appKeySaving = $state(false);
 
-  // Display-mode picker state. We mirror the persisted value into a local
-  // `pendingDisplayMode` so the radio reflects the user's selection before
-  // restart, while `$displayMode` (the active runtime mode) keeps driving
-  // the popover-root chrome until the next launch.
-  let pendingDisplayMode = $state<DisplayMode>($displayMode);
+  // Display-mode picker state. The Rust side now applies the swap live,
+  // so we no longer mirror into a separate `pendingDisplayMode` — the
+  // `$displayMode` store updates as soon as `save_display_mode` returns.
   let displayModeStatus = $state<string | null>(null);
+  let displayModeStatusTimer: ReturnType<typeof setTimeout> | null = null;
   /** Transient "saved X seconds ago" chip next to the header. */
   let saveState = $state<'idle' | 'saving' | 'saved'>('idle');
   let saveStateTimer: ReturnType<typeof setTimeout> | null = null;
@@ -232,24 +231,41 @@
     if (typeof window !== 'undefined') {
       window.removeEventListener('beforeunload', flushPending);
     }
+    if (displayModeStatusTimer !== null) {
+      clearTimeout(displayModeStatusTimer);
+      displayModeStatusTimer = null;
+    }
   });
 
   async function handleDisplayModeChange(next: DisplayMode): Promise<void> {
-    pendingDisplayMode = next;
+    if (next === $displayMode) return;
+    const previous = $displayMode;
+    // Optimistic update: flip the store before the IPC round-trip so the
+    // radio + downstream UI (popover chrome, board density) react instantly.
+    // We roll back on error.
+    displayMode.set(next);
     try {
-      const msg = await saveDisplayMode(next);
-      displayModeStatus =
-        next === $displayMode
-          ? `Active mode: ${prettyDisplayMode(next)}.`
-          : `${prettyDisplayMode(next)} — ${msg}.`;
+      await saveDisplayMode(next);
+      showDisplayModeStatus(`Switched to ${prettyDisplayMode(next)}.`);
     } catch (err: unknown) {
-      displayModeStatus = `Error: ${err instanceof Error ? err.message : String(err)}`;
-      pendingDisplayMode = $displayMode;
+      displayMode.set(previous);
+      showDisplayModeStatus(`Error: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
   function prettyDisplayMode(mode: DisplayMode): string {
     return mode === 'menubar' ? 'Menu bar popover' : 'Floating window';
+  }
+
+  function showDisplayModeStatus(text: string): void {
+    displayModeStatus = text;
+    if (displayModeStatusTimer !== null) {
+      clearTimeout(displayModeStatusTimer);
+    }
+    displayModeStatusTimer = setTimeout(() => {
+      displayModeStatus = null;
+      displayModeStatusTimer = null;
+    }, 2400);
   }
 
   async function handleSaveAppKey(): Promise<void> {
@@ -445,7 +461,7 @@
     <section class="settings__section" aria-labelledby="section-display-mode">
       <h2 id="section-display-mode" class="settings__section-title">Display mode</h2>
       <p class="settings__api-hint">
-        Choose how Tubbie launches. Changes take effect after restarting the app.
+        Choose how Tubbie shows its board. Changes apply immediately.
       </p>
       <div class="settings__display-mode" role="radiogroup" aria-label="Display mode">
         <label class="settings__display-mode-option">
@@ -453,7 +469,7 @@
             type="radio"
             name="display-mode"
             value="window"
-            checked={pendingDisplayMode === 'window'}
+            checked={$displayMode === 'window'}
             onchange={() => void handleDisplayModeChange('window')}
           />
           <span class="settings__display-mode-label">Floating window</span>
@@ -466,7 +482,7 @@
             type="radio"
             name="display-mode"
             value="menubar"
-            checked={pendingDisplayMode === 'menubar'}
+            checked={$displayMode === 'menubar'}
             onchange={() => void handleDisplayModeChange('menubar')}
           />
           <span class="settings__display-mode-label">Menu bar popover</span>

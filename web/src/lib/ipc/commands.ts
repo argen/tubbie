@@ -111,9 +111,10 @@ export async function loadDisplayMode(): Promise<DisplayMode> {
 }
 
 /**
- * Persist the display mode. Returns `"restart to apply"` because the
- * window chrome and tray icon are decided at startup — the renderer
- * should surface that hint to the user.
+ * Persist the display mode and apply it live. The Rust side toggles the
+ * tray icon, dock icon (macOS activation policy), and window chrome /
+ * size / always-on-top in place — no restart needed. Returns `"saved"`
+ * for a transient confirmation chip.
  */
 export async function saveDisplayMode(mode: DisplayMode): Promise<string> {
   const raw = await invoke<unknown>('save_display_mode', { mode });

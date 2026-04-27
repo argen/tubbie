@@ -13,7 +13,7 @@
 //! exposes only the methods commands need, avoiding generic leakage into Tauri
 //! state management.
 
-use std::sync::Arc;
+use std::sync::{Arc, RwLock as StdRwLock};
 
 use async_trait::async_trait;
 use serde_json::Value;
@@ -229,10 +229,16 @@ pub struct AppState {
     /// store write completes.
     pub cfg_tx: Arc<watch::Sender<BoardConfig>>,
 
-    /// Display mode resolved at startup (`"window"` or `"menubar"`).
-    /// Captured here so window-event handlers can branch on it without
-    /// re-reading the store on every event. Changes require restart.
-    pub display_mode: String,
+    /// Live display mode (`"window"` or `"menubar"`).
+    ///
+    /// Seeded at startup from the persisted value and mutated in place by
+    /// `save_display_mode_inner` so the runtime swap (tray on/off, dock
+    /// icon on/off, window chrome) is observed by every consumer without
+    /// a process restart. The sync `std::sync::RwLock` is used so the
+    /// `WindowEvent::Focused(false)` click-away handler — which runs on
+    /// the Tauri main thread in a sync context — can read the value
+    /// without spawning onto the Tokio runtime. Holds are microseconds.
+    pub display_mode: Arc<StdRwLock<String>>,
 
     /// Lifecycle phase signal. Desktop builds always stay `Active`
     /// (`LifecyclePhase::always_active()`). The iOS shell writes
