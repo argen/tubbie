@@ -124,6 +124,20 @@ export async function saveDisplayMode(mode: DisplayMode): Promise<string> {
   return raw;
 }
 
+/**
+ * Resize the main window to the given logical-pixel dimensions. The Rust
+ * side hops to the macOS main thread before reaching `NSWindow::setFrame:`
+ * (Cocoa asserts main-thread-only). Validation runs Rust-side, so out-of-
+ * range numbers reject before any Cocoa call is made.
+ *
+ * Called by `Board.svelte` whenever the line/platform count crosses a
+ * preset tier — see the table in that component. Renderer-side dedupe
+ * keeps the IPC quiet on every board tick; only tier transitions hit it.
+ */
+export async function applyBoardSize(width: number, height: number): Promise<void> {
+  await invoke<undefined>('apply_board_size', { width, height });
+}
+
 // ---------------------------------------------------------------------------
 // Event subscription
 // ---------------------------------------------------------------------------

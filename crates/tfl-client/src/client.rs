@@ -460,6 +460,49 @@ impl<H: TflHttp> TflClient<H> {
         Ok(stations.len())
     }
 
+    /// Return the set of `line_id`s that legitimately serve `station_id`.
+    ///
+    /// Source of truth for `BoardService::refresh`'s defensive filter:
+    /// any arrival whose `line_id` is not in this set is dropped before
+    /// the board is built. TfL occasionally surfaces predictions for
+    /// lines that don't physically serve the queried station (most
+    /// commonly via the hub-merge path — a sibling stop-point's
+    /// prediction leaks through the parent and confuses the line
+    /// grouping in the UI). Filtering at the boundary means the user
+    /// can never see a phantom Hammersmith & City group at Monument or
+    /// a Bakerloo train at Belsize Park.
+    ///
+    /// **Hub-aware** by construction: `Station.lines` is already
+    /// populated with the union across every hub child by
+    /// `stop_points_cached` (which merges DLR / Elizabeth / Overground
+    /// siblings at warm time), so we just project that field.
+    ///
+    /// **Fail-open if the cache is cold.** This method deliberately
+    /// does NOT trigger a network fetch — if `stop-points/tube` hasn't
+    /// been warmed yet we return an empty set, which the caller MUST
+    /// treat as "skip filtering". Two reasons:
+    /// (1) triggering a 16 MB fetch on every refresh would defeat the
+    /// whole point of the TTL cache and burn TfL's rate limit; and
+    /// (2) dropping a legitimate arrival because the cache hasn't
+    /// warmed is much worse UX than letting through one phantom
+    /// arrival until the next refresh. Production warms the cache
+    /// once at startup (`lib.rs::run` calls `warm_stop_points_cache`
+    /// after the first board emit), so the filter is active by the
+    /// second tick at the latest.
+    pub async fn allowed_line_ids_for(
+        &self,
+        station_id: &str,
+    ) -> Result<std::collections::HashSet<String>, TflError> {
+        let Some(stations) = self.read_fresh_cache() else {
+            return Ok(std::collections::HashSet::new());
+        };
+        Ok(stations
+            .iter()
+            .find(|s| s.id == station_id)
+            .map(|s| s.lines.iter().map(|l| l.id.clone()).collect())
+            .unwrap_or_default())
+    }
+
     /// Fetch the full tube stop-points list, serving from cache when fresh.
     ///
     /// Cache TTL is [`STOP_POINTS_TTL`]. On miss, fetches `/StopPoint/Mode/tube`

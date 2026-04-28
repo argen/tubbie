@@ -92,6 +92,7 @@ const defaultHandlers: Record<string, MockInvokeHandler> = {
   get_line_status: () => sampleLineStatus,
   load_display_mode: () => 'window',
   save_display_mode: () => 'saved',
+  apply_board_size: () => null,
 };
 
 let handlers: Record<string, MockInvokeHandler> = { ...defaultHandlers };

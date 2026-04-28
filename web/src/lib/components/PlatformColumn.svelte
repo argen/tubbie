@@ -86,8 +86,11 @@
     border-radius: 2px;
     display: flex;
     flex-direction: column;
-    min-width: 260px;
-    flex: 1;
+    /* Width comes from the parent (LineGroup CSS grid with auto-fit /
+       minmax). `min-width: 0` lets the grid track actually shrink below
+       the column's natural width — without it the children's intrinsic
+       size pins the column wide and overflows the container. */
+    min-width: 0;
   }
 
   .platform-col__header {

@@ -59,10 +59,10 @@ describe('Board', () => {
     expect(settingsLink.getAttribute('href')).toBe('/settings');
   });
 
-  it('renders platform columns', () => {
+  it('renders the arrivals region', () => {
     render(Board, { props: { board: sampleBoard } });
-    const platformRegion = screen.getByRole('region', { name: /platform arrivals/i });
-    expect(platformRegion).toBeTruthy();
+    const arrivalsRegion = screen.getByRole('region', { name: /arrivals/i });
+    expect(arrivalsRegion).toBeTruthy();
   });
 
   it('shows stale badge when board is stale', () => {

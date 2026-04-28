@@ -5,6 +5,7 @@
   import {
     formatTimeToStation,
     isDue,
+    lineColorVar,
     revealDuration,
     shortStationName,
   } from '$lib/utils/format.js';
@@ -22,39 +23,7 @@
   // in sync — otherwise the screen-reader string drifts from the visible one.
   const destination = $derived(shortStationName(arrival.destination_name));
 
-  // TfL line id → CSS custom property name defined in app.css. A small map
-  // (rather than string-templating `--line-${id}`) lets us alias TfL's id
-  // variants (e.g. "elizabeth-line") and fall back silently for unknown ids
-  // instead of emitting a reference to a non-existent variable.
-  const LINE_COLOR_VAR: Record<string, string> = {
-    bakerloo: '--line-bakerloo',
-    central: '--line-central',
-    circle: '--line-circle',
-    district: '--line-district',
-    'elizabeth-line': '--line-elizabeth',
-    elizabeth: '--line-elizabeth',
-    'hammersmith-city': '--line-hammersmith-city',
-    jubilee: '--line-jubilee',
-    metropolitan: '--line-metropolitan',
-    northern: '--line-northern',
-    piccadilly: '--line-piccadilly',
-    victoria: '--line-victoria',
-    'waterloo-city': '--line-waterloo-city',
-    dlr: '--line-dlr',
-    'london-overground': '--line-overground',
-    overground: '--line-overground',
-    liberty: '--line-liberty',
-    lioness: '--line-lioness',
-    mildmay: '--line-mildmay',
-    suffragette: '--line-suffragette',
-    weaver: '--line-weaver',
-    windrush: '--line-windrush',
-  };
-
-  const lineColor = $derived.by(() => {
-    const name = LINE_COLOR_VAR[arrival.line_id];
-    return name ? `var(${name})` : 'transparent';
-  });
+  const lineColor = $derived(lineColorVar(arrival.line_id));
 
   // ---------------------------------------------------------------------------
   // Char-by-char reveal

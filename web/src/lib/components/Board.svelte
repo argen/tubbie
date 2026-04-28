@@ -1,11 +1,17 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
-  import type { Board, LineStatus } from '$lib/ipc/types.js';
-  import { formatTime, prettyLineName, shortStationName } from '$lib/utils/format.js';
+  import type { Arrival, Board, Direction, LineStatus } from '$lib/ipc/types.js';
+  import {
+    formatTime,
+    prettyLineName,
+    shortPlatformName,
+    shortStationName,
+  } from '$lib/utils/format.js';
   import { lastUpdateTs } from '$lib/stores/board.js';
   import { reducedMotion } from '$lib/stores/reducedMotion.js';
   import { displayMode } from '$lib/stores/displayMode.js';
-  import PlatformColumn from './PlatformColumn.svelte';
+  import { applyBoardSize } from '$lib/ipc/commands.js';
+  import LineGroup from './LineGroup.svelte';
   import LineStatusTicker from './LineStatusTicker.svelte';
 
   interface Props {
@@ -92,10 +98,188 @@
     stationName.length > 0 ? shortStationName(stationName).toUpperCase() : board.station_id,
   );
 
-  // Cap rows per direction tightly in the menubar popover so both
-  // directions fit on the 380×560 surface without scroll. The floating
-  // window has room for a longer list.
-  const rowsPerPlatform = $derived($displayMode === 'menubar' ? 4 : 6);
+  // ---------------------------------------------------------------------------
+  // Group arrivals by line, then by direction
+  //
+  // The Rust backend (`crates/tfl-board::build_board`) buckets arrivals by
+  // **Direction**, not by line — `Board.platforms[]` is at most seven
+  // entries (Northbound, Southbound, Eastbound, Westbound, Inbound,
+  // Outbound, Unknown), and a single direction bucket explicitly merges
+  // arrivals from multiple lines (e.g. King's Cross "Westbound" carries
+  // both hammersmith-city and metropolitan trains; Baker Street southbound
+  // has Bakerloo + Jubilee on shared platforms).
+  //
+  // For the line-grouped UI we have to invert the structure: walk every
+  // arrival, bucket by `line_id`, then by `direction` inside each line.
+  // This is the only correct grouping for multi-line interchanges —
+  // grouping by `Platform.arrivals[0].line_id` (the previous attempt)
+  // labels the entire direction column by whichever line was scheduled
+  // first and silently mis-colours every minority-line train.
+  //
+  // The synthetic `Platform` we hand to `PlatformColumn` carries
+  // `name = direction.label` and the line+direction-filtered arrivals.
+  // PlatformColumn's existing dedupe key
+  // `${line_id}|${platform_name}|${expected_arrival}` stays unique even
+  // when arrivals were merged from multiple physical platforms by the
+  // backend (their `platform_name` differs).
+  // ---------------------------------------------------------------------------
+
+  interface DirectionBucket {
+    key: string;
+    label: string;
+    arrivals: Arrival[];
+  }
+
+  interface LineBucket {
+    lineId: string;
+    lineName: string;
+    directions: DirectionBucket[];
+  }
+
+  // Canonical compass order. The backend guarantees Platform order in the
+  // same sequence (`crates/tfl-board::build_board`), but we apply our own
+  // sort because we are re-grouping per arrival and a line may be missing
+  // some directions (e.g. Bakerloo only has Northbound/Southbound at
+  // Baker Street, no Inbound/Outbound).
+  const DIRECTION_ORDER: Direction[] = [
+    'Northbound',
+    'Southbound',
+    'Eastbound',
+    'Westbound',
+    'Inbound',
+    'Outbound',
+    'Unknown',
+  ];
+
+  function directionKeyAndLabel(arrival: Arrival): { key: string; label: string } {
+    if (arrival.direction !== 'Unknown') {
+      return { key: arrival.direction, label: arrival.direction };
+    }
+    // Defensive fallback for the rare case where an arrival's direction
+    // didn't infer cleanly. Use the prefix of `platform_name` (TfL's raw
+    // string, e.g. "Inner Rail"), which the backend already used to
+    // populate Platform.name. Keys are namespaced so they can never
+    // collide with the canonical Direction enum keys.
+    const fallback = shortPlatformName(arrival.platform_name);
+    const safe = fallback.length > 0 ? fallback : 'Unknown';
+    return { key: `name:${safe}`, label: safe };
+  }
+
+  function compareDirections(a: DirectionBucket, b: DirectionBucket): number {
+    const aIdx = DIRECTION_ORDER.indexOf(a.key as Direction);
+    const bIdx = DIRECTION_ORDER.indexOf(b.key as Direction);
+    if (aIdx === -1 && bIdx === -1) return a.label.localeCompare(b.label);
+    if (aIdx === -1) return 1;
+    if (bIdx === -1) return -1;
+    return aIdx - bIdx;
+  }
+
+  // Two parallel arrays rather than a `Map` — the lint forbids mutable
+  // Maps even when scoped to a single derivation pass. With only ~20
+  // arrivals and ~5 lines on a busy station, O(n²) lookup is irrelevant.
+  const linesGrouped = $derived.by(() => {
+    // Insertion order in `lineBuckets` is the first-seen order across
+    // arrivals. `find` keeps TS happy without an out-of-bounds-aware
+    // index, and at ≤6 lines per station the linear scan is irrelevant.
+    const lineBuckets: LineBucket[] = [];
+
+    for (const platform of board.platforms) {
+      for (const arrival of platform.arrivals) {
+        const { line_id: lineId, line_name: lineName } = arrival;
+        let bucket = lineBuckets.find((b) => b.lineId === lineId);
+        if (bucket === undefined) {
+          bucket = { lineId, lineName, directions: [] };
+          lineBuckets.push(bucket);
+        } else if (bucket.lineName.length === 0 && lineName.length > 0) {
+          bucket.lineName = lineName;
+        }
+
+        const { key, label } = directionKeyAndLabel(arrival);
+        const existingDir = bucket.directions.find((d) => d.key === key);
+        if (existingDir === undefined) {
+          bucket.directions.push({ key, label, arrivals: [arrival] });
+        } else {
+          existingDir.arrivals.push(arrival);
+        }
+      }
+    }
+
+    for (const line of lineBuckets) {
+      line.directions.sort(compareDirections);
+    }
+    return lineBuckets;
+  });
+
+  // Rows-per-direction, tuned for the new (line × direction) grouping.
+  // The denominator is `lineCount`, not platform count — a 4-line
+  // interchange like Baker Street has up to 5 lines × 2 directions = 10
+  // direction columns, and pushing 5 rows into each would force a lot
+  // of vertical scroll. Drop rows aggressively for busier stations to
+  // reduce scroll, and pad rows for sparse stations so the dot-matrix
+  // panel doesn't look anaemic.
+  const rowsPerPlatform = $derived.by(() => {
+    const lineCount = linesGrouped.length;
+    if ($displayMode === 'menubar') {
+      if (lineCount <= 1) return 5;
+      if (lineCount <= 2) return 4;
+      if (lineCount <= 3) return 3;
+      return 2;
+    }
+    if (lineCount <= 1) return 6;
+    if (lineCount <= 2) return 6;
+    if (lineCount <= 3) return 5;
+    return 4;
+  });
+
+  // ---------------------------------------------------------------------------
+  // Adaptive window resize
+  //
+  // Picks a (width, height) tier from the line / platform count and the
+  // current display mode, then pushes it through `applyBoardSize` only when
+  // the tier changes. The renderer-side dedupe is what keeps this off the
+  // main-thread Cocoa dispatch on every poll tick (every 30 s the board
+  // updates but the line count rarely changes).
+  // ---------------------------------------------------------------------------
+
+  // Adaptive size tiers by line count. Width is fixed in menubar (the
+  // popover is anchored under the tray and width changes would re-trigger
+  // horizontal repositioning); width grows in window mode so multi-line
+  // interchanges have room for side-by-side direction columns. Heights
+  // are deliberately a bit larger than the worst-case "no scroll" need —
+  // the user explicitly preferred a taller popover over internal scroll
+  // on busy stations like Baker Street (5 lines).
+  function pickBoardSize(
+    mode: 'window' | 'menubar',
+    lineCount: number,
+  ): { width: number; height: number } {
+    if (mode === 'menubar') {
+      if (lineCount <= 1) return { width: 380, height: 520 };
+      if (lineCount <= 2) return { width: 380, height: 620 };
+      if (lineCount <= 3) return { width: 380, height: 720 };
+      return { width: 380, height: 800 };
+    }
+    if (lineCount <= 1) return { width: 700, height: 560 };
+    if (lineCount <= 2) return { width: 980, height: 680 };
+    if (lineCount <= 3) return { width: 1200, height: 760 };
+    return { width: 1200, height: 880 };
+  }
+
+  let lastSizeKey = $state('');
+
+  $effect(() => {
+    const lineCount = linesGrouped.length;
+    if (lineCount === 0) return;
+    const { width, height } = pickBoardSize($displayMode, lineCount);
+    const key = `${$displayMode}|${String(width)}x${String(height)}`;
+    if (key === lastSizeKey) return;
+    lastSizeKey = key;
+    void applyBoardSize(width, height).catch((err: unknown) => {
+      // Resize failures are non-fatal (renderer keeps working at the
+      // previous size); log so the dev console surfaces a regression
+      // without blocking the board render.
+      console.warn('[board] applyBoardSize failed', err);
+    });
+  });
 
   // ---------------------------------------------------------------------------
   // Window controls (window mode only)
@@ -232,14 +416,23 @@
     </div>
   </header>
 
-  <!-- Platforms grid -->
-  <div class="board__platforms" aria-label="Platform arrivals" role="region">
-    {#each board.platforms as platform (platform.name)}
-      <PlatformColumn {platform} maxRows={rowsPerPlatform} />
+  <!-- Arrivals area: stacked by line. Each line group renders one
+       direction column per direction, with the per-direction arrivals
+       filtered to that line — so a Bakerloo + Jubilee shared platform
+       at Baker Street shows up as separate Bakerloo and Jubilee groups
+       and the line-coloured stripe always matches the train. -->
+  <div class="board__platforms" aria-label="Arrivals by line" role="region">
+    {#each linesGrouped as group (group.lineId)}
+      <LineGroup
+        lineId={group.lineId}
+        lineName={group.lineName}
+        directions={group.directions}
+        maxRows={rowsPerPlatform}
+      />
     {/each}
 
-    {#if board.platforms.length === 0}
-      <div class="board__no-platforms" role="status">No platforms to display</div>
+    {#if linesGrouped.length === 0}
+      <div class="board__no-platforms" role="status">No arrivals to display</div>
     {/if}
   </div>
 
@@ -459,11 +652,13 @@
     border-color: var(--platform-label);
   }
 
-  /* Platforms grid */
+  /* Platforms area: line groups stack vertically. Each LineGroup owns its
+     own responsive grid of platform columns (auto-fit, minmax(180px,
+     1fr)), so the only direction we ever need to scroll here is vertical
+     when a station has more groups than the window can show at once. */
   .board__platforms {
     display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
+    flex-direction: column;
     gap: 1px;
     flex: 1;
     overflow-y: auto;
@@ -480,12 +675,5 @@
     font-family: var(--font-board);
     font-size: 1.2rem;
     opacity: 0.5;
-  }
-
-  /* Narrow screens: stack platforms vertically */
-  @media (max-width: 800px) {
-    .board__platforms {
-      flex-direction: column;
-    }
   }
 </style>
