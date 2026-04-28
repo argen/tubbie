@@ -54,8 +54,8 @@ use tokio::sync::RwLock;
 use tokio::task::AbortHandle;
 
 use commands::{
-    get_board, get_line_status, has_app_key, load_app_key, load_config, load_display_mode,
-    save_app_key, save_config, save_display_mode, search_stations,
+    apply_board_size, get_board, get_line_status, has_app_key, load_app_key, load_config,
+    load_display_mode, save_app_key, save_config, save_display_mode, search_stations,
 };
 use state::{AnyBoardService, AppState};
 use store_impl::StorePluginConfigStore;
@@ -507,6 +507,91 @@ pub(crate) fn apply_display_mode_effects_sync(
     Ok(())
 }
 
+/// Apply a logical-pixel size to the main window.
+///
+/// **MUST run on the macOS main thread** — `WebviewWindow::set_size` reaches
+/// `NSWindow::setFrame:display:` (and friends) which Cocoa asserts must be
+/// called on the main thread. Same constraint as the display-mode side-
+/// effects (see [`apply_display_mode_effects_sync`]). Use
+/// [`apply_board_size_effects`] from any non-main-thread caller.
+///
+/// In menubar mode the popover keeps its current top-left anchor and grows
+/// downward; we make a best-effort to keep the bottom edge on-screen by
+/// nudging the y position up if the new height would push it past the
+/// monitor's work area. This avoids a popover that disappears off the bottom
+/// of a small display when switching from a 1-line to a 3-line station.
+pub(crate) fn apply_board_size_sync(
+    app: &tauri::AppHandle,
+    width: f64,
+    height: f64,
+) -> Result<(), String> {
+    let Some(win) = app.get_webview_window("main") else {
+        return Ok(());
+    };
+    let _ = win.set_size(LogicalSize::new(width, height));
+
+    // Only the menubar popover is anchored under the tray and so vulnerable
+    // to bottom-edge clipping. Window mode is centered + draggable, so
+    // resize is harmless.
+    let in_menubar = app
+        .try_state::<AppState>()
+        .as_ref()
+        .and_then(|s| s.display_mode.try_read().ok().map(|g| g.clone()))
+        .map(|m| m == "menubar")
+        .unwrap_or(false);
+    if in_menubar {
+        clamp_window_above_screen_bottom(&win);
+    }
+    Ok(())
+}
+
+/// Slide the window up if its new height pushes the bottom edge past the
+/// current monitor's work area. Best-effort: any missing piece (no monitor,
+/// no position) leaves the window where it was. Reads the *current* outer
+/// position rather than recomputing under the tray icon — that data is only
+/// available from a tray click event, and the popover anchor at click time
+/// is already correct.
+fn clamp_window_above_screen_bottom(window: &tauri::WebviewWindow) {
+    let monitor = window
+        .current_monitor()
+        .ok()
+        .flatten()
+        .or_else(|| window.primary_monitor().ok().flatten());
+    let Some(monitor) = monitor else { return };
+    let Ok(pos) = window.outer_position() else {
+        return;
+    };
+    let Ok(size) = window.outer_size() else { return };
+    let mon_pos = monitor.position();
+    let mon_size = monitor.size();
+    let win_bottom = pos.y + size.height as i32;
+    let mon_bottom = mon_pos.y + mon_size.height as i32;
+    let margin = 8;
+    if win_bottom + margin > mon_bottom {
+        let new_y = (mon_bottom - size.height as i32 - margin).max(mon_pos.y);
+        let _ = window.set_position(PhysicalPosition::new(pos.x, new_y));
+    }
+}
+
+/// Apply a window resize from any thread. Hops to the macOS main thread
+/// and waits on a oneshot for completion. Mirrors
+/// [`apply_display_mode_effects`] — see invariant #8 in `CLAUDE.md`.
+pub(crate) async fn apply_board_size_effects(
+    app: &tauri::AppHandle,
+    width: f64,
+    height: f64,
+) -> Result<(), String> {
+    let app_clone = app.clone();
+    let (tx, rx) = tokio::sync::oneshot::channel::<Result<(), String>>();
+    app.run_on_main_thread(move || {
+        let res = apply_board_size_sync(&app_clone, width, height);
+        let _ = tx.send(res);
+    })
+    .map_err(|e| format!("dispatch to main thread failed: {e}"))?;
+    rx.await
+        .map_err(|e| format!("apply_board_size dropped before completion: {e}"))?
+}
+
 /// Apply the display-mode side-effects from any thread.
 ///
 /// Hops to the macOS main thread via `run_on_main_thread` and waits on a
@@ -766,6 +851,7 @@ pub fn run() {
             get_line_status,
             save_display_mode,
             load_display_mode,
+            apply_board_size,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tubbie");

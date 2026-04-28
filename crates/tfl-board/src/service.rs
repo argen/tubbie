@@ -100,6 +100,12 @@ impl<H: TflHttp + 'static, C: Clock + 'static> BoardService<H, C> {
     pub async fn refresh(&self, cfg: &BoardConfig) -> Result<Board, BoardError> {
         let raw_arrivals = self.client.get_arrivals(&cfg.station_id).await?;
         let filtered = apply_filters(raw_arrivals, cfg);
+        let filtered = drop_arrivals_for_lines_not_serving(
+            &cfg.station_id,
+            filtered,
+            &self.client,
+        )
+        .await;
         let board = build_board(&cfg.station_id, filtered, self.clock.now(), None);
         Ok(board)
     }
@@ -396,6 +402,62 @@ enum TickOutcome {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+/// Drop arrivals whose `line_id` isn't in the queried station's allowed
+/// line set, logging a warning per disallowed line so the divergence is
+/// visible in the dev console.
+///
+/// Why this exists: TfL occasionally surfaces an arrival under a
+/// stop-point that doesn't physically serve that line. The likely path
+/// is hub-merge (`TflClient::get_arrivals` for a hub station unions
+/// arrivals across sibling stop-points; a future API change or a
+/// corrupted child entry could leak), but it can also happen when TfL's
+/// own data is briefly inconsistent. Either way, rendering an
+/// "Hammersmith & City" group at Monument is wrong UX, so we filter at
+/// the service boundary using `Station.lines` (already populated with
+/// the hub-aware union by `TflClient::stop_points_cached`).
+///
+/// Fail-open: if the allowed set is empty (cache cold / station
+/// missing), we keep every arrival. Dropping a legitimate arrival is
+/// far worse than letting through a phantom one — and the cache is
+/// guaranteed warm in production by the time the second tick runs
+/// (the first stream tick + warm task in `lib.rs::setup`).
+async fn drop_arrivals_for_lines_not_serving<H: TflHttp>(
+    station_id: &str,
+    arrivals: Vec<Arrival>,
+    client: &TflClient<H>,
+) -> Vec<Arrival> {
+    let allowed = match client.allowed_line_ids_for(station_id).await {
+        Ok(set) if !set.is_empty() => set,
+        Ok(_) => return arrivals,
+        Err(e) => {
+            eprintln!(
+                "[tfl-board] allowed_line_ids_for({station_id}) failed; skipping line filter: {e}"
+            );
+            return arrivals;
+        }
+    };
+
+    // Track which disallowed lines we've already warned about so we log
+    // once per (station, line) pair per refresh — not once per arrival.
+    let mut warned: std::collections::HashSet<String> = std::collections::HashSet::new();
+    let mut kept: Vec<Arrival> = Vec::with_capacity(arrivals.len());
+    for arrival in arrivals {
+        if allowed.contains(&arrival.line_id) {
+            kept.push(arrival);
+            continue;
+        }
+        if warned.insert(arrival.line_id.clone()) {
+            let mut sorted: Vec<&String> = allowed.iter().collect();
+            sorted.sort();
+            eprintln!(
+                "[tfl-board] dropping arrival for line {:?} at station {station_id}: line not in station's allowed set ({sorted:?})",
+                arrival.line_id,
+            );
+        }
+    }
+    kept
+}
 
 /// Group filtered arrivals by compass direction and build a `Board`.
 ///

@@ -91,6 +91,58 @@ bottom of this doc, not just the unit tests.**
    deadlock — `run_on_main_thread` queues a user event that can only be
    drained after setup returns).
 
+9. **`apply_board_size` MUST hop to the macOS main thread too.**
+   `WebviewWindow::set_size` reaches `NSWindow::setFrame:display:` —
+   same Cocoa assertion as #8. The public async
+   `apply_board_size_effects` wrapper exists for exactly this reason;
+   the Tauri `apply_board_size` command in `commands.rs` calls it after
+   `validate_board_size`. Validation runs *before* dispatch so a buggy
+   renderer (NaN, infinity, out-of-range) never reaches Cocoa. The
+   renderer dedupes per tier (`lastSizeKey` in `Board.svelte`), so
+   per-tick board updates don't pound the main thread when nothing
+   about the layout changed. Don't bypass the dedupe by re-issuing the
+   resize from any other component; the Board owns it.
+
+10. **`BoardService::refresh` MUST drop arrivals whose `line_id` is
+    not served by the queried station.** TfL occasionally surfaces
+    predictions under stop-points that don't physically serve that
+    line (the most likely path is hub-merge in
+    `TflClient::get_arrivals`, where a sibling stop-point's prediction
+    leaks under the parent). The defensive filter
+    `drop_arrivals_for_lines_not_serving` in `crates/tfl-board/src/service.rs`
+    runs after `apply_filters` and uses
+    `TflClient::allowed_line_ids_for(station_id)` as the source of
+    truth — that method projects the hub-aware `Station.lines` field
+    that `stop_points_cached` already populates with the union across
+    every hub child. Fail-open semantics: when the stop-points cache is
+    cold (`read_fresh_cache` returns `None`), the allowed set is empty
+    and the filter is skipped — dropping legitimate arrivals because
+    of a cold cache is worse UX than letting one phantom through until
+    the cache warms (production hits this only for the very first
+    refresh; the warm task in `lib.rs::run` populates the cache after
+    the first board emit). A disallowed arrival emits one warning per
+    `(station, line)` pair per refresh on stderr with the
+    `[tfl-board]` prefix. Don't silence it — the warning is the only
+    signal we have that the upstream data shape is drifting.
+
+11. **Line-grouped UI MUST re-bucket arrivals per-line, not per-platform.**
+    The Rust backend groups arrivals by `Direction` — `Board.platforms[]`
+    is at most seven entries (Northbound … Unknown) and a single
+    direction bucket explicitly mixes lines (King's Cross "Westbound"
+    has hammersmith-city + metropolitan; Baker Street southbound has
+    Bakerloo + Jubilee on the shared bay platforms — see
+    `crates/tfl-board/tests/board_service_tests.rs::refresh_groups_by_direction`).
+    The frontend's `linesGrouped` derivation in `Board.svelte` walks
+    every arrival, buckets by `line_id`, then by `direction` inside
+    each line. Grouping by `Platform.arrivals[0].line_id` (the previous
+    naive approach) silently mis-colours every minority-line train;
+    don't reintroduce it. The synthetic platform handed to
+    `PlatformColumn` carries `name = direction.label` and the line+
+    direction-filtered arrivals — `PlatformColumn`'s dedupe key
+    `${line_id}|${platform_name}|${expected_arrival}` stays unique
+    because `platform_name` differs across the physical platforms the
+    backend merged.
+
 ## Test harness — the rules
 
 **Tests are not optional for this pipeline.** Visual smoke testing is
@@ -132,6 +184,8 @@ These tests must stay green or you're shipping a regression:
 | `crates/tfl-board/src/service.rs`                             | `stream_rebuilds_interval_when_poll_seconds_changes`     | poll_seconds applies live       |
 | `crates/tfl-board/src/service.rs`                             | `stream_drops_last_ok_when_station_id_changes`           | no cross-station data leak      |
 | `crates/tfl-board/tests/board_service_tests.rs`               | `stream_terminates_after_fatal_error_no_last_ok`         | infinite-stream contract        |
+| `crates/tfl-board/tests/board_service_tests.rs`               | `every_fixture_arrival_carries_a_line_id_known_to_the_station` | end-to-end: refresh through fixture → no out-of-set line_id reaches the board (uses `allowed_line_ids_for` as source of truth) |
+| `crates/tfl-board/tests/board_service_tests.rs`               | `refresh_drops_arrivals_for_lines_not_serving_the_station` | injects a phantom Bakerloo arrival at Belsize Park; defensive filter must drop it while keeping the legitimate Northern arrival |
 | `crates/tfl-client/tests/http_retry.rs`                       | `with_app_key_appends_query_param`                       | app_key reaches the wire        |
 | `crates/tfl-client/tests/http_retry.rs`                       | `concurrent_calls_share_429_cooldown`                    | rate-limit gate                 |
 | `web/src/lib/__tests__/dom/board-store-seed.dom.test.ts`      | latest-wins by `generated_at`                            | board store regression check    |
@@ -143,6 +197,11 @@ These tests must stay green or you're shipping a regression:
 | `src-tauri/src/commands.rs`                                   | `save_display_mode_invalid_value_does_not_mutate_state`  | rejected save leaves runtime + store untouched |
 | `src-tauri/src/commands.rs`                                   | `save_display_mode_idempotent_when_mode_unchanged`       | re-saving current mode is a no-op |
 | `web/src/lib/__tests__/dom/settings-display-mode-live.dom.test.ts` | radio reflects $displayMode; save updates store; rejection rolls back; same-mode click is a no-op | live-toggle UI contract |
+| `src-tauri/src/commands.rs`                                   | `validate_board_size_accepts_renderer_preset_table`      | each preset tier passes validation; bounds drift guard |
+| `src-tauri/src/commands.rs`                                   | `validate_board_size_rejects_out_of_range`               | buggy renderer can't crash Cocoa via degenerate `set_size` |
+| `src-tauri/src/commands.rs`                                   | `validate_board_size_rejects_non_finite`                 | NaN / infinity refused before reaching `NSWindow::setFrame:` |
+| `web/src/lib/__tests__/dom/board-line-groups.dom.test.ts`     | mixed-line direction bucket splits per-line; 5-line interchange renders 5 groups; directions sort by compass order; multi-platform merges within (line, direction) | line-grouped layout contract — covers Baker Street / King's Cross corner cases |
+| `web/src/lib/__tests__/dom/board-resize-request.dom.test.ts`  | each preset tier (1 / 2 / 3 / 4+ lines × menubar/window) triggers correct dims; same board re-render dedupes; switching stations re-fires | adaptive resize contract |
 
 If you add a new failure mode, add a test row here.
 
@@ -182,6 +241,30 @@ Before reporting work as complete:
        MUST keep flowing — the mode swap touches no stream state.
      - Switch mode, then change station. `save_config` still works
        (no lock starvation, no leaked Arc cycle).
+   - **Adaptive board resize + line-grouped layout** (only for
+     `apply_board_size` / `Board.svelte::pickBoardSize` /
+     `linesGrouped` changes). Cycle through this set of stations to
+     cover the line-count tiers and the multi-line corner cases:
+     - **1-line** (Belsize Park, Stockwell): menubar 380×520, window
+       700×560. One LINE header, two direction columns under it.
+     - **2-line** (Oxford Circus, Green Park): menubar 380×620, window
+       980×680. Two LINE headers stacked, two directions each.
+     - **3-line** (Tottenham Court Road, Bank): menubar 380×720, window
+       1200×760. Three LINE headers stacked.
+     - **4+ line** (Baker Street — Metropolitan / Bakerloo / Circle /
+       H&C / Jubilee — or King's Cross): menubar 380×800, window
+       1200×880. **Critical: every line stripe on every row must
+       match its line header** — no Bakerloo orange stripe under the
+       Metropolitan group, no Jubilee silver stripe under Bakerloo.
+       This is the line-grouping correctness check. If you see mixed
+       stripes, the per-arrival grouping (invariant #10) regressed.
+     - Switch back to a 1-line station. Window shrinks/popover shrinks
+       in a single resize step (no flicker, no intermediate sizes).
+     - Watch the dev log: one `apply_board_size` invocation per tier
+       transition; sitting on the same station for 60 s (two poll
+       ticks) MUST NOT issue any extra resize requests. The renderer-
+       side dedupe (`lastSizeKey`) is what protects the main-thread
+       Cocoa dispatch.
 
 ## Branching rules (also in `~/.claude/CLAUDE.md`)
 

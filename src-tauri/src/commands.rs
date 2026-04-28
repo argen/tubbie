@@ -239,6 +239,37 @@ pub(crate) async fn has_app_key_inner(state: &AppState) -> Result<bool, String> 
     Ok(key.is_some())
 }
 
+/// Validate a board-window size in logical pixels.
+///
+/// Bounds are deliberately wider than the current preset table so the
+/// renderer keeps full control over its tier choices, but tight enough that
+/// a renderer-side bug (NaN, infinity, negative number) can't ask Cocoa for
+/// a degenerate window. The lower bounds match the smallest reasonable
+/// popover; the upper bounds cover a 3-line × 3-platform station on a 4K
+/// display.
+pub(crate) fn validate_board_size(width: f64, height: f64) -> Result<(f64, f64), String> {
+    if !width.is_finite() || !height.is_finite() {
+        return Err(format!(
+            "validation: board size must be finite, got width={width}, height={height}"
+        ));
+    }
+    const MIN_W: f64 = 320.0;
+    const MAX_W: f64 = 1600.0;
+    const MIN_H: f64 = 400.0;
+    const MAX_H: f64 = 900.0;
+    if !(MIN_W..=MAX_W).contains(&width) {
+        return Err(format!(
+            "validation: width must be in [{MIN_W}, {MAX_W}], got {width}"
+        ));
+    }
+    if !(MIN_H..=MAX_H).contains(&height) {
+        return Err(format!(
+            "validation: height must be in [{MIN_H}, {MAX_H}], got {height}"
+        ));
+    }
+    Ok((width, height))
+}
+
 /// Validate a `display_mode` argument. Only `"window"` and `"menubar"` are
 /// accepted; the renderer must never persist an unrecognised value because
 /// startup branches on this string and would silently fall back to default.
@@ -415,6 +446,27 @@ pub async fn save_display_mode(
 #[tauri::command]
 pub async fn load_display_mode(state: State<'_, AppState>) -> Result<String, String> {
     load_display_mode_inner(&state).await
+}
+
+/// Resize the main window to fit the current board.
+///
+/// The renderer picks `(width, height)` from a small preset table tied to
+/// the current display mode and the station's line / platform count, and
+/// calls this command whenever the picked tier changes (it dedupes
+/// renderer-side so the IPC isn't hit on every board tick).
+///
+/// Hops to the macOS main thread internally — `set_size` reaches Cocoa,
+/// which asserts main-thread-only and crashes the process otherwise (see
+/// invariant #8 in `CLAUDE.md`). Validation runs *before* dispatch so an
+/// out-of-range request from a buggy renderer never reaches Cocoa.
+#[tauri::command]
+pub async fn apply_board_size(
+    width: f64,
+    height: f64,
+    app: tauri::AppHandle,
+) -> Result<(), String> {
+    let (w, h) = validate_board_size(width, height)?;
+    crate::apply_board_size_effects(&app, w, h).await
 }
 
 // ---------------------------------------------------------------------------
@@ -1434,5 +1486,77 @@ mod tests {
             "menubar",
             "idempotent save leaves the live lock at the same value"
         );
+    }
+
+    // -----------------------------------------------------------------------
+    // Board size (renderer-driven window resize)
+    // -----------------------------------------------------------------------
+
+    /// Each tier from the renderer's preset table must pass validation —
+    /// otherwise a perfectly normal "switch to a busy station" event would
+    /// be rejected and the window would stay too small. Guards against
+    /// over-tightening the bounds in [`validate_board_size`].
+    #[test]
+    fn validate_board_size_accepts_renderer_preset_table() {
+        // (width, height) tuples must mirror the table in
+        // Board.svelte::pickBoardSize. Both modes have a 4-tier ladder
+        // (1 / 2 / 3 / 4+ lines).
+        for (w, h) in [
+            // menubar tiers
+            (380.0, 520.0),
+            (380.0, 620.0),
+            (380.0, 720.0),
+            (380.0, 800.0),
+            // window tiers
+            (700.0, 560.0),
+            (980.0, 680.0),
+            (1200.0, 760.0),
+            (1200.0, 880.0),
+        ] {
+            validate_board_size(w, h)
+                .unwrap_or_else(|e| panic!("preset {w}x{h} should validate: {e}"));
+        }
+    }
+
+    /// Out-of-range values from a buggy renderer must be rejected before
+    /// reaching the main-thread Cocoa dispatch — a degenerate `set_size`
+    /// can leave the window unusable until the next launch.
+    #[test]
+    fn validate_board_size_rejects_out_of_range() {
+        assert!(validate_board_size(100.0, 600.0).is_err(), "width too small");
+        assert!(
+            validate_board_size(2000.0, 600.0).is_err(),
+            "width too large"
+        );
+        assert!(
+            validate_board_size(800.0, 100.0).is_err(),
+            "height too small"
+        );
+        assert!(
+            validate_board_size(800.0, 2000.0).is_err(),
+            "height too large"
+        );
+    }
+
+    /// NaN / infinity must never reach Cocoa — `NSWindow::setFrame:` traps
+    /// on non-finite values and crashes the process. The frontend converts
+    /// numbers via JSON which can express both, so we have to guard at the
+    /// IPC boundary.
+    #[test]
+    fn validate_board_size_rejects_non_finite() {
+        assert!(validate_board_size(f64::NAN, 600.0).is_err());
+        assert!(validate_board_size(800.0, f64::NAN).is_err());
+        assert!(validate_board_size(f64::INFINITY, 600.0).is_err());
+        assert!(validate_board_size(800.0, f64::NEG_INFINITY).is_err());
+    }
+
+    /// Validation returns the validated (width, height) so the caller can
+    /// pass it straight through to the main-thread dispatch — keeps the
+    /// signature symmetric with `apply_board_size_effects`.
+    #[test]
+    fn validate_board_size_returns_inputs_on_success() {
+        let (w, h) = validate_board_size(980.0, 720.0).unwrap();
+        assert_eq!(w, 980.0);
+        assert_eq!(h, 720.0);
     }
 }

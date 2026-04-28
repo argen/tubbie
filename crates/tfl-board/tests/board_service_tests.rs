@@ -210,6 +210,201 @@ async fn build_board_invariants_hold_for_every_station_fixture() {
     }
 }
 
+/// End-to-end integrity check: for every fixture station, every arrival
+/// in the built `Board` carries a `line_id` that is in the station's
+/// real line set.
+///
+/// **Source of truth.** The allowed line set is what `TflClient` returns
+/// from `allowed_line_ids_for(station_id)` — i.e. the *same* function
+/// the production filter inside `BoardService::refresh` uses to drop
+/// disallowed arrivals. By reusing it here, the test cannot drift from
+/// production behaviour: if either side regresses, both fail at once.
+///
+/// **What this guards.** Rendering a line group for a line that doesn't
+/// physically serve the station (e.g. a Hammersmith & City group at
+/// Monument). The most likely origin is the hub-merge path
+/// (`TflClient::get_arrivals` for hub stations), where a corrupted
+/// sibling, bad `hubNaptanCode`, or future change to the merge logic
+/// could surface a phantom line. The defensive filter is what keeps the
+/// UI honest in production; this test is what keeps the filter honest.
+///
+/// **Why it's not vacuous.** We assert (a) the allowed-line set is
+/// non-empty for every fixture station — a silent empty set would
+/// disable filtering and let any phantom line through; and (b) the
+/// final board contains only allowed lines. Both have to hold.
+#[tokio::test]
+async fn every_fixture_arrival_carries_a_line_id_known_to_the_station() {
+    let svc = fixture_service("2026-04-23T16:31:00Z");
+    // Warm the stop-points cache exactly the way `lib.rs` does in
+    // production. Without this the first `allowed_line_ids_for` call
+    // for each station triggers its own warm and the test-time mutex
+    // contention masks bugs in the hub-line merge step.
+    svc.warm_stop_points_cache()
+        .await
+        .expect("warm stop-points cache for integrity test");
+
+    let client_for_lookup = std::sync::Arc::new(tfl_client::TflClient::new(
+        tfl_client::fixture::FixtureTflHttp::new(fixtures_dir()),
+    ));
+    client_for_lookup
+        .warm_stop_points_cache()
+        .await
+        .expect("warm shared lookup client");
+
+    for station_id in every_arrivals_fixture() {
+        let allowed = client_for_lookup
+            .allowed_line_ids_for(&station_id)
+            .await
+            .expect("allowed_line_ids_for must succeed against fixture data");
+
+        assert!(
+            !allowed.is_empty(),
+            "no allowed lines resolved for {station_id} — fixture data is \
+             missing the station's lineModeGroups, which would silently \
+             disable the defensive filter"
+        );
+
+        let cfg = BoardConfig::new(&station_id);
+        let board = svc
+            .refresh(&cfg)
+            .await
+            .unwrap_or_else(|e| panic!("refresh failed for {station_id}: {e}"));
+
+        for platform in &board.platforms {
+            for arrival in &platform.arrivals {
+                assert!(
+                    allowed.contains(&arrival.line_id),
+                    "station {station_id} surfaced an arrival with line_id {:?} \
+                     (towards {:?} in column {:?}). The defensive filter in \
+                     BoardService::refresh should have dropped this — most \
+                     likely `Station.lines` lacks the line, or the filter \
+                     regressed. Allowed set: {:?}.",
+                    arrival.line_id,
+                    arrival.towards,
+                    platform.name,
+                    {
+                        let mut sorted: Vec<&String> = allowed.iter().collect();
+                        sorted.sort();
+                        sorted
+                    },
+                );
+            }
+        }
+    }
+}
+
+/// Direct unit test for the defensive filter: hand the service
+/// arrivals containing a phantom line (one that the station doesn't
+/// serve) and prove the resulting board doesn't carry it. Runs end-to-
+/// end through the real fixture-backed client so the test exercises
+/// the same `allowed_line_ids_for` lookup that production uses.
+///
+/// This is the test that would fail loudly if the filter ever stopped
+/// dropping disallowed lines — `every_fixture_arrival_carries_…`
+/// passes when fixtures happen to be clean, but this one specifically
+/// constructs the bug shape and asserts it gets neutralised.
+#[tokio::test]
+async fn refresh_drops_arrivals_for_lines_not_serving_the_station() {
+    use tfl_client::fixture::FixtureTflHttp;
+    use tfl_client::TflClient;
+
+    // Belsize Park serves only the Northern line. Build a custom http
+    // layer that returns a synthetic arrival list including a phantom
+    // Bakerloo train (which can't physically appear at BZP) alongside
+    // a real Northern train. The defensive filter must drop the
+    // Bakerloo entry; the Northern entry must survive.
+    let phantom_payload = serde_json::json!([
+        {
+            "id": "1",
+            "stationName": "Belsize Park Underground Station",
+            "platformName": "Northbound - Platform 1",
+            "lineId": "northern",
+            "lineName": "Northern",
+            "destinationName": "Edgware Underground Station",
+            "towards": "Edgware",
+            "currentLocation": "On schedule",
+            "timeToStation": 60,
+            "expectedArrival": "2026-04-23T16:32:00Z",
+            "naptanId": "940GZZLUBZP",
+            "direction": "outbound",
+            "modeName": "tube",
+        },
+        {
+            "id": "2",
+            "stationName": "Belsize Park Underground Station",
+            "platformName": "Northbound - Platform 1",
+            "lineId": "bakerloo", // PHANTOM — Bakerloo doesn't serve BZP
+            "lineName": "Bakerloo",
+            "destinationName": "Elephant & Castle",
+            "towards": "Elephant",
+            "currentLocation": "On schedule",
+            "timeToStation": 90,
+            "expectedArrival": "2026-04-23T16:32:30Z",
+            "naptanId": "940GZZLUBZP",
+            "direction": "outbound",
+            "modeName": "tube",
+        },
+    ]);
+
+    // Use the existing fixture transport for stop-points + line-status,
+    // but override the arrivals response for BZP with our phantom-laced
+    // payload. The simplest way is to write the payload to a tempfile-
+    // backed fixture dir; here we instead build a FixtureTflHttp at the
+    // real fixtures dir and rely on the fact that the existing BZP
+    // arrivals fixture is already a single-line Northern board — so we
+    // injection-test by wrapping the http in a custom impl.
+    struct InjectingHttp {
+        inner: FixtureTflHttp,
+        bzp_payload: serde_json::Value,
+    }
+
+    impl tfl_client::http::TflHttp for InjectingHttp {
+        async fn fetch(&self, kind: &str, id: &str) -> Result<serde_json::Value, TflError> {
+            if kind == "arrivals" && id == "940GZZLUBZP" {
+                return Ok(self.bzp_payload.clone());
+            }
+            self.inner.fetch(kind, id).await
+        }
+    }
+
+    let injecting = InjectingHttp {
+        inner: FixtureTflHttp::new(fixtures_dir()),
+        bzp_payload: phantom_payload,
+    };
+
+    let client = std::sync::Arc::new(TflClient::new(injecting));
+    client
+        .warm_stop_points_cache()
+        .await
+        .expect("warm stop-points");
+
+    let svc = BoardService::new(
+        std::sync::Arc::clone(&client),
+        tfl_client::clock::FakeClock::from_rfc3339("2026-04-23T16:31:00Z").unwrap(),
+    );
+
+    let cfg = BoardConfig::new("940GZZLUBZP");
+    let board = svc.refresh(&cfg).await.expect("refresh BZP");
+
+    let mut surfaced_lines: std::collections::BTreeSet<String> =
+        std::collections::BTreeSet::new();
+    for platform in &board.platforms {
+        for arrival in &platform.arrivals {
+            surfaced_lines.insert(arrival.line_id.clone());
+        }
+    }
+
+    assert!(
+        surfaced_lines.contains("northern"),
+        "the legitimate Northern arrival must reach the board; got {surfaced_lines:?}"
+    );
+    assert!(
+        !surfaced_lines.contains("bakerloo"),
+        "the phantom Bakerloo arrival must be dropped by the defensive \
+         filter; surfaced lines: {surfaced_lines:?}"
+    );
+}
+
 // ---------------------------------------------------------------------------
 // Test 2: refresh_groups_by_direction (KSX — 4+ lines merged per compass direction)
 // ---------------------------------------------------------------------------
