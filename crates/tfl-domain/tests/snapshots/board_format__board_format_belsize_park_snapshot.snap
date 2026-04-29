@@ -1,13 +1,16 @@
 ---
 source: crates/tfl-domain/tests/board_format.rs
-assertion_line: 61
 expression: rendered
 ---
 [Northbound - Platform 1]
-  4 mins  Edgware Underground Station
-  14 mins  Edgware Underground Station
-  29 mins  Edgware Underground Station
-  29 mins  Edgware Underground Station
+   1 min  Edgware Underground Station
+  5 mins  Edgware Underground Station
+  11 mins  Edgware Underground Station
+  15 mins  Edgware Underground Station
+  20 mins  Edgware Underground Station
+  28 mins  Edgware Underground Station
 [Southbound - Platform 2]
-  2 mins  Battersea Power Station Underground Station
+     Due  Battersea Power Station Underground Station
   12 mins  Battersea Power Station Underground Station
+  18 mins  Battersea Power Station Underground Station
+  20 mins  Battersea Power Station Underground Station

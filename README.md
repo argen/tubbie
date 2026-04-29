@@ -3,7 +3,7 @@
   Tubbie
 </h1>
 
-> A desktop dot-matrix arrivals board for the London Underground, powered by [TfL's Unified API](https://api.tfl.gov.uk). Built with Tauri v2, SvelteKit, and Rust.
+> A desktop dot-matrix arrivals board for the London Underground, DLR, London Overground, and Elizabeth line, powered by [TfL's Unified API](https://api.tfl.gov.uk). Built with Tauri v2, SvelteKit, and Rust.
 
 [![CI](https://github.com/argen/tubbie/actions/workflows/ci.yml/badge.svg)](https://github.com/argen/tubbie/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -15,16 +15,16 @@
 
 ## What it is
 
-Tubbie replicates the classic amber LED dot-matrix boards found on Underground platforms. Pick any tube station, filter by line and direction, and watch real-time arrival predictions scroll in. Four built-in themes — classic amber, classic orange, modern white, and high-contrast — match the visual character of different eras of board hardware.
+Tubbie replicates the classic amber LED dot-matrix boards found on Underground platforms. Pick any station on the **Tube, DLR, London Overground (Mildmay / Lioness / Suffragette / Windrush / Weaver / Liberty), or Elizabeth line**, filter by line and direction, and watch real-time arrival predictions scroll in. Four built-in themes — classic amber, classic orange, modern white, and high-contrast — match the visual character of different eras of board hardware.
 
 ## Features
 
-- Real-time arrivals for any London Underground station, grouped by platform
-- Line and direction filters
+- Real-time arrivals for any London Underground, DLR, Overground, or Elizabeth-line station, grouped by line and direction
+- Line and direction filters across all surfaced modes
 - Four visual themes (classic-amber, classic-orange, modern-white, high-contrast)
 - Dot-matrix typography with animated row entry, character-reveal, marquee ticker, and "Due" flash
 - Settings persisted across restarts via Tauri's secure store
-- Anonymous TfL API access by default (50 req/min); optionally supply your own app key
+- Anonymous TfL API access by default (50 req/min); optionally supply your own app key (500 req/min)
 - Stale-data fallback: last-known arrivals shown when offline, with a visible badge
 
 ## Requirements

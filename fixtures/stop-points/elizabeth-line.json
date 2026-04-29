@@ -1,0 +1,2034 @@
+{
+  "$type": "Tfl.Api.Presentation.Entities.StopPointsResponse, Tfl.Api.Presentation.Entities",
+  "stopPoints": [
+    {
+      "commonName": "Abbey Wood Station",
+      "hubNaptanCode": "HUBABW",
+      "id": "9100ABWDXR0",
+      "lat": 51.491284,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": 0.121087,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Abbey Wood Station",
+      "hubNaptanCode": "HUBABW",
+      "id": "9100ABWDXR1",
+      "lat": 51.491221,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": 0.121085,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Acton Main Line Station",
+      "id": "9100ACTONML0",
+      "lat": 51.516747,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "great-western-railway"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.269684,
+      "modes": [
+        "elizabeth-line",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Burnham (Berks) Rail Station",
+      "id": "9100BNHAM0",
+      "lat": 51.523506,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.646374,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Bond Street Station",
+      "hubNaptanCode": "HUBBDS",
+      "id": "9100BONDST0",
+      "lat": 51.51369,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.149517,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Bond Street Station",
+      "hubNaptanCode": "HUBBDS",
+      "id": "9100BONDST1",
+      "lat": 51.51339,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.149371,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Brentwood Rail Station",
+      "id": "9100BRTWOOD1",
+      "lat": 51.613567,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": 0.300147,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Brentwood Rail Station",
+      "id": "9100BRTWOOD2",
+      "lat": 51.613684,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": 0.300153,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Canary Wharf Rail Station",
+      "hubNaptanCode": "HUBCAW",
+      "id": "9100CANWHRF0",
+      "lat": 51.506321,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.018815,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Canary Wharf Rail Station",
+      "hubNaptanCode": "HUBCAW",
+      "id": "9100CANWHRF1",
+      "lat": 51.506079,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.018868,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Chadwell Heath Station",
+      "id": "9100CHDWLHT1",
+      "lat": 51.568094,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": 0.129394,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Custom House Station",
+      "hubNaptanCode": "HUBCUS",
+      "id": "9100CUSTMHS0",
+      "lat": 51.50986,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": 0.026677,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Custom House Station",
+      "hubNaptanCode": "HUBCUS",
+      "id": "9100CUSTMHS1",
+      "lat": 51.509769,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": 0.02673,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Ealing Broadway Station",
+      "hubNaptanCode": "HUBEAL",
+      "id": "9100EALINGB0",
+      "lat": 51.514643,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "great-western-railway"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.30173,
+      "modes": [
+        "elizabeth-line",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Ealing Broadway Station",
+      "hubNaptanCode": "HUBEAL",
+      "id": "9100EALINGB1",
+      "lat": 51.514743,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "great-western-railway"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.301755,
+      "modes": [
+        "elizabeth-line",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Farringdon Station",
+      "hubNaptanCode": "HUBZFD",
+      "id": "9100FRNDXR0",
+      "lat": 51.520419,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.105237,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Farringdon Station",
+      "hubNaptanCode": "HUBZFD",
+      "id": "9100FRNDXR1",
+      "lat": 51.520189,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.104915,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Forest Gate Station",
+      "id": "9100FRSTGT0",
+      "lat": 51.549297,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": 0.023842,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Forest Gate Station",
+      "id": "9100FRSTGT1",
+      "lat": 51.54928,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": 0.024303,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Gidea Park Station",
+      "id": "9100GIDEAPK1",
+      "lat": 51.582217,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": 0.206081,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Goodmayes Station",
+      "id": "9100GODMAYS1",
+      "lat": 51.565748,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": 0.111392,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Goodmayes Station",
+      "id": "9100GODMAYS2",
+      "lat": 51.565496,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": 0.110904,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Hanwell Station",
+      "id": "9100HANWELL0",
+      "lat": 51.511888,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.338524,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Hayes & Harlington Station",
+      "id": "9100HAYESAH0",
+      "lat": 51.502935,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "great-western-railway"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.420113,
+      "modes": [
+        "elizabeth-line",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Harold Wood Station",
+      "id": "9100HRLDWOD2",
+      "lat": 51.593319,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": 0.233834,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Heathrow Terminals 2 & 3 Rail Station",
+      "hubNaptanCode": "HUBH13",
+      "id": "9100HTRWAPT0",
+      "lat": 51.471987,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "heathrow-express"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.454788,
+      "modes": [
+        "elizabeth-line",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Heathrow Terminal 4",
+      "hubNaptanCode": "HUBHX4",
+      "id": "9100HTRWTM40",
+      "lat": 51.458674,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.446256,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Heathrow Terminal 5",
+      "hubNaptanCode": "HUBHX5",
+      "id": "9100HTRWTM50",
+      "lat": 51.472193,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "heathrow-express"
+          ]
+        }
+      ],
+      "lon": -0.4864,
+      "modes": [
+        "elizabeth-line",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Ilford Station",
+      "id": "9100ILFORD2",
+      "lat": 51.559063,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": 0.068682,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Iver Rail Station",
+      "id": "9100IVER1",
+      "lat": 51.508503,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "great-western-railway"
+          ]
+        }
+      ],
+      "lon": -0.506726,
+      "modes": [
+        "elizabeth-line",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Iver Rail Station",
+      "id": "9100IVER2",
+      "lat": 51.508411,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.506585,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Langley (Berks) Rail Station",
+      "id": "9100LANGLEY0",
+      "lat": 51.507712,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.541104,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Liverpool Street Station",
+      "hubNaptanCode": "HUBLST",
+      "id": "9100LIVST0",
+      "lat": 51.518381,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "c2c",
+            "greater-anglia"
+          ]
+        }
+      ],
+      "lon": -0.081092,
+      "modes": [
+        "overground",
+        "national-rail",
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Liverpool Street Station",
+      "hubNaptanCode": "HUBLST",
+      "id": "9100LIVSTLL0",
+      "lat": 51.518381,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.081092,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Liverpool Street Station",
+      "hubNaptanCode": "HUBLST",
+      "id": "9100LIVSTLL1",
+      "lat": 51.517722,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.082043,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Manor Park Station",
+      "id": "9100MANRPK0",
+      "lat": 51.552291,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": 0.045107,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Manor Park Station",
+      "id": "9100MANRPK1",
+      "lat": 51.552262,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": 0.046274,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Maidenhead Rail Station",
+      "id": "9100MDNHEAD0",
+      "lat": 51.518305,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.722253,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Maryland Station",
+      "id": "9100MRYLAND0",
+      "lat": 51.545937,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": 0.005852,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Maryland Station",
+      "id": "9100MRYLAND1",
+      "lat": 51.546037,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": 0.005784,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Paddington Station",
+      "hubNaptanCode": "HUBPAD",
+      "id": "9100PADTLL0",
+      "lat": 51.516995,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.177388,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Paddington Station",
+      "hubNaptanCode": "HUBPAD",
+      "id": "9100PADTLL1",
+      "lat": 51.516451,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.177107,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Paddington Station",
+      "hubNaptanCode": "HUBPAD",
+      "id": "9100PADTON0",
+      "lat": 51.516995,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "great-western-railway",
+            "heathrow-express"
+          ]
+        }
+      ],
+      "lon": -0.177388,
+      "modes": [
+        "elizabeth-line",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Reading Rail Station",
+      "id": "9100RDNGSTN0",
+      "lat": 51.458786,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.971849,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Romford Station",
+      "id": "9100ROMFORD3",
+      "lat": 51.574578,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": 0.181768,
+      "modes": [
+        "national-rail",
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Shenfield Rail Station",
+      "id": "9100SHENFLD2",
+      "lat": 51.630426,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        }
+      ],
+      "lon": 0.329929,
+      "modes": [
+        "elizabeth-line",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Slough Rail Station",
+      "id": "9100SLOUGH0",
+      "lat": 51.51202,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.591924,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Stratford Station",
+      "hubNaptanCode": "HUBSRA",
+      "id": "9100STFD5",
+      "lat": 51.542236,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.002819,
+      "modes": [
+        "elizabeth-line",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Southall Station",
+      "id": "9100STHALL0",
+      "lat": 51.505987,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "great-western-railway"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.377543,
+      "modes": [
+        "national-rail",
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Seven Kings Station",
+      "id": "9100SVNKNGS0",
+      "lat": 51.563916,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        }
+      ],
+      "lon": 0.096215,
+      "modes": [
+        "elizabeth-line",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Seven Kings Station",
+      "id": "9100SVNKNGS1",
+      "lat": 51.563961,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": 0.096203,
+      "modes": [
+        "elizabeth-line",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Taplow Rail Station",
+      "id": "9100TAPLOW0",
+      "lat": 51.523402,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.681505,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Tottenham Court Road Station",
+      "hubNaptanCode": "HUBTCR",
+      "id": "9100TOTCTRD0",
+      "lat": 51.515698,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.13044,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Tottenham Court Road Station",
+      "hubNaptanCode": "HUBTCR",
+      "id": "9100TOTCTRD1",
+      "lat": 51.515005,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.130396,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Twyford Rail Station",
+      "id": "9100TWYFORD0",
+      "lat": 51.475534,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.863293,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Whitechapel Station",
+      "hubNaptanCode": "HUBZWL",
+      "id": "9100WCHAPXR0",
+      "lat": 51.520392,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.060121,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Whitechapel Station",
+      "hubNaptanCode": "HUBZWL",
+      "id": "9100WCHAPXR1",
+      "lat": 51.520094,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.060048,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "West Drayton Station",
+      "id": "9100WDRYTON1",
+      "lat": 51.509829,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "great-western-railway"
+          ]
+        }
+      ],
+      "lon": -0.47217,
+      "modes": [
+        "national-rail",
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "West Ealing Station",
+      "id": "9100WEALING0",
+      "lat": 51.513411,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "great-western-railway"
+          ]
+        }
+      ],
+      "lon": -0.322313,
+      "modes": [
+        "elizabeth-line",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "West Ealing Station",
+      "id": "9100WEALING1",
+      "lat": 51.513465,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "great-western-railway"
+          ]
+        }
+      ],
+      "lon": -0.322325,
+      "modes": [
+        "national-rail",
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Woolwich Station",
+      "id": "9100WOLWXR0",
+      "lat": 51.492168,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": 0.070593,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Woolwich Station",
+      "id": "9100WOLWXR1",
+      "lat": 51.492017,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": 0.0705,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Abbey Wood",
+      "hubNaptanCode": "HUBABW",
+      "id": "910GABWDXR",
+      "lat": 51.491284,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": 0.121087,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Acton Main Line Rail Station",
+      "id": "910GACTONML",
+      "lat": 51.51718,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "great-western-railway"
+          ]
+        }
+      ],
+      "lon": -0.266756,
+      "modes": [
+        "national-rail",
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Burnham (Berks) Rail Station",
+      "id": "910GBNHAM",
+      "lat": 51.523506,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "great-western-railway"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.646374,
+      "modes": [
+        "elizabeth-line",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Bond Street",
+      "hubNaptanCode": "HUBBDS",
+      "id": "910GBONDST",
+      "lat": 51.513895,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.147246,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Brentwood Rail Station",
+      "id": "910GBRTWOOD",
+      "lat": 51.613605,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": 0.299586,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Canary Wharf",
+      "hubNaptanCode": "HUBCAW",
+      "id": "910GCANWHRF",
+      "lat": 51.506203,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.018834,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Chadwell Heath Rail Station",
+      "id": "910GCHDWLHT",
+      "lat": 51.568039,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": 0.128958,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Custom House Rail Station",
+      "hubNaptanCode": "HUBCUS",
+      "id": "910GCUSTMHS",
+      "lat": 51.509769,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": 0.02673,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Ealing Broadway Rail Station",
+      "hubNaptanCode": "HUBEAL",
+      "id": "910GEALINGB",
+      "lat": 51.514841,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "great-western-railway"
+          ]
+        }
+      ],
+      "lon": -0.301752,
+      "modes": [
+        "elizabeth-line",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Farringdon",
+      "hubNaptanCode": "HUBZFD",
+      "id": "910GFRNDXR",
+      "lat": 51.520189,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.104915,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Forest Gate Rail Station",
+      "id": "910GFRSTGT",
+      "lat": 51.549432,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": 0.024353,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Gidea Park Rail Station",
+      "id": "910GGIDEAPK",
+      "lat": 51.581904,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        }
+      ],
+      "lon": 0.205964,
+      "modes": [
+        "elizabeth-line",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Goodmayes Rail Station",
+      "id": "910GGODMAYS",
+      "lat": 51.565579,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": 0.110807,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Hanwell Rail Station",
+      "id": "910GHANWELL",
+      "lat": 51.511835,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.338583,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Hayes & Harlington Rail Station",
+      "id": "910GHAYESAH",
+      "lat": 51.503096,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "great-western-railway"
+          ]
+        }
+      ],
+      "lon": -0.420683,
+      "modes": [
+        "elizabeth-line",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Harold Wood Rail Station",
+      "id": "910GHRLDWOD",
+      "lat": 51.592766,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": 0.233129,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Heathrow Terminals 2 & 3 Rail Station",
+      "hubNaptanCode": "HUBH13",
+      "id": "910GHTRWAPT",
+      "lat": 51.471987,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "heathrow-express"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.454788,
+      "modes": [
+        "elizabeth-line",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Heathrow Terminal 4 Rail Station",
+      "hubNaptanCode": "HUBHX4",
+      "id": "910GHTRWTM4",
+      "lat": 51.458268,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.445463,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Heathrow Terminal 5 Rail Station",
+      "hubNaptanCode": "HUBHX5",
+      "id": "910GHTRWTM5",
+      "lat": 51.470053,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "heathrow-express"
+          ]
+        }
+      ],
+      "lon": -0.490589,
+      "modes": [
+        "elizabeth-line",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Ilford Rail Station",
+      "id": "910GILFORD",
+      "lat": 51.559118,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        }
+      ],
+      "lon": 0.06968,
+      "modes": [
+        "national-rail",
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Iver Rail Station",
+      "id": "910GIVER",
+      "lat": 51.508503,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "great-western-railway"
+          ]
+        }
+      ],
+      "lon": -0.506726,
+      "modes": [
+        "elizabeth-line",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Langley (Berks) Rail Station",
+      "id": "910GLANGLEY",
+      "lat": 51.508062,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "great-western-railway"
+          ]
+        }
+      ],
+      "lon": -0.541756,
+      "modes": [
+        "elizabeth-line",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "London Liverpool Street Rail Station",
+      "hubNaptanCode": "HUBLST",
+      "id": "910GLIVST",
+      "lat": 51.517991,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "c2c",
+            "greater-anglia"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.081426,
+      "modes": [
+        "national-rail",
+        "elizabeth-line",
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Liverpool Street",
+      "hubNaptanCode": "HUBLST",
+      "id": "910GLIVSTLL",
+      "lat": 51.517721,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.082043,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Manor Park Rail Station",
+      "id": "910GMANRPK",
+      "lat": 51.552477,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": 0.046342,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Maidenhead Rail Station",
+      "id": "910GMDNHEAD",
+      "lat": 51.518669,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "great-western-railway"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.72266,
+      "modes": [
+        "national-rail",
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Maryland Rail Station",
+      "id": "910GMRYLAND",
+      "lat": 51.546081,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": 0.005815,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Paddington",
+      "hubNaptanCode": "HUBPAD",
+      "id": "910GPADTLL",
+      "lat": 51.516449,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.177107,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "London Paddington Rail Station",
+      "hubNaptanCode": "HUBPAD",
+      "id": "910GPADTON",
+      "lat": 51.515996,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "great-western-railway",
+            "heathrow-express"
+          ]
+        }
+      ],
+      "lon": -0.176174,
+      "modes": [
+        "elizabeth-line",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Reading Rail Station",
+      "id": "910GRDNGSTN",
+      "lat": 51.458786,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "great-western-railway",
+            "south-western-railway"
+          ]
+        }
+      ],
+      "lon": -0.971863,
+      "modes": [
+        "elizabeth-line",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Romford Rail Station",
+      "id": "910GROMFORD",
+      "lat": 51.574829,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "liberty"
+          ]
+        }
+      ],
+      "lon": 0.183237,
+      "modes": [
+        "elizabeth-line",
+        "national-rail",
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Shenfield Rail Station",
+      "id": "910GSHENFLD",
+      "lat": 51.630877,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": 0.329851,
+      "modes": [
+        "elizabeth-line",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Slough Rail Station",
+      "id": "910GSLOUGH",
+      "lat": 51.51188,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "great-western-railway"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.59151,
+      "modes": [
+        "national-rail",
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Stratford (London) Rail Station",
+      "hubNaptanCode": "HUBSRA",
+      "id": "910GSTFD",
+      "lat": 51.541895,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "greater-anglia",
+            "c2c"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.003397,
+      "modes": [
+        "elizabeth-line",
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Southall Rail Station",
+      "id": "910GSTHALL",
+      "lat": 51.505957,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "great-western-railway"
+          ]
+        }
+      ],
+      "lon": -0.37861,
+      "modes": [
+        "national-rail",
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Seven Kings Rail Station",
+      "id": "910GSVNKNGS",
+      "lat": 51.564026,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        }
+      ],
+      "lon": 0.0971,
+      "modes": [
+        "national-rail",
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Taplow Rail Station",
+      "id": "910GTAPLOW",
+      "lat": 51.523562,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "great-western-railway"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.68137,
+      "modes": [
+        "national-rail",
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Tottenham Court Road",
+      "hubNaptanCode": "HUBTCR",
+      "id": "910GTOTCTRD",
+      "lat": 51.515698,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.13044,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Twyford Rail Station",
+      "id": "910GTWYFORD",
+      "lat": 51.475534,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "great-western-railway"
+          ]
+        }
+      ],
+      "lon": -0.863293,
+      "modes": [
+        "elizabeth-line",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Whitechapel",
+      "hubNaptanCode": "HUBZWL",
+      "id": "910GWCHAPXR",
+      "lat": 51.51943,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.060191,
+      "modes": [
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "West Drayton Rail Station",
+      "id": "910GWDRYTON",
+      "lat": 51.510055,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "great-western-railway"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.472234,
+      "modes": [
+        "national-rail",
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "West Ealing Rail Station",
+      "id": "910GWEALING",
+      "lat": 51.513506,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "great-western-railway"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.320133,
+      "modes": [
+        "national-rail",
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Woolwich",
+      "id": "910GWOLWXR",
+      "lat": 51.492168,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "n53",
+            "244",
+            "122",
+            "53",
+            "96",
+            "469",
+            "54",
+            "422",
+            "380",
+            "291",
+            "301",
+            "99",
+            "n472",
+            "sl11",
+            "672",
+            "180",
+            "n1",
+            "177",
+            "161"
+          ]
+        }
+      ],
+      "lon": 0.070593,
+      "modes": [
+        "bus",
+        "elizabeth-line"
+      ]
+    }
+  ],
+  "total": 119
+}

@@ -104,6 +104,30 @@ describe('ArrivalRow — line colour stripe', () => {
     const li = screen.getByRole('listitem');
     expect(li.style.getPropertyValue('--line-color')).toBe('transparent');
   });
+
+  // London Overground was split into six independently-named lines in
+  // November 2024. Each must resolve to its own CSS variable so the per-row
+  // stripe matches the per-line group header in `Board.svelte`.
+  it.each([
+    ['mildmay', 'var(--line-mildmay)'],
+    ['lioness', 'var(--line-lioness)'],
+    ['suffragette', 'var(--line-suffragette)'],
+    ['windrush', 'var(--line-windrush)'],
+    ['weaver', 'var(--line-weaver)'],
+    ['liberty', 'var(--line-liberty)'],
+  ])('maps %s to %s', (lineId, expected) => {
+    const og: Arrival = { ...sampleArrival, line_id: lineId };
+    render(ArrivalRow, { props: { arrival: og, rank: 1 } });
+    const li = screen.getByRole('listitem');
+    expect(li.style.getPropertyValue('--line-color')).toBe(expected);
+  });
+
+  it('aliases legacy "london-overground" to the same overground colour as the named lines', () => {
+    const legacy: Arrival = { ...sampleArrival, line_id: 'london-overground' };
+    render(ArrivalRow, { props: { arrival: legacy, rank: 1 } });
+    const li = screen.getByRole('listitem');
+    expect(li.style.getPropertyValue('--line-color')).toBe('var(--line-overground)');
+  });
 });
 
 describe('ArrivalRow — reduced-motion', () => {

@@ -1,0 +1,3527 @@
+{
+  "$type": "Tfl.Api.Presentation.Entities.StopPointsResponse, Tfl.Api.Presentation.Entities",
+  "stopPoints": [
+    {
+      "commonName": "Abbey Road DLR Station",
+      "id": "4900ZZDLABR0",
+      "lat": 51.53209,
+      "lineModeGroups": [],
+      "lon": 0.00383,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Abbey Road DLR Station",
+      "id": "4900ZZDLABR1",
+      "lat": 51.5327,
+      "lineModeGroups": [],
+      "lon": 0.0037,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "All Saints",
+      "id": "4900ZZDLALL1",
+      "lat": 51.51113,
+      "lineModeGroups": [],
+      "lon": -0.01291,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "All Saints",
+      "id": "4900ZZDLALL2",
+      "lat": 51.5112,
+      "lineModeGroups": [],
+      "lon": -0.01311,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Blackwall Station",
+      "id": "4900ZZDLBA2",
+      "lat": 51.50812,
+      "lineModeGroups": [],
+      "lon": -0.00656,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Beckton Station",
+      "id": "4900ZZDLBEC1",
+      "lat": 51.51432,
+      "lineModeGroups": [],
+      "lon": 0.06064,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Blackwall Station",
+      "id": "4900ZZDLBLA1",
+      "lat": 51.50807,
+      "lineModeGroups": [],
+      "lon": -0.00697,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Bow Church Station",
+      "id": "4900ZZDLBOW1",
+      "lat": 51.52781,
+      "lineModeGroups": [],
+      "lon": -0.02094,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Beckton Park Station",
+      "id": "4900ZZDLBPK1",
+      "lat": 51.50927,
+      "lineModeGroups": [],
+      "lon": 0.05485,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Canary Wharf DLR Station",
+      "hubNaptanCode": "HUBCAW",
+      "id": "4900ZZDLCAN1",
+      "lat": 51.50542,
+      "lineModeGroups": [],
+      "lon": -0.02073,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Canary Wharf DLR Station",
+      "hubNaptanCode": "HUBCAW",
+      "id": "4900ZZDLCAN2",
+      "lat": 51.50474,
+      "lineModeGroups": [],
+      "lon": -0.0209,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Canary Wharf DLR Station",
+      "hubNaptanCode": "HUBCAW",
+      "id": "4900ZZDLCAN3",
+      "lat": 51.50505,
+      "lineModeGroups": [],
+      "lon": -0.02064,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Canary Wharf DLR Station",
+      "hubNaptanCode": "HUBCAW",
+      "id": "4900ZZDLCAN4",
+      "lat": 51.5051,
+      "lineModeGroups": [],
+      "lon": -0.02117,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Canning Town Bus Station",
+      "hubNaptanCode": "HUBCAN",
+      "id": "4900ZZDLCGT2",
+      "lat": 51.51458,
+      "lineModeGroups": [],
+      "lon": 0.00814,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Canning Town Bus Station",
+      "hubNaptanCode": "HUBCAN",
+      "id": "4900ZZDLCGT3",
+      "lat": 51.51446,
+      "lineModeGroups": [],
+      "lon": 0.00725,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Canning Town Bus Station",
+      "hubNaptanCode": "HUBCAN",
+      "id": "4900ZZDLCGT4",
+      "lat": 51.51491,
+      "lineModeGroups": [],
+      "lon": 0.00795,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Canning Town Bus Station",
+      "hubNaptanCode": "HUBCAN",
+      "id": "4900ZZDLCGT5",
+      "lat": 51.51467,
+      "lineModeGroups": [],
+      "lon": 0.00831,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Canning Town Bus Station",
+      "hubNaptanCode": "HUBCAN",
+      "id": "4900ZZDLCGT6",
+      "lat": 51.51389,
+      "lineModeGroups": [],
+      "lon": 0.009,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Canning Town Bus Station",
+      "hubNaptanCode": "HUBCAN",
+      "id": "4900ZZDLCGT7",
+      "lat": 51.51331,
+      "lineModeGroups": [],
+      "lon": 0.00928,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Crossharbour Station",
+      "id": "4900ZZDLCLA1",
+      "lat": 51.49603,
+      "lineModeGroups": [],
+      "lon": -0.0142,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Crossharbour Station",
+      "id": "4900ZZDLCLA2",
+      "lat": 51.49537,
+      "lineModeGroups": [],
+      "lon": -0.01442,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Custom House Station",
+      "hubNaptanCode": "HUBCUS",
+      "id": "4900ZZDLCUS1",
+      "lat": 51.50994,
+      "lineModeGroups": [],
+      "lon": 0.02691,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Custom House",
+      "hubNaptanCode": "HUBCUS",
+      "id": "4900ZZDLCUS2",
+      "lat": 51.509,
+      "lineModeGroups": [],
+      "lon": 0.02732,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Greenwich Town Ctr / Cutty Sark Stn",
+      "hubNaptanCode": "HUBCUT",
+      "id": "4900ZZDLCUT1",
+      "lat": 51.48151,
+      "lineModeGroups": [],
+      "lon": -0.0108,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Greenwich Town Ctr / Cutty Sark Stn",
+      "hubNaptanCode": "HUBCUT",
+      "id": "4900ZZDLCUT2",
+      "lat": 51.48164,
+      "lineModeGroups": [],
+      "lon": -0.01034,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Cyprus Station",
+      "id": "4900ZZDLCYP1",
+      "lat": 51.50882,
+      "lineModeGroups": [],
+      "lon": 0.06357,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Cyprus Station",
+      "id": "4900ZZDLCYP2",
+      "lat": 51.5076,
+      "lineModeGroups": [],
+      "lon": 0.06393,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Deptford Bridge",
+      "id": "4900ZZDLDEP1",
+      "lat": 51.47445,
+      "lineModeGroups": [],
+      "lon": -0.02246,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Deptford Bridge",
+      "id": "4900ZZDLDEP2",
+      "lat": 51.47429,
+      "lineModeGroups": [],
+      "lon": -0.02261,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Devons Road Station",
+      "id": "4900ZZDLDEV1",
+      "lat": 51.52268,
+      "lineModeGroups": [],
+      "lon": -0.01748,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "East India Station",
+      "id": "4900ZZDLEIN1",
+      "lat": 51.50944,
+      "lineModeGroups": [],
+      "lon": -0.00263,
+      "modes": [
+        "bus",
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "East India Station",
+      "id": "4900ZZDLEIN2",
+      "lat": 51.50968,
+      "lineModeGroups": [],
+      "lon": -0.0024,
+      "modes": [
+        "dlr",
+        "bus"
+      ]
+    },
+    {
+      "commonName": "East India Station",
+      "id": "4900ZZDLEIN3",
+      "lat": 51.50949,
+      "lineModeGroups": [],
+      "lon": -0.00167,
+      "modes": [
+        "bus",
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Elverson Road",
+      "id": "4900ZZDLELV1",
+      "lat": 51.46895,
+      "lineModeGroups": [],
+      "lon": -0.01668,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Elverson Road",
+      "id": "4900ZZDLELV2",
+      "lat": 51.46857,
+      "lineModeGroups": [],
+      "lon": -0.016,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Gallions Reach Station",
+      "id": "4900ZZDLGAL1",
+      "lat": 51.50875,
+      "lineModeGroups": [],
+      "lon": 0.07196,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Greenwich Station",
+      "hubNaptanCode": "HUBGNW",
+      "id": "4900ZZDLGRE1",
+      "lat": 51.47792,
+      "lineModeGroups": [],
+      "lon": -0.01322,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Greenwich Station",
+      "hubNaptanCode": "HUBGNW",
+      "id": "4900ZZDLGRE2",
+      "lat": 51.4785,
+      "lineModeGroups": [],
+      "lon": -0.01544,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Greenwich Station",
+      "hubNaptanCode": "HUBGNW",
+      "id": "4900ZZDLGRE3",
+      "lat": 51.47796,
+      "lineModeGroups": [],
+      "lon": -0.01562,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Heron Quays",
+      "id": "4900ZZDLHEQ1",
+      "lat": 51.50317,
+      "lineModeGroups": [],
+      "lon": -0.02134,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Island Gardens Station",
+      "id": "4900ZZDLISL2",
+      "lat": 51.48782,
+      "lineModeGroups": [],
+      "lon": -0.01001,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "King George V.",
+      "id": "4900ZZDLKGV1",
+      "lat": 51.50194,
+      "lineModeGroups": [],
+      "lon": 0.06177,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "King George V.",
+      "id": "4900ZZDLKGV2",
+      "lat": 51.50189,
+      "lineModeGroups": [],
+      "lon": 0.06309,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "London City Airport",
+      "hubNaptanCode": "HUBLCY",
+      "id": "4900ZZDLLCA1",
+      "lat": 51.50329,
+      "lineModeGroups": [],
+      "lon": 0.0498,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "London City Airport",
+      "hubNaptanCode": "HUBLCY",
+      "id": "4900ZZDLLCA2",
+      "lat": 51.50326,
+      "lineModeGroups": [],
+      "lon": 0.04904,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "London City Airport",
+      "hubNaptanCode": "HUBLCY",
+      "id": "4900ZZDLLCA3",
+      "lat": 51.50322,
+      "lineModeGroups": [],
+      "lon": 0.04879,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Lewisham Station",
+      "hubNaptanCode": "HUBLEW",
+      "id": "4900ZZDLLEW1",
+      "lat": 51.46459,
+      "lineModeGroups": [],
+      "lon": -0.01281,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Lewisham Station",
+      "hubNaptanCode": "HUBLEW",
+      "id": "4900ZZDLLEW2",
+      "lat": 51.46539,
+      "lineModeGroups": [],
+      "lon": -0.01361,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Mudchute Station",
+      "id": "4900ZZDLMUD1",
+      "lat": 51.49118,
+      "lineModeGroups": [],
+      "lon": -0.01469,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Mudchute Station",
+      "id": "4900ZZDLMUD2",
+      "lat": 51.49097,
+      "lineModeGroups": [],
+      "lon": -0.01496,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Poplar",
+      "id": "4900ZZDLPOP1",
+      "lat": 51.508,
+      "lineModeGroups": [],
+      "lon": -0.01773,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Poplar",
+      "id": "4900ZZDLPOP2",
+      "lat": 51.50743,
+      "lineModeGroups": [],
+      "lon": -0.01786,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Prince Regent",
+      "id": "4900ZZDLPRE1",
+      "lat": 51.50957,
+      "lineModeGroups": [],
+      "lon": 0.0342,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Prince Regent",
+      "id": "4900ZZDLPRE2",
+      "lat": 51.5091,
+      "lineModeGroups": [],
+      "lon": 0.03365,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Pudding Mill Lane",
+      "id": "4900ZZDLPUD1",
+      "lat": 51.53401,
+      "lineModeGroups": [],
+      "lon": -0.0131,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Royal Albert Dlr Station",
+      "id": "4900ZZDLRAL1",
+      "lat": 51.50809,
+      "lineModeGroups": [],
+      "lon": 0.04572,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Royal Victoria Station",
+      "hubNaptanCode": "HUBRVC",
+      "id": "4900ZZDLRVC1",
+      "lat": 51.50946,
+      "lineModeGroups": [],
+      "lon": 0.01852,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Royal Victoria Station",
+      "hubNaptanCode": "HUBRVC",
+      "id": "4900ZZDLRVC2",
+      "lat": 51.50908,
+      "lineModeGroups": [],
+      "lon": 0.01869,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Shadwell Station",
+      "hubNaptanCode": "HUBSDE",
+      "id": "4900ZZDLSHA3",
+      "lat": 51.51146,
+      "lineModeGroups": [],
+      "lon": -0.05642,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Shadwell Station",
+      "hubNaptanCode": "HUBSDE",
+      "id": "4900ZZDLSHA4",
+      "lat": 51.51166,
+      "lineModeGroups": [],
+      "lon": -0.05477,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Stratford High Street",
+      "id": "4900ZZDLSHS0",
+      "lat": 51.53843,
+      "lineModeGroups": [],
+      "lon": -0.00091,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Stratford High Street",
+      "id": "4900ZZDLSHS1",
+      "lat": 51.5376,
+      "lineModeGroups": [],
+      "lon": 0.00011,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Stratford International DLR",
+      "id": "4900ZZDLSIT0",
+      "lat": 51.5456,
+      "lineModeGroups": [],
+      "lon": -0.00841,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Stratford International DLR",
+      "id": "4900ZZDLSIT1",
+      "lat": 51.54561,
+      "lineModeGroups": [],
+      "lon": -0.00987,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "South Quay",
+      "id": "4900ZZDLSOQ1",
+      "lat": 51.50013,
+      "lineModeGroups": [],
+      "lon": -0.01658,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "South Quay",
+      "id": "4900ZZDLSOQ2",
+      "lat": 51.50005,
+      "lineModeGroups": [],
+      "lon": -0.01597,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Star Lane Station",
+      "id": "4900ZZDLSTL0",
+      "lat": 51.52085,
+      "lineModeGroups": [],
+      "lon": 0.00376,
+      "modes": [
+        "bus",
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Star Lane Station",
+      "id": "4900ZZDLSTL1",
+      "lat": 51.52082,
+      "lineModeGroups": [],
+      "lon": 0.0044,
+      "modes": [
+        "dlr",
+        "bus"
+      ]
+    },
+    {
+      "commonName": "Tower Gateway Station",
+      "hubNaptanCode": "HUBTOG",
+      "id": "4900ZZDLTWG1",
+      "lat": 51.5103,
+      "lineModeGroups": [],
+      "lon": -0.07482,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Tower Gateway Station",
+      "hubNaptanCode": "HUBTOG",
+      "id": "4900ZZDLTWG2",
+      "lat": 51.51066,
+      "lineModeGroups": [],
+      "lon": -0.07283,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Westferry Station",
+      "id": "4900ZZDLWFE1",
+      "lat": 51.50942,
+      "lineModeGroups": [],
+      "lon": -0.02661,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "West India Quay",
+      "id": "4900ZZDLWIQ1",
+      "lat": 51.50744,
+      "lineModeGroups": [],
+      "lon": -0.02051,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Woolwich Arsenal DLR",
+      "hubNaptanCode": "HUBWWA",
+      "id": "4900ZZDLWLA1",
+      "lat": 51.49079,
+      "lineModeGroups": [],
+      "lon": 0.06854,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Woolwich Arsenal DLR",
+      "hubNaptanCode": "HUBWWA",
+      "id": "4900ZZDLWLA2",
+      "lat": 51.49023,
+      "lineModeGroups": [],
+      "lon": 0.06902,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "West Silvertown Station",
+      "id": "4900ZZDLWSV1",
+      "lat": 51.50285,
+      "lineModeGroups": [],
+      "lon": 0.02275,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Abbey Road DLR Station",
+      "id": "9400ZZDLABR",
+      "lat": 51.531926,
+      "lineModeGroups": [],
+      "lon": 0.003737,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Abbey Road DLR Station",
+      "id": "9400ZZDLABR1",
+      "lat": 51.531925,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": 0.003838,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Abbey Road DLR Station",
+      "id": "9400ZZDLABR2",
+      "lat": 51.531928,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": 0.003636,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "All Saints DLR Station",
+      "id": "9400ZZDLALL",
+      "lat": 51.511,
+      "lineModeGroups": [],
+      "lon": -0.013135,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "All Saints DLR Station",
+      "id": "9400ZZDLALL1",
+      "lat": 51.510683,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.013019,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "All Saints DLR Station",
+      "id": "9400ZZDLALL2",
+      "lat": 51.511021,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.012817,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Beckton DLR Station",
+      "id": "9400ZZDLBEC",
+      "lat": 51.514362,
+      "lineModeGroups": [],
+      "lon": 0.061453,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Beckton DLR Station",
+      "id": "9400ZZDLBEC1",
+      "lat": 51.514786,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": 0.061342,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Blackwall DLR Station",
+      "id": "9400ZZDLBLA",
+      "lat": 51.507991,
+      "lineModeGroups": [],
+      "lon": -0.006969,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Blackwall DLR Station",
+      "id": "9400ZZDLBLA1",
+      "lat": 51.507985,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.006638,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Blackwall DLR Station",
+      "id": "9400ZZDLBLA2",
+      "lat": 51.507929,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.006539,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Bank DLR Station",
+      "hubNaptanCode": "HUBBAN",
+      "id": "9400ZZDLBNK",
+      "lat": 51.513233,
+      "lineModeGroups": [],
+      "lon": -0.088515,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Bank DLR Station",
+      "hubNaptanCode": "HUBBAN",
+      "id": "9400ZZDLBNK1",
+      "lat": 51.512171,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.087911,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Bank",
+      "hubNaptanCode": "HUBBAN",
+      "id": "9400ZZDLBNK2",
+      "lat": 51.511995,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.088178,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Bow Church DLR Station",
+      "id": "9400ZZDLBOW",
+      "lat": 51.527858,
+      "lineModeGroups": [],
+      "lon": -0.020936,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Bow Church DLR Station",
+      "id": "9400ZZDLBOW1",
+      "lat": 51.527668,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.020858,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Bow Church DLR Station",
+      "id": "9400ZZDLBOW2",
+      "lat": 51.527703,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.020828,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Beckton Park DLR Station",
+      "id": "9400ZZDLBPK",
+      "lat": 51.508793,
+      "lineModeGroups": [],
+      "lon": 0.054932,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Beckton Park DLR Station",
+      "id": "9400ZZDLBPK1",
+      "lat": 51.508801,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": 0.054976,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Beckton Park DLR Station",
+      "id": "9400ZZDLBPK2",
+      "lat": 51.508713,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": 0.054871,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Canary Wharf DLR Station",
+      "hubNaptanCode": "HUBCAW",
+      "id": "9400ZZDLCAN",
+      "lat": 51.504838,
+      "lineModeGroups": [],
+      "lon": -0.020997,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Canary Wharf DLR Station",
+      "hubNaptanCode": "HUBCAW",
+      "id": "9400ZZDLCAN1",
+      "lat": 51.504936,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.020935,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Canary Wharf DLR Station",
+      "hubNaptanCode": "HUBCAW",
+      "id": "9400ZZDLCAN2",
+      "lat": 51.504746,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.0209,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Canning Town DLR Station",
+      "hubNaptanCode": "HUBCAN",
+      "id": "9400ZZDLCGT",
+      "lat": 51.514127,
+      "lineModeGroups": [],
+      "lon": 0.008101,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Canning Town DLR Station",
+      "hubNaptanCode": "HUBCAN",
+      "id": "9400ZZDLCGT1",
+      "lat": 51.514464,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": 0.007856,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Canning Town DLR Station",
+      "hubNaptanCode": "HUBCAN",
+      "id": "9400ZZDLCGT2",
+      "lat": 51.514467,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": 0.007712,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Canning Town DLR Station",
+      "hubNaptanCode": "HUBCAN",
+      "id": "9400ZZDLCGT3",
+      "lat": 51.514379,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": 0.007564,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Canning Town DLR Station",
+      "hubNaptanCode": "HUBCAN",
+      "id": "9400ZZDLCGT4",
+      "lat": 51.514382,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": 0.00742,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Crossharbour DLR Station",
+      "id": "9400ZZDLCLA",
+      "lat": 51.495728,
+      "lineModeGroups": [],
+      "lon": -0.014606,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Crossharbour DLR Station",
+      "id": "9400ZZDLCLA1",
+      "lat": 51.495799,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.014531,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Crossharbour DLR Station",
+      "id": "9400ZZDLCLA2",
+      "lat": 51.495374,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.01442,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Custom House (for ExCel) DLR Station",
+      "hubNaptanCode": "HUBCUS",
+      "id": "9400ZZDLCUS",
+      "lat": 51.509716,
+      "lineModeGroups": [],
+      "lon": 0.026699,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Custom House (for ExCel) DLR Station",
+      "hubNaptanCode": "HUBCUS",
+      "id": "9400ZZDLCUS1",
+      "lat": 51.50951,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": 0.026661,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Custom House Station",
+      "hubNaptanCode": "HUBCUS",
+      "id": "9400ZZDLCUS2",
+      "lat": 51.509626,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": 0.026695,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Cutty Sark (for Maritime Greenwich) DLR Station",
+      "hubNaptanCode": "HUBCUT",
+      "id": "9400ZZDLCUT",
+      "lat": 51.481671,
+      "lineModeGroups": [],
+      "lon": -0.01081,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Cutty Sark (for Maritime Greenwich) DLR Station",
+      "hubNaptanCode": "HUBCUT",
+      "id": "9400ZZDLCUT1",
+      "lat": 51.481615,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.010654,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Cutty Sark for Maritime Greenwich",
+      "hubNaptanCode": "HUBCUT",
+      "id": "9400ZZDLCUT2",
+      "lat": 51.481777,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.01069,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Cyprus DLR Station",
+      "id": "9400ZZDLCYP",
+      "lat": 51.508473,
+      "lineModeGroups": [],
+      "lon": 0.063925,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Cyprus DLR Station",
+      "id": "9400ZZDLCYP1",
+      "lat": 51.508499,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": 0.063969,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Cyprus DLR Station",
+      "id": "9400ZZDLCYP2",
+      "lat": 51.508464,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": 0.06391,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Deptford Bridge DLR Station",
+      "id": "9400ZZDLDEP",
+      "lat": 51.474215,
+      "lineModeGroups": [],
+      "lon": -0.022438,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Deptford Bridge DLR Station",
+      "id": "9400ZZDLDEP1",
+      "lat": 51.474307,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.022578,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Deptford Bridge DLR Station",
+      "id": "9400ZZDLDEP2",
+      "lat": 51.474279,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.022464,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Devons Road DLR Station",
+      "id": "9400ZZDLDEV",
+      "lat": 51.522667,
+      "lineModeGroups": [],
+      "lon": -0.017615,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Devons Road DLR Station",
+      "id": "9400ZZDLDEV1",
+      "lat": 51.52223,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.017303,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Devons Road DLR Station",
+      "id": "9400ZZDLDEV2",
+      "lat": 51.522591,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.017373,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "East India DLR Station",
+      "id": "9400ZZDLEIN",
+      "lat": 51.509359,
+      "lineModeGroups": [],
+      "lon": -0.002326,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "East India DLR Station",
+      "id": "9400ZZDLEIN1",
+      "lat": 51.509915,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.001711,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "East India DLR Station",
+      "id": "9400ZZDLEIN2",
+      "lat": 51.509642,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.001493,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Elverson Road DLR Station",
+      "id": "9400ZZDLELV",
+      "lat": 51.469074,
+      "lineModeGroups": [],
+      "lon": -0.016728,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Elverson Road DLR Station",
+      "id": "9400ZZDLELV1",
+      "lat": 51.468948,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.016719,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Elverson Road DLR Station",
+      "id": "9400ZZDLELV2",
+      "lat": 51.468679,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.016803,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Gallions Reach DLR Station",
+      "id": "9400ZZDLGAL",
+      "lat": 51.508941,
+      "lineModeGroups": [],
+      "lon": 0.071555,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Gallions Reach DLR Station",
+      "id": "9400ZZDLGAL1",
+      "lat": 51.50913,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": 0.072039,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Gallions Reach DLR Station",
+      "id": "9400ZZDLGAL2",
+      "lat": 51.50897,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": 0.07196,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Greenwich DLR Station",
+      "hubNaptanCode": "HUBGNW",
+      "id": "9400ZZDLGRE",
+      "lat": 51.478087,
+      "lineModeGroups": [],
+      "lon": -0.013673,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Greenwich DLR Station",
+      "hubNaptanCode": "HUBGNW",
+      "id": "9400ZZDLGRE1",
+      "lat": 51.478162,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.016003,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Greenwich DLR Station",
+      "hubNaptanCode": "HUBGNW",
+      "id": "9400ZZDLGRE2",
+      "lat": 51.478082,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.015488,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Heron Quays DLR Station",
+      "id": "9400ZZDLHEQ",
+      "lat": 51.503379,
+      "lineModeGroups": [],
+      "lon": -0.021421,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Heron Quays DLR Station",
+      "id": "9400ZZDLHEQ1",
+      "lat": 51.50329,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.021453,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Heron Quays DLR Station",
+      "id": "9400ZZDLHEQ2",
+      "lat": 51.503184,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.021559,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Island Gardens DLR Station",
+      "id": "9400ZZDLISL",
+      "lat": 51.487811,
+      "lineModeGroups": [],
+      "lon": -0.010139,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Island Gardens DLR Station",
+      "id": "9400ZZDLISL1",
+      "lat": 51.487197,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.010022,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Island Gardens",
+      "id": "9400ZZDLISL2",
+      "lat": 51.488048,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.010359,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "King George V DLR Station",
+      "id": "9400ZZDLKGV",
+      "lat": 51.502003,
+      "lineModeGroups": [],
+      "lon": 0.062624,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "King George V DLR Station",
+      "id": "9400ZZDLKGV1",
+      "lat": 51.502095,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": 0.061994,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "King George V.",
+      "id": "9400ZZDLKGV2",
+      "lat": 51.502045,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": 0.062266,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "London City Airport DLR Station",
+      "hubNaptanCode": "HUBLCY",
+      "id": "9400ZZDLLCA",
+      "lat": 51.503416,
+      "lineModeGroups": [],
+      "lon": 0.048739,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "London City Airport DLR Station",
+      "hubNaptanCode": "HUBLCY",
+      "id": "9400ZZDLLCA1",
+      "lat": 51.503415,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": 0.048754,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "London City Airport",
+      "hubNaptanCode": "HUBLCY",
+      "id": "9400ZZDLLCA2",
+      "lat": 51.503452,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": 0.048712,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Langdon Park DLR Station",
+      "id": "9400ZZDLLDP",
+      "lat": 51.515172,
+      "lineModeGroups": [],
+      "lon": -0.01415,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Langdon Park DLR Station",
+      "id": "9400ZZDLLDP1",
+      "lat": 51.515171,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.014107,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Langdon Park DLR Station",
+      "id": "9400ZZDLLDP2",
+      "lat": 51.515172,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.014179,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Lewisham DLR Station",
+      "hubNaptanCode": "HUBLEW",
+      "id": "9400ZZDLLEW",
+      "lat": 51.464665,
+      "lineModeGroups": [],
+      "lon": -0.012874,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Lewisham DLR Station",
+      "hubNaptanCode": "HUBLEW",
+      "id": "9400ZZDLLEW1",
+      "lat": 51.465053,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.01244,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Limehouse DLR Station",
+      "hubNaptanCode": "HUBLHS",
+      "id": "9400ZZDLLIM",
+      "lat": 51.512393,
+      "lineModeGroups": [],
+      "lon": -0.039809,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Limehouse DLR Station",
+      "hubNaptanCode": "HUBLHS",
+      "id": "9400ZZDLLIM1",
+      "lat": 51.512336,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.03961,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Limehouse DLR Station",
+      "hubNaptanCode": "HUBLHS",
+      "id": "9400ZZDLLIM2",
+      "lat": 51.512317,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.039582,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Mudchute DLR Station",
+      "id": "9400ZZDLMUD",
+      "lat": 51.490704,
+      "lineModeGroups": [],
+      "lon": -0.014738,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Mudchute DLR Station",
+      "id": "9400ZZDLMUD1",
+      "lat": 51.490097,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.014476,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Mudchute DLR Station",
+      "id": "9400ZZDLMUD2",
+      "lat": 51.490339,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.01448,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Pontoon Dock DLR Station",
+      "id": "9400ZZDLPDK",
+      "lat": 51.502212,
+      "lineModeGroups": [],
+      "lon": 0.032115,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Pontoon Dock DLR Station",
+      "id": "9400ZZDLPDK1",
+      "lat": 51.502212,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": 0.03213,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Pontoon Dock DLR Station",
+      "id": "9400ZZDLPDK2",
+      "lat": 51.502362,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": 0.033303,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Poplar DLR Station",
+      "id": "9400ZZDLPOP",
+      "lat": 51.507744,
+      "lineModeGroups": [],
+      "lon": -0.017384,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Poplar DLR Station",
+      "id": "9400ZZDLPOP1",
+      "lat": 51.507693,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.01753,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Poplar DLR Station",
+      "id": "9400ZZDLPOP2",
+      "lat": 51.507596,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.017621,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Poplar DLR Station",
+      "id": "9400ZZDLPOP3",
+      "lat": 51.507598,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.017765,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Poplar",
+      "id": "9400ZZDLPOP4",
+      "lat": 51.507614,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.01713,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Prince Regent DLR Station",
+      "id": "9400ZZDLPRE",
+      "lat": 51.509263,
+      "lineModeGroups": [],
+      "lon": 0.034158,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Prince Regent DLR Station",
+      "id": "9400ZZDLPRE1",
+      "lat": 51.509291,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": 0.033569,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Prince Regent",
+      "id": "9400ZZDLPRE2",
+      "lat": 51.509439,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": 0.03333,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Pudding Mill Lane DLR Station",
+      "id": "9400ZZDLPUD",
+      "lat": 51.534302,
+      "lineModeGroups": [],
+      "lon": -0.012755,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Pudding Mill Lane DLR Station",
+      "id": "9400ZZDLPUD1",
+      "lat": 51.534329,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.012754,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Pudding Mill Lane DLR Station",
+      "id": "9400ZZDLPUD2",
+      "lat": 51.534066,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.013155,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Royal Albert DLR Station",
+      "id": "9400ZZDLRAL",
+      "lat": 51.508357,
+      "lineModeGroups": [],
+      "lon": 0.045935,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Royal Albert DLR Station",
+      "id": "9400ZZDLRAL1",
+      "lat": 51.508541,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": 0.046692,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Royal Albert DLR Station",
+      "id": "9400ZZDLRAL2",
+      "lat": 51.50842,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": 0.046442,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Royal Victoria DLR Station",
+      "hubNaptanCode": "HUBRVC",
+      "id": "9400ZZDLRVC",
+      "lat": 51.509336,
+      "lineModeGroups": [],
+      "lon": 0.018497,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Royal Victoria DLR Station",
+      "hubNaptanCode": "HUBRVC",
+      "id": "9400ZZDLRVC1",
+      "lat": 51.508927,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": 0.018205,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Royal Victoria DLR Station",
+      "hubNaptanCode": "HUBRVC",
+      "id": "9400ZZDLRVC2",
+      "lat": 51.509075,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": 0.018471,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Shadwell DLR Station",
+      "hubNaptanCode": "HUBSDE",
+      "id": "9400ZZDLSHA",
+      "lat": 51.511693,
+      "lineModeGroups": [],
+      "lon": -0.056643,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Shadwell DLR Station",
+      "hubNaptanCode": "HUBSDE",
+      "id": "9400ZZDLSHA1",
+      "lat": 51.511643,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.056343,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Shadwell DLR",
+      "hubNaptanCode": "HUBSDE",
+      "id": "9400ZZDLSHA2",
+      "lat": 51.511707,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.055893,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Stratford High Street DLR Station",
+      "id": "9400ZZDLSHS",
+      "lat": 51.538196,
+      "lineModeGroups": [],
+      "lon": -0.001078,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Stratford High Street DLR Station",
+      "id": "9400ZZDLSHS1",
+      "lat": 51.538194,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.001006,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Stratford High Street DLR Station",
+      "id": "9400ZZDLSHS2",
+      "lat": 51.538197,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.001179,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Stratford International DLR Station",
+      "id": "9400ZZDLSIT",
+      "lat": 51.545265,
+      "lineModeGroups": [],
+      "lon": -0.009638,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Stratford International DLR Station",
+      "id": "9400ZZDLSIT1",
+      "lat": 51.545194,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.009641,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Stratford International DLR Station",
+      "id": "9400ZZDLSIT2",
+      "lat": 51.545337,
+      "lineModeGroups": [],
+      "lon": -0.009635,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "South Quay DLR Station",
+      "id": "9400ZZDLSOQ",
+      "lat": 51.500053,
+      "lineModeGroups": [],
+      "lon": -0.016133,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "South Quay DLR Station",
+      "id": "9400ZZDLSOQ1",
+      "lat": 51.500072,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.016247,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "South Quay DLR Station",
+      "id": "9400ZZDLSOQ2",
+      "lat": 51.50005,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.015975,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Stratford DLR Station",
+      "hubNaptanCode": "HUBSRA",
+      "id": "9400ZZDLSTD",
+      "lat": 51.541758,
+      "lineModeGroups": [],
+      "lon": -0.003287,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Stratford DLR Station",
+      "hubNaptanCode": "HUBSRA",
+      "id": "9400ZZDLSTD1",
+      "lat": 51.540743,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.004413,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Stratford DLR Station",
+      "hubNaptanCode": "HUBSRA",
+      "id": "9400ZZDLSTD2",
+      "lat": 51.540738,
+      "lineModeGroups": [],
+      "lon": -0.004125,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Stratford DLR Station",
+      "hubNaptanCode": "HUBSRA",
+      "id": "9400ZZDLSTD3",
+      "lat": 51.541017,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.003075,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Stratford DLR Station",
+      "hubNaptanCode": "HUBSRA",
+      "id": "9400ZZDLSTD4",
+      "lat": 51.541015,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.00293,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Star Lane DLR Station",
+      "id": "9400ZZDLSTL",
+      "lat": 51.520786,
+      "lineModeGroups": [],
+      "lon": 0.004156,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Star Lane DLR Station",
+      "id": "9400ZZDLSTL1",
+      "lat": 51.520785,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": 0.004228,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Star Lane DLR Station",
+      "id": "9400ZZDLSTL2",
+      "lat": 51.520788,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": 0.004055,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Tower Gateway DLR Station",
+      "hubNaptanCode": "HUBTOG",
+      "id": "9400ZZDLTWG",
+      "lat": 51.510617,
+      "lineModeGroups": [],
+      "lon": -0.074818,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Tower Gateway DLR Station",
+      "hubNaptanCode": "HUBTOG",
+      "id": "9400ZZDLTWG1",
+      "lat": 51.510556,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.074389,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Tower Gateway Station DLR",
+      "hubNaptanCode": "HUBTOG",
+      "id": "9400ZZDLTWG2",
+      "lat": 51.510645,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.07437,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Westferry DLR Station",
+      "id": "9400ZZDLWFE",
+      "lat": 51.509431,
+      "lineModeGroups": [],
+      "lon": -0.02675,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Westferry DLR Station",
+      "id": "9400ZZDLWFE1",
+      "lat": 51.509411,
+      "lineModeGroups": [],
+      "lon": -0.026607,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Westferry DLR Station",
+      "id": "9400ZZDLWFE2",
+      "lat": 51.50941,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.026578,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "West Ham DLR Station",
+      "hubNaptanCode": "HUBWEH",
+      "id": "9400ZZDLWHM",
+      "lat": 51.527894,
+      "lineModeGroups": [],
+      "lon": 0.004482,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "West Ham DLR Station",
+      "hubNaptanCode": "HUBWEH",
+      "id": "9400ZZDLWHM1",
+      "lat": 51.52776,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": 0.004448,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "West Ham DLR Station",
+      "hubNaptanCode": "HUBWEH",
+      "id": "9400ZZDLWHM2",
+      "lat": 51.527765,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": 0.004159,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "West India Quay DLR Station",
+      "id": "9400ZZDLWIQ",
+      "lat": 51.50703,
+      "lineModeGroups": [],
+      "lon": -0.020311,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "West India Quay DLR Station",
+      "id": "9400ZZDLWIQ1",
+      "lat": 51.507002,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.020298,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "West India Quay DLR Station",
+      "id": "9400ZZDLWIQ2",
+      "lat": 51.506986,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.0204,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Woolwich Arsenal DLR Station",
+      "hubNaptanCode": "HUBWWA",
+      "id": "9400ZZDLWLA",
+      "lat": 51.490009,
+      "lineModeGroups": [],
+      "lon": 0.069127,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Woolwich Arsenal DLR Station",
+      "hubNaptanCode": "HUBWWA",
+      "id": "9400ZZDLWLA1",
+      "lat": 51.490214,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": 0.069208,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Woolwich Arsenal DLR Station",
+      "hubNaptanCode": "HUBWWA",
+      "id": "9400ZZDLWLA2",
+      "lat": 51.490257,
+      "lineModeGroups": [],
+      "lon": 0.069325,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "West Silvertown DLR Station",
+      "id": "9400ZZDLWSV",
+      "lat": 51.502838,
+      "lineModeGroups": [],
+      "lon": 0.02246,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "West Silvertown DLR Station",
+      "id": "9400ZZDLWSV1",
+      "lat": 51.502388,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": 0.022455,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "West Silvertown DLR Station",
+      "id": "9400ZZDLWSV2",
+      "lat": 51.502585,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": 0.022996,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Abbey Road DLR Station",
+      "id": "940GZZDLABR",
+      "lat": 51.531926,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": 0.003737,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "All Saints DLR Station",
+      "id": "940GZZDLALL",
+      "lat": 51.511,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.013135,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Beckton DLR Station",
+      "id": "940GZZDLBEC",
+      "lat": 51.514362,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": 0.061453,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Blackwall DLR Station",
+      "id": "940GZZDLBLA",
+      "lat": 51.507991,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.006969,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Bank DLR Station",
+      "hubNaptanCode": "HUBBAN",
+      "id": "940GZZDLBNK",
+      "lat": 51.513233,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.088515,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Bow Church DLR Station",
+      "id": "940GZZDLBOW",
+      "lat": 51.527858,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.020936,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Beckton Park DLR Station",
+      "id": "940GZZDLBPK",
+      "lat": 51.508793,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": 0.054932,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Canary Wharf DLR Station",
+      "hubNaptanCode": "HUBCAW",
+      "id": "940GZZDLCAN",
+      "lat": 51.504838,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.020997,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Canning Town DLR Station",
+      "hubNaptanCode": "HUBCAN",
+      "id": "940GZZDLCGT",
+      "lat": 51.514127,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": 0.008101,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Crossharbour DLR Station",
+      "id": "940GZZDLCLA",
+      "lat": 51.495728,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.014606,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Custom House (for ExCel) DLR Station",
+      "hubNaptanCode": "HUBCUS",
+      "id": "940GZZDLCUS",
+      "lat": 51.509716,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": 0.026699,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Cutty Sark (for Maritime Greenwich) DLR Station",
+      "hubNaptanCode": "HUBCUT",
+      "id": "940GZZDLCUT",
+      "lat": 51.481671,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.01081,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Cyprus DLR Station",
+      "id": "940GZZDLCYP",
+      "lat": 51.508473,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": 0.063925,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Deptford Bridge DLR Station",
+      "id": "940GZZDLDEP",
+      "lat": 51.474215,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.022438,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Devons Road DLR Station",
+      "id": "940GZZDLDEV",
+      "lat": 51.522667,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.017615,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "East India DLR Station",
+      "id": "940GZZDLEIN",
+      "lat": 51.509359,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "sl4",
+            "n550",
+            "d3"
+          ]
+        }
+      ],
+      "lon": -0.002326,
+      "modes": [
+        "dlr",
+        "bus"
+      ]
+    },
+    {
+      "commonName": "Elverson Road DLR Station",
+      "id": "940GZZDLELV",
+      "lat": 51.469074,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.016728,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Gallions Reach DLR Station",
+      "id": "940GZZDLGAL",
+      "lat": 51.508941,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": 0.071555,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Greenwich DLR Station",
+      "hubNaptanCode": "HUBGNW",
+      "id": "940GZZDLGRE",
+      "lat": 51.478087,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.013673,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Heron Quays DLR Station",
+      "id": "940GZZDLHEQ",
+      "lat": 51.503379,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.021421,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Island Gardens DLR Station",
+      "id": "940GZZDLISL",
+      "lat": 51.487811,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.010139,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "King George V DLR Station",
+      "id": "940GZZDLKGV",
+      "lat": 51.502003,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": 0.062624,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "London City Airport DLR Station",
+      "hubNaptanCode": "HUBLCY",
+      "id": "940GZZDLLCA",
+      "lat": 51.503416,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": 0.048739,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Langdon Park DLR Station",
+      "id": "940GZZDLLDP",
+      "lat": 51.515172,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.01415,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Lewisham DLR Station",
+      "hubNaptanCode": "HUBLEW",
+      "id": "940GZZDLLEW",
+      "lat": 51.464665,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.012874,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Limehouse DLR Station",
+      "hubNaptanCode": "HUBLHS",
+      "id": "940GZZDLLIM",
+      "lat": 51.512393,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.039809,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Mudchute DLR Station",
+      "id": "940GZZDLMUD",
+      "lat": 51.490704,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.014738,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Pontoon Dock DLR Station",
+      "id": "940GZZDLPDK",
+      "lat": 51.502212,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "241",
+            "330",
+            "129"
+          ]
+        }
+      ],
+      "lon": 0.032115,
+      "modes": [
+        "dlr",
+        "bus"
+      ]
+    },
+    {
+      "commonName": "Poplar DLR Station",
+      "id": "940GZZDLPOP",
+      "lat": 51.507744,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.017384,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Prince Regent DLR Station",
+      "id": "940GZZDLPRE",
+      "lat": 51.509263,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": 0.034158,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Pudding Mill Lane DLR Station",
+      "id": "940GZZDLPUD",
+      "lat": 51.534302,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.012755,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Royal Albert DLR Station",
+      "id": "940GZZDLRAL",
+      "lat": 51.508357,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": 0.045935,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Royal Victoria DLR Station",
+      "hubNaptanCode": "HUBRVC",
+      "id": "940GZZDLRVC",
+      "lat": 51.509336,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": 0.018497,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Shadwell DLR Station",
+      "hubNaptanCode": "HUBSDE",
+      "id": "940GZZDLSHA",
+      "lat": 51.511693,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.056643,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Stratford High Street DLR Station",
+      "id": "940GZZDLSHS",
+      "lat": 51.538196,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.001078,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Stratford International DLR Station",
+      "id": "940GZZDLSIT",
+      "lat": 51.545265,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.009638,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "South Quay DLR Station",
+      "id": "940GZZDLSOQ",
+      "lat": 51.50005,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.015975,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Stratford DLR Station",
+      "hubNaptanCode": "HUBSRA",
+      "id": "940GZZDLSTD",
+      "lat": 51.541758,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.003287,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Star Lane DLR Station",
+      "id": "940GZZDLSTL",
+      "lat": 51.520786,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "323",
+            "276"
+          ]
+        }
+      ],
+      "lon": 0.004156,
+      "modes": [
+        "bus",
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Tower Gateway DLR Station",
+      "hubNaptanCode": "HUBTOG",
+      "id": "940GZZDLTWG",
+      "lat": 51.510617,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.074818,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Westferry DLR Station",
+      "id": "940GZZDLWFE",
+      "lat": 51.509431,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.02675,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "West Ham DLR Station",
+      "hubNaptanCode": "HUBWEH",
+      "id": "940GZZDLWHM",
+      "lat": 51.527894,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": 0.004482,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "West India Quay DLR Station",
+      "id": "940GZZDLWIQ",
+      "lat": 51.50703,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": -0.020311,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "Woolwich Arsenal DLR Station",
+      "hubNaptanCode": "HUBWWA",
+      "id": "940GZZDLWLA",
+      "lat": 51.490009,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": 0.069127,
+      "modes": [
+        "dlr"
+      ]
+    },
+    {
+      "commonName": "West Silvertown DLR Station",
+      "id": "940GZZDLWSV",
+      "lat": 51.502838,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "dlr"
+          ]
+        }
+      ],
+      "lon": 0.02246,
+      "modes": [
+        "dlr"
+      ]
+    }
+  ],
+  "total": 274
+}

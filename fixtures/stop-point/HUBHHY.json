@@ -1,0 +1,2433 @@
+{
+  "$type": "Tfl.Api.Presentation.Entities.StopPoint, Tfl.Api.Presentation.Entities",
+  "additionalProperties": [
+    {
+      "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+      "category": "Address",
+      "key": "Address",
+      "sourceSystemKey": "StaticObjects",
+      "value": "Highbury & Islington Underground Station,London Underground Ltd.,Holloway Rd,London,N5 1RA"
+    },
+    {
+      "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+      "category": "Address",
+      "key": "PhoneNo",
+      "sourceSystemKey": "StaticObjects",
+      "value": "0845 330 9880"
+    },
+    {
+      "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+      "category": "Facility",
+      "key": "Lifts",
+      "sourceSystemKey": "StaticObjects",
+      "value": "3"
+    },
+    {
+      "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+      "category": "Facility",
+      "key": "Payphones",
+      "sourceSystemKey": "StaticObjects",
+      "value": "2"
+    },
+    {
+      "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+      "category": "Facility",
+      "key": "Ticket Halls",
+      "sourceSystemKey": "StaticObjects",
+      "value": "1"
+    },
+    {
+      "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+      "category": "Facility",
+      "key": "Boarding Ramps",
+      "sourceSystemKey": "StaticObjects",
+      "value": "yes London Overground Only"
+    },
+    {
+      "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+      "category": "Facility",
+      "key": "Toilets",
+      "sourceSystemKey": "StaticObjects",
+      "value": "no"
+    },
+    {
+      "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+      "category": "Facility",
+      "key": "Gates",
+      "sourceSystemKey": "StaticObjects",
+      "value": "7"
+    },
+    {
+      "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+      "category": "Facility",
+      "key": "Photo Booths",
+      "sourceSystemKey": "StaticObjects",
+      "value": "0"
+    },
+    {
+      "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+      "category": "Facility",
+      "key": "Waiting Room",
+      "sourceSystemKey": "StaticObjects",
+      "value": "no"
+    },
+    {
+      "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+      "category": "Facility",
+      "key": "Bridge",
+      "sourceSystemKey": "StaticObjects",
+      "value": "yes"
+    },
+    {
+      "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+      "category": "Facility",
+      "key": "Cash Machines",
+      "sourceSystemKey": "StaticObjects",
+      "value": "0"
+    },
+    {
+      "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+      "category": "Facility",
+      "key": "Escalators",
+      "sourceSystemKey": "StaticObjects",
+      "value": "2"
+    },
+    {
+      "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+      "category": "Facility",
+      "key": "Help Points",
+      "sourceSystemKey": "StaticObjects",
+      "value": "0 on platforms, 0 in ticket halls, 0 elsewhere"
+    },
+    {
+      "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+      "category": "Facility",
+      "key": "Other Facilities",
+      "sourceSystemKey": "StaticObjects",
+      "value": "taxi ranks outside station, routeways platform to ticket hall."
+    },
+    {
+      "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+      "category": "Geo",
+      "key": "Zone",
+      "sourceSystemKey": "StaticObjects",
+      "value": "2"
+    },
+    {
+      "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+      "category": "Facility",
+      "key": "Car park",
+      "sourceSystemKey": "StaticObjects",
+      "value": "no"
+    },
+    {
+      "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+      "category": "Facility",
+      "key": "WiFi",
+      "sourceSystemKey": "StaticObjects",
+      "value": "yes"
+    }
+  ],
+  "children": [
+    {
+      "$type": "Tfl.Api.Presentation.Entities.StopPoint, Tfl.Api.Presentation.Entities",
+      "additionalProperties": [
+        {
+          "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+          "category": "ServiceInfo",
+          "key": "Night",
+          "sourceSystemKey": "TransXchangeETL",
+          "value": "yes"
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+          "category": "Facility",
+          "key": "Car park",
+          "sourceSystemKey": "StaticObjects",
+          "value": "no"
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+          "category": "Facility",
+          "key": "Lifts",
+          "sourceSystemKey": "StaticObjects",
+          "value": "3"
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+          "category": "Address",
+          "key": "PhoneNo",
+          "sourceSystemKey": "StaticObjects",
+          "value": "0845 330 9880"
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+          "category": "Facility",
+          "key": "Gates",
+          "sourceSystemKey": "StaticObjects",
+          "value": "7"
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+          "category": "Facility",
+          "key": "Cash Machines",
+          "sourceSystemKey": "StaticObjects",
+          "value": "0"
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+          "category": "Facility",
+          "key": "Escalators",
+          "sourceSystemKey": "StaticObjects",
+          "value": "2"
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+          "category": "Geo",
+          "key": "Zone",
+          "sourceSystemKey": "StaticObjects",
+          "value": "2"
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+          "category": "Facility",
+          "key": "Other Facilities",
+          "sourceSystemKey": "StaticObjects",
+          "value": "taxi ranks outside station, routeways platform to ticket hall."
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+          "category": "Facility",
+          "key": "Ticket Halls",
+          "sourceSystemKey": "StaticObjects",
+          "value": "1"
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+          "category": "Facility",
+          "key": "Boarding Ramps",
+          "sourceSystemKey": "StaticObjects",
+          "value": "yes London Overground Only"
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+          "category": "Facility",
+          "key": "WiFi",
+          "sourceSystemKey": "StaticObjects",
+          "value": "yes"
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+          "category": "Address",
+          "key": "Address",
+          "sourceSystemKey": "StaticObjects",
+          "value": "Highbury & Islington Underground Station,London Underground Ltd.,Holloway Rd,London,N5 1RA"
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+          "category": "Facility",
+          "key": "Photo Booths",
+          "sourceSystemKey": "StaticObjects",
+          "value": "0"
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+          "category": "Facility",
+          "key": "Bridge",
+          "sourceSystemKey": "StaticObjects",
+          "value": "yes"
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+          "category": "Facility",
+          "key": "Toilets",
+          "sourceSystemKey": "StaticObjects",
+          "value": "no"
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+          "category": "Facility",
+          "key": "Help Points",
+          "sourceSystemKey": "StaticObjects",
+          "value": "0 on platforms, 0 in ticket halls, 0 elsewhere"
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+          "category": "Facility",
+          "key": "Payphones",
+          "sourceSystemKey": "StaticObjects",
+          "value": "2"
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+          "category": "Facility",
+          "key": "Waiting Room",
+          "sourceSystemKey": "StaticObjects",
+          "value": "no"
+        }
+      ],
+      "children": [
+        {
+          "$type": "Tfl.Api.Presentation.Entities.StopPoint, Tfl.Api.Presentation.Entities",
+          "additionalProperties": [
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Lifts",
+              "sourceSystemKey": "StaticObjects",
+              "value": "3"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Cash Machines",
+              "sourceSystemKey": "StaticObjects",
+              "value": "0"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Gates",
+              "sourceSystemKey": "StaticObjects",
+              "value": "7"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Toilets",
+              "sourceSystemKey": "StaticObjects",
+              "value": "no"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Escalators",
+              "sourceSystemKey": "StaticObjects",
+              "value": "2"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Address",
+              "key": "PhoneNo",
+              "sourceSystemKey": "StaticObjects",
+              "value": "0845 330 9880"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Geo",
+              "key": "Zone",
+              "sourceSystemKey": "StaticObjects",
+              "value": "2"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Ticket Halls",
+              "sourceSystemKey": "StaticObjects",
+              "value": "1"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "WiFi",
+              "sourceSystemKey": "StaticObjects",
+              "value": "yes"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Address",
+              "key": "Address",
+              "sourceSystemKey": "StaticObjects",
+              "value": "Highbury & Islington Underground Station,London Underground Ltd.,Holloway Rd,London,N5 1RA"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Boarding Ramps",
+              "sourceSystemKey": "StaticObjects",
+              "value": "yes London Overground Only"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Other Facilities",
+              "sourceSystemKey": "StaticObjects",
+              "value": "taxi ranks outside station, routeways platform to ticket hall."
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Bridge",
+              "sourceSystemKey": "StaticObjects",
+              "value": "yes"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Car park",
+              "sourceSystemKey": "StaticObjects",
+              "value": "no"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Help Points",
+              "sourceSystemKey": "StaticObjects",
+              "value": "0 on platforms, 0 in ticket halls, 0 elsewhere"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Payphones",
+              "sourceSystemKey": "StaticObjects",
+              "value": "2"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Photo Booths",
+              "sourceSystemKey": "StaticObjects",
+              "value": "0"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Waiting Room",
+              "sourceSystemKey": "StaticObjects",
+              "value": "no"
+            }
+          ],
+          "children": [],
+          "commonName": "Highbury & Islington Station",
+          "hubNaptanCode": "HUBHHY",
+          "icsCode": "1000108",
+          "id": "4900HGHI",
+          "indicator": "Entrance",
+          "lat": 51.54622,
+          "lineGroup": [],
+          "lineModeGroups": [],
+          "lines": [],
+          "lon": -0.1035,
+          "modes": [
+            "overground"
+          ],
+          "naptanId": "4900HGHI",
+          "placeType": "StopPoint",
+          "stationNaptan": "910GHGHI",
+          "status": true,
+          "stopType": "NaptanRailEntrance"
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.StopPoint, Tfl.Api.Presentation.Entities",
+          "additionalProperties": [
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Bridge",
+              "sourceSystemKey": "StaticObjects",
+              "value": "yes"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Help Points",
+              "sourceSystemKey": "StaticObjects",
+              "value": "0 on platforms, 0 in ticket halls, 0 elsewhere"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Other Facilities",
+              "sourceSystemKey": "StaticObjects",
+              "value": "taxi ranks outside station, routeways platform to ticket hall."
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Photo Booths",
+              "sourceSystemKey": "StaticObjects",
+              "value": "0"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Ticket Halls",
+              "sourceSystemKey": "StaticObjects",
+              "value": "1"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Toilets",
+              "sourceSystemKey": "StaticObjects",
+              "value": "no"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Car park",
+              "sourceSystemKey": "StaticObjects",
+              "value": "no"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Gates",
+              "sourceSystemKey": "StaticObjects",
+              "value": "7"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Lifts",
+              "sourceSystemKey": "StaticObjects",
+              "value": "3"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Payphones",
+              "sourceSystemKey": "StaticObjects",
+              "value": "2"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Address",
+              "key": "PhoneNo",
+              "sourceSystemKey": "StaticObjects",
+              "value": "0845 330 9880"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Waiting Room",
+              "sourceSystemKey": "StaticObjects",
+              "value": "no"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Cash Machines",
+              "sourceSystemKey": "StaticObjects",
+              "value": "0"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Escalators",
+              "sourceSystemKey": "StaticObjects",
+              "value": "2"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Geo",
+              "key": "Zone",
+              "sourceSystemKey": "StaticObjects",
+              "value": "2"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Address",
+              "key": "Address",
+              "sourceSystemKey": "StaticObjects",
+              "value": "Highbury & Islington Underground Station,London Underground Ltd.,Holloway Rd,London,N5 1RA"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Boarding Ramps",
+              "sourceSystemKey": "StaticObjects",
+              "value": "yes London Overground Only"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "WiFi",
+              "sourceSystemKey": "StaticObjects",
+              "value": "yes"
+            }
+          ],
+          "children": [],
+          "commonName": "Highbury & Islington Rail Station",
+          "hubNaptanCode": "HUBHHY",
+          "icsCode": "1000108",
+          "id": "9100HGHI",
+          "lat": 51.546177,
+          "lineGroup": [],
+          "lineModeGroups": [],
+          "lines": [],
+          "lon": -0.103764,
+          "modes": [],
+          "naptanId": "9100HGHI",
+          "placeType": "StopPoint",
+          "stationNaptan": "910GHGHI",
+          "status": true,
+          "stopType": "NaptanRailAccessArea"
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.StopPoint, Tfl.Api.Presentation.Entities",
+          "additionalProperties": [
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Gates",
+              "sourceSystemKey": "StaticObjects",
+              "value": "7"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Address",
+              "key": "PhoneNo",
+              "sourceSystemKey": "StaticObjects",
+              "value": "0845 330 9880"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Other Facilities",
+              "sourceSystemKey": "StaticObjects",
+              "value": "taxi ranks outside station, routeways platform to ticket hall."
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Payphones",
+              "sourceSystemKey": "StaticObjects",
+              "value": "2"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Ticket Halls",
+              "sourceSystemKey": "StaticObjects",
+              "value": "1"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Boarding Ramps",
+              "sourceSystemKey": "StaticObjects",
+              "value": "yes London Overground Only"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Toilets",
+              "sourceSystemKey": "StaticObjects",
+              "value": "no"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Geo",
+              "key": "Zone",
+              "sourceSystemKey": "StaticObjects",
+              "value": "2"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Address",
+              "key": "Address",
+              "sourceSystemKey": "StaticObjects",
+              "value": "Highbury & Islington Underground Station,London Underground Ltd.,Holloway Rd,London,N5 1RA"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "WiFi",
+              "sourceSystemKey": "StaticObjects",
+              "value": "yes"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Cash Machines",
+              "sourceSystemKey": "StaticObjects",
+              "value": "0"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Lifts",
+              "sourceSystemKey": "StaticObjects",
+              "value": "3"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Photo Booths",
+              "sourceSystemKey": "StaticObjects",
+              "value": "0"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Waiting Room",
+              "sourceSystemKey": "StaticObjects",
+              "value": "no"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Bridge",
+              "sourceSystemKey": "StaticObjects",
+              "value": "yes"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Escalators",
+              "sourceSystemKey": "StaticObjects",
+              "value": "2"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Help Points",
+              "sourceSystemKey": "StaticObjects",
+              "value": "0 on platforms, 0 in ticket halls, 0 elsewhere"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Car park",
+              "sourceSystemKey": "StaticObjects",
+              "value": "no"
+            }
+          ],
+          "children": [],
+          "commonName": "Highbury & Islington Station",
+          "hubNaptanCode": "HUBHHY",
+          "icsCode": "1000108",
+          "id": "9100HGHI1",
+          "lat": 51.546996,
+          "lineGroup": [
+            {
+              "$type": "Tfl.Api.Presentation.Entities.LineGroup, Tfl.Api.Presentation.Entities",
+              "lineIdentifier": [
+                "great-northern"
+              ],
+              "stationAtcoCode": "910GHGHI"
+            }
+          ],
+          "lineModeGroups": [
+            {
+              "$type": "Tfl.Api.Presentation.Entities.LineModeGroup, Tfl.Api.Presentation.Entities",
+              "lineIdentifier": [
+                "great-northern"
+              ],
+              "modeName": "national-rail"
+            }
+          ],
+          "lines": [
+            {
+              "$type": "Tfl.Api.Presentation.Entities.Identifier, Tfl.Api.Presentation.Entities",
+              "crowding": {
+                "$type": "Tfl.Api.Presentation.Entities.Crowding, Tfl.Api.Presentation.Entities"
+              },
+              "id": "great-northern",
+              "name": "Great Northern",
+              "routeType": "Unknown",
+              "status": "Unknown",
+              "type": "Line",
+              "uri": "/Line/great-northern"
+            }
+          ],
+          "lon": -0.103225,
+          "modes": [
+            "national-rail"
+          ],
+          "naptanId": "9100HGHI1",
+          "placeType": "StopPoint",
+          "stationNaptan": "910GHGHI",
+          "status": true,
+          "stopType": "NaptanRailAccessArea"
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.StopPoint, Tfl.Api.Presentation.Entities",
+          "additionalProperties": [
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Car park",
+              "sourceSystemKey": "StaticObjects",
+              "value": "no"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Escalators",
+              "sourceSystemKey": "StaticObjects",
+              "value": "2"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Help Points",
+              "sourceSystemKey": "StaticObjects",
+              "value": "0 on platforms, 0 in ticket halls, 0 elsewhere"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Other Facilities",
+              "sourceSystemKey": "StaticObjects",
+              "value": "taxi ranks outside station, routeways platform to ticket hall."
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Gates",
+              "sourceSystemKey": "StaticObjects",
+              "value": "7"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Payphones",
+              "sourceSystemKey": "StaticObjects",
+              "value": "2"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Ticket Halls",
+              "sourceSystemKey": "StaticObjects",
+              "value": "1"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Address",
+              "key": "PhoneNo",
+              "sourceSystemKey": "StaticObjects",
+              "value": "0845 330 9880"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Address",
+              "key": "Address",
+              "sourceSystemKey": "StaticObjects",
+              "value": "Highbury & Islington Underground Station,London Underground Ltd.,Holloway Rd,London,N5 1RA"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Geo",
+              "key": "Zone",
+              "sourceSystemKey": "StaticObjects",
+              "value": "2"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Boarding Ramps",
+              "sourceSystemKey": "StaticObjects",
+              "value": "yes London Overground Only"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Lifts",
+              "sourceSystemKey": "StaticObjects",
+              "value": "3"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Toilets",
+              "sourceSystemKey": "StaticObjects",
+              "value": "no"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Bridge",
+              "sourceSystemKey": "StaticObjects",
+              "value": "yes"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Cash Machines",
+              "sourceSystemKey": "StaticObjects",
+              "value": "0"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Waiting Room",
+              "sourceSystemKey": "StaticObjects",
+              "value": "no"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Photo Booths",
+              "sourceSystemKey": "StaticObjects",
+              "value": "0"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "WiFi",
+              "sourceSystemKey": "StaticObjects",
+              "value": "yes"
+            }
+          ],
+          "children": [],
+          "commonName": "Highbury & Islington Station",
+          "hubNaptanCode": "HUBHHY",
+          "icsCode": "1000108",
+          "id": "9100HGHI2",
+          "lat": 51.546946,
+          "lineGroup": [
+            {
+              "$type": "Tfl.Api.Presentation.Entities.LineGroup, Tfl.Api.Presentation.Entities",
+              "lineIdentifier": [
+                "great-northern"
+              ],
+              "stationAtcoCode": "910GHGHI"
+            }
+          ],
+          "lineModeGroups": [
+            {
+              "$type": "Tfl.Api.Presentation.Entities.LineModeGroup, Tfl.Api.Presentation.Entities",
+              "lineIdentifier": [
+                "great-northern"
+              ],
+              "modeName": "national-rail"
+            }
+          ],
+          "lines": [
+            {
+              "$type": "Tfl.Api.Presentation.Entities.Identifier, Tfl.Api.Presentation.Entities",
+              "crowding": {
+                "$type": "Tfl.Api.Presentation.Entities.Crowding, Tfl.Api.Presentation.Entities"
+              },
+              "id": "great-northern",
+              "name": "Great Northern",
+              "routeType": "Unknown",
+              "status": "Unknown",
+              "type": "Line",
+              "uri": "/Line/great-northern"
+            }
+          ],
+          "lon": -0.103501,
+          "modes": [
+            "national-rail"
+          ],
+          "naptanId": "9100HGHI2",
+          "placeType": "StopPoint",
+          "stationNaptan": "910GHGHI",
+          "status": true,
+          "stopType": "NaptanRailAccessArea"
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.StopPoint, Tfl.Api.Presentation.Entities",
+          "additionalProperties": [
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Address",
+              "key": "PhoneNo",
+              "sourceSystemKey": "StaticObjects",
+              "value": "0845 330 9880"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "WiFi",
+              "sourceSystemKey": "StaticObjects",
+              "value": "yes"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Boarding Ramps",
+              "sourceSystemKey": "StaticObjects",
+              "value": "yes London Overground Only"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Lifts",
+              "sourceSystemKey": "StaticObjects",
+              "value": "3"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Ticket Halls",
+              "sourceSystemKey": "StaticObjects",
+              "value": "1"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Help Points",
+              "sourceSystemKey": "StaticObjects",
+              "value": "0 on platforms, 0 in ticket halls, 0 elsewhere"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Payphones",
+              "sourceSystemKey": "StaticObjects",
+              "value": "2"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Car park",
+              "sourceSystemKey": "StaticObjects",
+              "value": "no"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Gates",
+              "sourceSystemKey": "StaticObjects",
+              "value": "7"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Photo Booths",
+              "sourceSystemKey": "StaticObjects",
+              "value": "0"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Waiting Room",
+              "sourceSystemKey": "StaticObjects",
+              "value": "no"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Bridge",
+              "sourceSystemKey": "StaticObjects",
+              "value": "yes"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Cash Machines",
+              "sourceSystemKey": "StaticObjects",
+              "value": "0"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Toilets",
+              "sourceSystemKey": "StaticObjects",
+              "value": "no"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Escalators",
+              "sourceSystemKey": "StaticObjects",
+              "value": "2"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Other Facilities",
+              "sourceSystemKey": "StaticObjects",
+              "value": "taxi ranks outside station, routeways platform to ticket hall."
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Geo",
+              "key": "Zone",
+              "sourceSystemKey": "StaticObjects",
+              "value": "2"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Address",
+              "key": "Address",
+              "sourceSystemKey": "StaticObjects",
+              "value": "Highbury & Islington Underground Station,London Underground Ltd.,Holloway Rd,London,N5 1RA"
+            }
+          ],
+          "children": [],
+          "commonName": "Highbury & Islington Station",
+          "hubNaptanCode": "HUBHHY",
+          "icsCode": "1000108",
+          "id": "9100HIGBYA3",
+          "lat": 51.546032,
+          "lineGroup": [
+            {
+              "$type": "Tfl.Api.Presentation.Entities.LineGroup, Tfl.Api.Presentation.Entities",
+              "lineIdentifier": [
+                "windrush"
+              ],
+              "stationAtcoCode": "910GHGHI"
+            }
+          ],
+          "lineModeGroups": [
+            {
+              "$type": "Tfl.Api.Presentation.Entities.LineModeGroup, Tfl.Api.Presentation.Entities",
+              "lineIdentifier": [
+                "windrush"
+              ],
+              "modeName": "overground"
+            }
+          ],
+          "lines": [
+            {
+              "$type": "Tfl.Api.Presentation.Entities.Identifier, Tfl.Api.Presentation.Entities",
+              "crowding": {
+                "$type": "Tfl.Api.Presentation.Entities.Crowding, Tfl.Api.Presentation.Entities"
+              },
+              "id": "windrush",
+              "name": "Windrush",
+              "routeType": "Unknown",
+              "status": "Unknown",
+              "type": "Line",
+              "uri": "/Line/windrush"
+            }
+          ],
+          "lon": -0.104246,
+          "modes": [
+            "overground"
+          ],
+          "naptanId": "9100HIGBYA3",
+          "placeType": "StopPoint",
+          "stationNaptan": "910GHGHI",
+          "status": true,
+          "stopType": "NaptanRailAccessArea"
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.StopPoint, Tfl.Api.Presentation.Entities",
+          "additionalProperties": [
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Boarding Ramps",
+              "sourceSystemKey": "StaticObjects",
+              "value": "yes London Overground Only"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Help Points",
+              "sourceSystemKey": "StaticObjects",
+              "value": "0 on platforms, 0 in ticket halls, 0 elsewhere"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Other Facilities",
+              "sourceSystemKey": "StaticObjects",
+              "value": "taxi ranks outside station, routeways platform to ticket hall."
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Payphones",
+              "sourceSystemKey": "StaticObjects",
+              "value": "2"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Car park",
+              "sourceSystemKey": "StaticObjects",
+              "value": "no"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Photo Booths",
+              "sourceSystemKey": "StaticObjects",
+              "value": "0"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Waiting Room",
+              "sourceSystemKey": "StaticObjects",
+              "value": "no"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Bridge",
+              "sourceSystemKey": "StaticObjects",
+              "value": "yes"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Lifts",
+              "sourceSystemKey": "StaticObjects",
+              "value": "3"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Cash Machines",
+              "sourceSystemKey": "StaticObjects",
+              "value": "0"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Gates",
+              "sourceSystemKey": "StaticObjects",
+              "value": "7"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Toilets",
+              "sourceSystemKey": "StaticObjects",
+              "value": "no"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Address",
+              "key": "Address",
+              "sourceSystemKey": "StaticObjects",
+              "value": "Highbury & Islington Underground Station,London Underground Ltd.,Holloway Rd,London,N5 1RA"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Escalators",
+              "sourceSystemKey": "StaticObjects",
+              "value": "2"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Address",
+              "key": "PhoneNo",
+              "sourceSystemKey": "StaticObjects",
+              "value": "0845 330 9880"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Geo",
+              "key": "Zone",
+              "sourceSystemKey": "StaticObjects",
+              "value": "2"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Ticket Halls",
+              "sourceSystemKey": "StaticObjects",
+              "value": "1"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "WiFi",
+              "sourceSystemKey": "StaticObjects",
+              "value": "yes"
+            }
+          ],
+          "children": [],
+          "commonName": "Highbury & Islington Station",
+          "hubNaptanCode": "HUBHHY",
+          "icsCode": "1000108",
+          "id": "9100HIGHBYA1",
+          "lat": 51.545925,
+          "lineGroup": [
+            {
+              "$type": "Tfl.Api.Presentation.Entities.LineGroup, Tfl.Api.Presentation.Entities",
+              "lineIdentifier": [
+                "mildmay"
+              ],
+              "stationAtcoCode": "910GHGHI"
+            }
+          ],
+          "lineModeGroups": [
+            {
+              "$type": "Tfl.Api.Presentation.Entities.LineModeGroup, Tfl.Api.Presentation.Entities",
+              "lineIdentifier": [
+                "mildmay"
+              ],
+              "modeName": "overground"
+            }
+          ],
+          "lines": [
+            {
+              "$type": "Tfl.Api.Presentation.Entities.Identifier, Tfl.Api.Presentation.Entities",
+              "crowding": {
+                "$type": "Tfl.Api.Presentation.Entities.Crowding, Tfl.Api.Presentation.Entities"
+              },
+              "id": "mildmay",
+              "name": "Mildmay",
+              "routeType": "Unknown",
+              "status": "Unknown",
+              "type": "Line",
+              "uri": "/Line/mildmay"
+            }
+          ],
+          "lon": -0.104841,
+          "modes": [
+            "overground"
+          ],
+          "naptanId": "9100HIGHBYA1",
+          "placeType": "StopPoint",
+          "stationNaptan": "910GHGHI",
+          "status": true,
+          "stopType": "NaptanRailAccessArea"
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.StopPoint, Tfl.Api.Presentation.Entities",
+          "additionalProperties": [
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Address",
+              "key": "PhoneNo",
+              "sourceSystemKey": "StaticObjects",
+              "value": "0845 330 9880"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "WiFi",
+              "sourceSystemKey": "StaticObjects",
+              "value": "yes"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Address",
+              "key": "Address",
+              "sourceSystemKey": "StaticObjects",
+              "value": "Highbury & Islington Underground Station,London Underground Ltd.,Holloway Rd,London,N5 1RA"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Car park",
+              "sourceSystemKey": "StaticObjects",
+              "value": "no"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Lifts",
+              "sourceSystemKey": "StaticObjects",
+              "value": "3"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Ticket Halls",
+              "sourceSystemKey": "StaticObjects",
+              "value": "1"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Boarding Ramps",
+              "sourceSystemKey": "StaticObjects",
+              "value": "yes London Overground Only"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Escalators",
+              "sourceSystemKey": "StaticObjects",
+              "value": "2"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Other Facilities",
+              "sourceSystemKey": "StaticObjects",
+              "value": "taxi ranks outside station, routeways platform to ticket hall."
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Toilets",
+              "sourceSystemKey": "StaticObjects",
+              "value": "no"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Geo",
+              "key": "Zone",
+              "sourceSystemKey": "StaticObjects",
+              "value": "2"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Gates",
+              "sourceSystemKey": "StaticObjects",
+              "value": "7"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Photo Booths",
+              "sourceSystemKey": "StaticObjects",
+              "value": "0"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Waiting Room",
+              "sourceSystemKey": "StaticObjects",
+              "value": "no"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Help Points",
+              "sourceSystemKey": "StaticObjects",
+              "value": "0 on platforms, 0 in ticket halls, 0 elsewhere"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Payphones",
+              "sourceSystemKey": "StaticObjects",
+              "value": "2"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Bridge",
+              "sourceSystemKey": "StaticObjects",
+              "value": "yes"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Cash Machines",
+              "sourceSystemKey": "StaticObjects",
+              "value": "0"
+            }
+          ],
+          "children": [],
+          "commonName": "Highbury & Islington Station",
+          "hubNaptanCode": "HUBHHY",
+          "icsCode": "1000108",
+          "id": "9100HIGHBYA2",
+          "lat": 51.54587,
+          "lineGroup": [
+            {
+              "$type": "Tfl.Api.Presentation.Entities.LineGroup, Tfl.Api.Presentation.Entities",
+              "lineIdentifier": [
+                "mildmay",
+                "windrush"
+              ],
+              "stationAtcoCode": "910GHGHI"
+            }
+          ],
+          "lineModeGroups": [
+            {
+              "$type": "Tfl.Api.Presentation.Entities.LineModeGroup, Tfl.Api.Presentation.Entities",
+              "lineIdentifier": [
+                "mildmay",
+                "windrush"
+              ],
+              "modeName": "overground"
+            }
+          ],
+          "lines": [
+            {
+              "$type": "Tfl.Api.Presentation.Entities.Identifier, Tfl.Api.Presentation.Entities",
+              "crowding": {
+                "$type": "Tfl.Api.Presentation.Entities.Crowding, Tfl.Api.Presentation.Entities"
+              },
+              "id": "mildmay",
+              "name": "Mildmay",
+              "routeType": "Unknown",
+              "status": "Unknown",
+              "type": "Line",
+              "uri": "/Line/mildmay"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.Identifier, Tfl.Api.Presentation.Entities",
+              "crowding": {
+                "$type": "Tfl.Api.Presentation.Entities.Crowding, Tfl.Api.Presentation.Entities"
+              },
+              "id": "windrush",
+              "name": "Windrush",
+              "routeType": "Unknown",
+              "status": "Unknown",
+              "type": "Line",
+              "uri": "/Line/windrush"
+            }
+          ],
+          "lon": -0.104815,
+          "modes": [
+            "overground"
+          ],
+          "naptanId": "9100HIGHBYA2",
+          "placeType": "StopPoint",
+          "stationNaptan": "910GHGHI",
+          "status": true,
+          "stopType": "NaptanRailAccessArea"
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.StopPoint, Tfl.Api.Presentation.Entities",
+          "additionalProperties": [],
+          "children": [
+            {
+              "$type": "Tfl.Api.Presentation.Entities.StopPoint, Tfl.Api.Presentation.Entities",
+              "additionalProperties": [],
+              "children": [],
+              "commonName": "Highbury & Islington Rail Station",
+              "hubNaptanCode": "HUBHHY",
+              "id": "9100HIGHBYA",
+              "lat": 51.546087,
+              "lineGroup": [],
+              "lineModeGroups": [],
+              "lines": [],
+              "lon": -0.103767,
+              "modes": [],
+              "naptanId": "9100HIGHBYA",
+              "placeType": "StopPoint",
+              "stationNaptan": "910GHIGHBYA",
+              "status": true,
+              "stopType": "NaptanRailAccessArea"
+            }
+          ],
+          "commonName": "Highbury & Islington Rail Station",
+          "hubNaptanCode": "HUBHHY",
+          "id": "910GHIGHBYA",
+          "lat": 51.546087,
+          "lineGroup": [],
+          "lineModeGroups": [],
+          "lines": [],
+          "lon": -0.103767,
+          "modes": [],
+          "naptanId": "910GHIGHBYA",
+          "placeType": "StopPoint",
+          "stationNaptan": "910GHIGHBYA",
+          "status": true,
+          "stopType": "NaptanRailStation"
+        }
+      ],
+      "commonName": "Highbury & Islington Rail Station",
+      "hubNaptanCode": "HUBHHY",
+      "icsCode": "1000108",
+      "id": "910GHGHI",
+      "lat": 51.546177,
+      "lineGroup": [
+        {
+          "$type": "Tfl.Api.Presentation.Entities.LineGroup, Tfl.Api.Presentation.Entities",
+          "lineIdentifier": [
+            "great-northern"
+          ],
+          "stationAtcoCode": "910GHGHI"
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.LineGroup, Tfl.Api.Presentation.Entities",
+          "lineIdentifier": [
+            "mildmay"
+          ],
+          "stationAtcoCode": "910GHGHI"
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.LineGroup, Tfl.Api.Presentation.Entities",
+          "lineIdentifier": [
+            "mildmay",
+            "windrush"
+          ],
+          "stationAtcoCode": "910GHGHI"
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.LineGroup, Tfl.Api.Presentation.Entities",
+          "lineIdentifier": [
+            "windrush"
+          ],
+          "stationAtcoCode": "910GHGHI"
+        }
+      ],
+      "lineModeGroups": [
+        {
+          "$type": "Tfl.Api.Presentation.Entities.LineModeGroup, Tfl.Api.Presentation.Entities",
+          "lineIdentifier": [
+            "great-northern"
+          ],
+          "modeName": "national-rail"
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.LineModeGroup, Tfl.Api.Presentation.Entities",
+          "lineIdentifier": [
+            "mildmay",
+            "windrush"
+          ],
+          "modeName": "overground"
+        }
+      ],
+      "lines": [
+        {
+          "$type": "Tfl.Api.Presentation.Entities.Identifier, Tfl.Api.Presentation.Entities",
+          "crowding": {
+            "$type": "Tfl.Api.Presentation.Entities.Crowding, Tfl.Api.Presentation.Entities"
+          },
+          "id": "great-northern",
+          "name": "Great Northern",
+          "routeType": "Unknown",
+          "status": "Unknown",
+          "type": "Line",
+          "uri": "/Line/great-northern"
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.Identifier, Tfl.Api.Presentation.Entities",
+          "crowding": {
+            "$type": "Tfl.Api.Presentation.Entities.Crowding, Tfl.Api.Presentation.Entities"
+          },
+          "id": "mildmay",
+          "name": "Mildmay",
+          "routeType": "Unknown",
+          "status": "Unknown",
+          "type": "Line",
+          "uri": "/Line/mildmay"
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.Identifier, Tfl.Api.Presentation.Entities",
+          "crowding": {
+            "$type": "Tfl.Api.Presentation.Entities.Crowding, Tfl.Api.Presentation.Entities"
+          },
+          "id": "windrush",
+          "name": "Windrush",
+          "routeType": "Unknown",
+          "status": "Unknown",
+          "type": "Line",
+          "uri": "/Line/windrush"
+        }
+      ],
+      "lon": -0.103764,
+      "modes": [
+        "national-rail",
+        "overground"
+      ],
+      "naptanId": "910GHGHI",
+      "placeType": "StopPoint",
+      "stationNaptan": "910GHGHI",
+      "status": true,
+      "stopType": "NaptanRailStation"
+    },
+    {
+      "$type": "Tfl.Api.Presentation.Entities.StopPoint, Tfl.Api.Presentation.Entities",
+      "additionalProperties": [
+        {
+          "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+          "category": "ServiceInfo",
+          "key": "Night",
+          "sourceSystemKey": "TransXchangeETL",
+          "value": "yes"
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+          "category": "Facility",
+          "key": "Car park",
+          "sourceSystemKey": "StaticObjects",
+          "value": "no"
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+          "category": "Facility",
+          "key": "Photo Booths",
+          "sourceSystemKey": "StaticObjects",
+          "value": "0"
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+          "category": "Facility",
+          "key": "Other Facilities",
+          "sourceSystemKey": "StaticObjects",
+          "value": "taxi ranks outside station, routeways platform to ticket hall."
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+          "category": "Facility",
+          "key": "Toilets",
+          "sourceSystemKey": "StaticObjects",
+          "value": "no"
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+          "category": "Facility",
+          "key": "Bridge",
+          "sourceSystemKey": "StaticObjects",
+          "value": "yes"
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+          "category": "Facility",
+          "key": "Cash Machines",
+          "sourceSystemKey": "StaticObjects",
+          "value": "0"
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+          "category": "Facility",
+          "key": "Payphones",
+          "sourceSystemKey": "StaticObjects",
+          "value": "2"
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+          "category": "Facility",
+          "key": "Waiting Room",
+          "sourceSystemKey": "StaticObjects",
+          "value": "no"
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+          "category": "Facility",
+          "key": "Gates",
+          "sourceSystemKey": "StaticObjects",
+          "value": "7"
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+          "category": "Address",
+          "key": "PhoneNo",
+          "sourceSystemKey": "StaticObjects",
+          "value": "0845 330 9880"
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+          "category": "Facility",
+          "key": "WiFi",
+          "sourceSystemKey": "StaticObjects",
+          "value": "yes"
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+          "category": "Address",
+          "key": "Address",
+          "sourceSystemKey": "StaticObjects",
+          "value": "Highbury & Islington Underground Station,London Underground Ltd.,Holloway Rd,London,N5 1RA"
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+          "category": "Geo",
+          "key": "Zone",
+          "sourceSystemKey": "StaticObjects",
+          "value": "2"
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+          "category": "Facility",
+          "key": "Ticket Halls",
+          "sourceSystemKey": "StaticObjects",
+          "value": "1"
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+          "category": "Facility",
+          "key": "Boarding Ramps",
+          "sourceSystemKey": "StaticObjects",
+          "value": "yes London Overground Only"
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+          "category": "Facility",
+          "key": "Escalators",
+          "sourceSystemKey": "StaticObjects",
+          "value": "2"
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+          "category": "Facility",
+          "key": "Help Points",
+          "sourceSystemKey": "StaticObjects",
+          "value": "0 on platforms, 0 in ticket halls, 0 elsewhere"
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+          "category": "Facility",
+          "key": "Lifts",
+          "sourceSystemKey": "StaticObjects",
+          "value": "3"
+        }
+      ],
+      "children": [
+        {
+          "$type": "Tfl.Api.Presentation.Entities.StopPoint, Tfl.Api.Presentation.Entities",
+          "additionalProperties": [
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "WiFi",
+              "sourceSystemKey": "StaticObjects",
+              "value": "yes"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Address",
+              "key": "Address",
+              "sourceSystemKey": "StaticObjects",
+              "value": "Highbury & Islington Underground Station,London Underground Ltd.,Holloway Rd,London,N5 1RA"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Toilets",
+              "sourceSystemKey": "StaticObjects",
+              "value": "no"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Bridge",
+              "sourceSystemKey": "StaticObjects",
+              "value": "yes"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Lifts",
+              "sourceSystemKey": "StaticObjects",
+              "value": "3"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Address",
+              "key": "PhoneNo",
+              "sourceSystemKey": "StaticObjects",
+              "value": "0845 330 9880"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Boarding Ramps",
+              "sourceSystemKey": "StaticObjects",
+              "value": "yes London Overground Only"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Help Points",
+              "sourceSystemKey": "StaticObjects",
+              "value": "0 on platforms, 0 in ticket halls, 0 elsewhere"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Ticket Halls",
+              "sourceSystemKey": "StaticObjects",
+              "value": "1"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Cash Machines",
+              "sourceSystemKey": "StaticObjects",
+              "value": "0"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Escalators",
+              "sourceSystemKey": "StaticObjects",
+              "value": "2"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Geo",
+              "key": "Zone",
+              "sourceSystemKey": "StaticObjects",
+              "value": "2"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Other Facilities",
+              "sourceSystemKey": "StaticObjects",
+              "value": "taxi ranks outside station, routeways platform to ticket hall."
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Payphones",
+              "sourceSystemKey": "StaticObjects",
+              "value": "2"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Photo Booths",
+              "sourceSystemKey": "StaticObjects",
+              "value": "0"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Waiting Room",
+              "sourceSystemKey": "StaticObjects",
+              "value": "no"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Car park",
+              "sourceSystemKey": "StaticObjects",
+              "value": "no"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Gates",
+              "sourceSystemKey": "StaticObjects",
+              "value": "7"
+            }
+          ],
+          "children": [],
+          "commonName": "Highbury & Islington Underground Station",
+          "hubNaptanCode": "HUBHHY",
+          "icsCode": "1000108",
+          "id": "9400ZZLUHAI",
+          "lat": 51.54635,
+          "lineGroup": [],
+          "lineModeGroups": [],
+          "lines": [],
+          "lon": -0.103324,
+          "modes": [
+            "tube"
+          ],
+          "naptanId": "9400ZZLUHAI",
+          "placeType": "StopPoint",
+          "stationNaptan": "940GZZLUHAI",
+          "status": true,
+          "stopType": "NaptanMetroAccessArea"
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.StopPoint, Tfl.Api.Presentation.Entities",
+          "additionalProperties": [
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Boarding Ramps",
+              "sourceSystemKey": "StaticObjects",
+              "value": "yes London Overground Only"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Escalators",
+              "sourceSystemKey": "StaticObjects",
+              "value": "2"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Help Points",
+              "sourceSystemKey": "StaticObjects",
+              "value": "0 on platforms, 0 in ticket halls, 0 elsewhere"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Other Facilities",
+              "sourceSystemKey": "StaticObjects",
+              "value": "taxi ranks outside station, routeways platform to ticket hall."
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Toilets",
+              "sourceSystemKey": "StaticObjects",
+              "value": "no"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Ticket Halls",
+              "sourceSystemKey": "StaticObjects",
+              "value": "1"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Car park",
+              "sourceSystemKey": "StaticObjects",
+              "value": "no"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Address",
+              "key": "PhoneNo",
+              "sourceSystemKey": "StaticObjects",
+              "value": "0845 330 9880"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Gates",
+              "sourceSystemKey": "StaticObjects",
+              "value": "7"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Photo Booths",
+              "sourceSystemKey": "StaticObjects",
+              "value": "0"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "WiFi",
+              "sourceSystemKey": "StaticObjects",
+              "value": "yes"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Address",
+              "key": "Address",
+              "sourceSystemKey": "StaticObjects",
+              "value": "Highbury & Islington Underground Station,London Underground Ltd.,Holloway Rd,London,N5 1RA"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Geo",
+              "key": "Zone",
+              "sourceSystemKey": "StaticObjects",
+              "value": "2"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Cash Machines",
+              "sourceSystemKey": "StaticObjects",
+              "value": "0"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Payphones",
+              "sourceSystemKey": "StaticObjects",
+              "value": "2"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Waiting Room",
+              "sourceSystemKey": "StaticObjects",
+              "value": "no"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Bridge",
+              "sourceSystemKey": "StaticObjects",
+              "value": "yes"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Lifts",
+              "sourceSystemKey": "StaticObjects",
+              "value": "3"
+            }
+          ],
+          "children": [],
+          "commonName": "Highbury & Islington Underground Station",
+          "hubNaptanCode": "HUBHHY",
+          "icsCode": "1000108",
+          "id": "9400ZZLUHAI1",
+          "lat": 51.545557,
+          "lineGroup": [
+            {
+              "$type": "Tfl.Api.Presentation.Entities.LineGroup, Tfl.Api.Presentation.Entities",
+              "lineIdentifier": [
+                "victoria"
+              ],
+              "stationAtcoCode": "940GZZLUHAI"
+            }
+          ],
+          "lineModeGroups": [
+            {
+              "$type": "Tfl.Api.Presentation.Entities.LineModeGroup, Tfl.Api.Presentation.Entities",
+              "lineIdentifier": [
+                "victoria"
+              ],
+              "modeName": "tube"
+            }
+          ],
+          "lines": [
+            {
+              "$type": "Tfl.Api.Presentation.Entities.Identifier, Tfl.Api.Presentation.Entities",
+              "crowding": {
+                "$type": "Tfl.Api.Presentation.Entities.Crowding, Tfl.Api.Presentation.Entities"
+              },
+              "id": "victoria",
+              "name": "Victoria",
+              "routeType": "Unknown",
+              "status": "Unknown",
+              "type": "Line",
+              "uri": "/Line/victoria"
+            }
+          ],
+          "lon": -0.104337,
+          "modes": [
+            "tube"
+          ],
+          "naptanId": "9400ZZLUHAI1",
+          "placeType": "StopPoint",
+          "stationNaptan": "940GZZLUHAI",
+          "status": true,
+          "stopType": "NaptanMetroPlatform"
+        },
+        {
+          "$type": "Tfl.Api.Presentation.Entities.StopPoint, Tfl.Api.Presentation.Entities",
+          "additionalProperties": [
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Address",
+              "key": "PhoneNo",
+              "sourceSystemKey": "StaticObjects",
+              "value": "0845 330 9880"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "WiFi",
+              "sourceSystemKey": "StaticObjects",
+              "value": "yes"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Address",
+              "key": "Address",
+              "sourceSystemKey": "StaticObjects",
+              "value": "Highbury & Islington Underground Station,London Underground Ltd.,Holloway Rd,London,N5 1RA"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Lifts",
+              "sourceSystemKey": "StaticObjects",
+              "value": "3"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Boarding Ramps",
+              "sourceSystemKey": "StaticObjects",
+              "value": "yes London Overground Only"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Escalators",
+              "sourceSystemKey": "StaticObjects",
+              "value": "2"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Help Points",
+              "sourceSystemKey": "StaticObjects",
+              "value": "0 on platforms, 0 in ticket halls, 0 elsewhere"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Ticket Halls",
+              "sourceSystemKey": "StaticObjects",
+              "value": "1"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Bridge",
+              "sourceSystemKey": "StaticObjects",
+              "value": "yes"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Cash Machines",
+              "sourceSystemKey": "StaticObjects",
+              "value": "0"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Toilets",
+              "sourceSystemKey": "StaticObjects",
+              "value": "no"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Geo",
+              "key": "Zone",
+              "sourceSystemKey": "StaticObjects",
+              "value": "2"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Other Facilities",
+              "sourceSystemKey": "StaticObjects",
+              "value": "taxi ranks outside station, routeways platform to ticket hall."
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Payphones",
+              "sourceSystemKey": "StaticObjects",
+              "value": "2"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Photo Booths",
+              "sourceSystemKey": "StaticObjects",
+              "value": "0"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Waiting Room",
+              "sourceSystemKey": "StaticObjects",
+              "value": "no"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Car park",
+              "sourceSystemKey": "StaticObjects",
+              "value": "no"
+            },
+            {
+              "$type": "Tfl.Api.Presentation.Entities.AdditionalProperties, Tfl.Api.Presentation.Entities",
+              "category": "Facility",
+              "key": "Gates",
+              "sourceSystemKey": "StaticObjects",
+              "value": "7"
+            }
+          ],
+          "children": [],
+          "commonName": "Highbury & Islington Underground Station",
+          "hubNaptanCode": "HUBHHY",
+          "icsCode": "1000108",
+          "id": "9400ZZLUHAI2",
+          "lat": 51.545584,
+          "lineGroup": [
+            {
+              "$type": "Tfl.Api.Presentation.Entities.LineGroup, Tfl.Api.Presentation.Entities",
+              "lineIdentifier": [
+                "victoria"
+              ],
+              "stationAtcoCode": "940GZZLUHAI"
+            }
+          ],
+          "lineModeGroups": [
+            {
+              "$type": "Tfl.Api.Presentation.Entities.LineModeGroup, Tfl.Api.Presentation.Entities",
+              "lineIdentifier": [
+                "victoria"
+              ],
+              "modeName": "tube"
+            }
+          ],
+          "lines": [
+            {
+              "$type": "Tfl.Api.Presentation.Entities.Identifier, Tfl.Api.Presentation.Entities",
+              "crowding": {
+                "$type": "Tfl.Api.Presentation.Entities.Crowding, Tfl.Api.Presentation.Entities"
+              },
+              "id": "victoria",
+              "name": "Victoria",
+              "routeType": "Unknown",
+              "status": "Unknown",
+              "type": "Line",
+              "uri": "/Line/victoria"
+            }
+          ],
+          "lon": -0.104322,
+          "modes": [
+            "tube"
+          ],
+          "naptanId": "9400ZZLUHAI2",
+          "placeType": "StopPoint",
+          "stationNaptan": "940GZZLUHAI",
+          "status": true,
+          "stopType": "NaptanMetroPlatform"
+        }
+      ],
+      "commonName": "Highbury & Islington Underground Station",
+      "hubNaptanCode": "HUBHHY",
+      "icsCode": "1000108",
+      "id": "940GZZLUHAI",
+      "lat": 51.54635,
+      "lineGroup": [
+        {
+          "$type": "Tfl.Api.Presentation.Entities.LineGroup, Tfl.Api.Presentation.Entities",
+          "lineIdentifier": [
+            "victoria"
+          ],
+          "stationAtcoCode": "940GZZLUHAI"
+        }
+      ],
+      "lineModeGroups": [
+        {
+          "$type": "Tfl.Api.Presentation.Entities.LineModeGroup, Tfl.Api.Presentation.Entities",
+          "lineIdentifier": [
+            "victoria"
+          ],
+          "modeName": "tube"
+        }
+      ],
+      "lines": [
+        {
+          "$type": "Tfl.Api.Presentation.Entities.Identifier, Tfl.Api.Presentation.Entities",
+          "crowding": {
+            "$type": "Tfl.Api.Presentation.Entities.Crowding, Tfl.Api.Presentation.Entities"
+          },
+          "id": "victoria",
+          "name": "Victoria",
+          "routeType": "Unknown",
+          "status": "Unknown",
+          "type": "Line",
+          "uri": "/Line/victoria"
+        }
+      ],
+      "lon": -0.103324,
+      "modes": [
+        "tube"
+      ],
+      "naptanId": "940GZZLUHAI",
+      "placeType": "StopPoint",
+      "stationNaptan": "940GZZLUHAI",
+      "status": true,
+      "stopType": "NaptanMetroStation"
+    }
+  ],
+  "commonName": "Highbury & Islington",
+  "hubNaptanCode": "HUBHHY",
+  "icsCode": "1000108",
+  "id": "HUBHHY",
+  "lat": 51.546269,
+  "lineGroup": [
+    {
+      "$type": "Tfl.Api.Presentation.Entities.LineGroup, Tfl.Api.Presentation.Entities",
+      "lineIdentifier": [
+        "great-northern"
+      ],
+      "stationAtcoCode": "910GHGHI"
+    },
+    {
+      "$type": "Tfl.Api.Presentation.Entities.LineGroup, Tfl.Api.Presentation.Entities",
+      "lineIdentifier": [
+        "mildmay"
+      ],
+      "stationAtcoCode": "910GHGHI"
+    },
+    {
+      "$type": "Tfl.Api.Presentation.Entities.LineGroup, Tfl.Api.Presentation.Entities",
+      "lineIdentifier": [
+        "mildmay",
+        "windrush"
+      ],
+      "stationAtcoCode": "910GHGHI"
+    },
+    {
+      "$type": "Tfl.Api.Presentation.Entities.LineGroup, Tfl.Api.Presentation.Entities",
+      "lineIdentifier": [
+        "victoria"
+      ],
+      "stationAtcoCode": "940GZZLUHAI"
+    },
+    {
+      "$type": "Tfl.Api.Presentation.Entities.LineGroup, Tfl.Api.Presentation.Entities",
+      "lineIdentifier": [
+        "windrush"
+      ],
+      "stationAtcoCode": "910GHGHI"
+    }
+  ],
+  "lineModeGroups": [
+    {
+      "$type": "Tfl.Api.Presentation.Entities.LineModeGroup, Tfl.Api.Presentation.Entities",
+      "lineIdentifier": [
+        "great-northern"
+      ],
+      "modeName": "national-rail"
+    },
+    {
+      "$type": "Tfl.Api.Presentation.Entities.LineModeGroup, Tfl.Api.Presentation.Entities",
+      "lineIdentifier": [
+        "mildmay",
+        "windrush"
+      ],
+      "modeName": "overground"
+    },
+    {
+      "$type": "Tfl.Api.Presentation.Entities.LineModeGroup, Tfl.Api.Presentation.Entities",
+      "lineIdentifier": [
+        "victoria"
+      ],
+      "modeName": "tube"
+    }
+  ],
+  "lines": [
+    {
+      "$type": "Tfl.Api.Presentation.Entities.Identifier, Tfl.Api.Presentation.Entities",
+      "crowding": {
+        "$type": "Tfl.Api.Presentation.Entities.Crowding, Tfl.Api.Presentation.Entities"
+      },
+      "id": "great-northern",
+      "name": "Great Northern",
+      "routeType": "Unknown",
+      "status": "Unknown",
+      "type": "Line",
+      "uri": "/Line/great-northern"
+    },
+    {
+      "$type": "Tfl.Api.Presentation.Entities.Identifier, Tfl.Api.Presentation.Entities",
+      "crowding": {
+        "$type": "Tfl.Api.Presentation.Entities.Crowding, Tfl.Api.Presentation.Entities"
+      },
+      "id": "mildmay",
+      "name": "Mildmay",
+      "routeType": "Unknown",
+      "status": "Unknown",
+      "type": "Line",
+      "uri": "/Line/mildmay"
+    },
+    {
+      "$type": "Tfl.Api.Presentation.Entities.Identifier, Tfl.Api.Presentation.Entities",
+      "crowding": {
+        "$type": "Tfl.Api.Presentation.Entities.Crowding, Tfl.Api.Presentation.Entities"
+      },
+      "id": "victoria",
+      "name": "Victoria",
+      "routeType": "Unknown",
+      "status": "Unknown",
+      "type": "Line",
+      "uri": "/Line/victoria"
+    },
+    {
+      "$type": "Tfl.Api.Presentation.Entities.Identifier, Tfl.Api.Presentation.Entities",
+      "crowding": {
+        "$type": "Tfl.Api.Presentation.Entities.Crowding, Tfl.Api.Presentation.Entities"
+      },
+      "id": "windrush",
+      "name": "Windrush",
+      "routeType": "Unknown",
+      "status": "Unknown",
+      "type": "Line",
+      "uri": "/Line/windrush"
+    }
+  ],
+  "lon": -0.103538,
+  "modes": [
+    "bus",
+    "national-rail",
+    "overground",
+    "tube"
+  ],
+  "naptanId": "HUBHHY",
+  "placeType": "StopPoint",
+  "status": true,
+  "stopType": "TransportInterchange"
+}

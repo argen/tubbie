@@ -218,7 +218,60 @@ pub(crate) async fn save_config_inner(cfg: &BoardConfig, state: &AppState) -> Re
 }
 
 pub(crate) async fn load_config_inner(state: &AppState) -> Result<BoardConfig, String> {
-    state.config_store.load_config().await
+    let mut cfg = state.config_store.load_config().await?;
+    cfg.line_ids = migrate_legacy_line_ids(cfg.line_ids);
+    Ok(cfg)
+}
+
+/// The six Overground line ids that replaced the legacy `"london-overground"`
+/// id when TfL split the network in November 2024. Stable display order
+/// (alphabetical, matching `web/src/lib/utils/format.ts::LINE_LABELS`).
+pub(crate) const NAMED_OVERGROUND_LINES: &[&str] = &[
+    "liberty",
+    "lioness",
+    "mildmay",
+    "suffragette",
+    "weaver",
+    "windrush",
+];
+
+/// One-shot migration: rewrite a stored `BoardConfig.line_ids` containing
+/// the legacy `"london-overground"` id into the union of the six successor
+/// line ids ([`NAMED_OVERGROUND_LINES`]). Idempotent — re-running on an
+/// already-migrated `Vec` is a no-op. Stable order: existing entries
+/// preserved in their original positions; new entries appended where the
+/// legacy id used to be, with cross-list dedupe.
+///
+/// Why: the live API stopped emitting predictions under `"london-overground"`
+/// when the new lines launched. A user upgrading from a pre-2024 install
+/// would silently lose their Overground board because the chip filter
+/// excludes everything; this migration preserves their intent ("I had
+/// Overground enabled").
+pub(crate) fn migrate_legacy_line_ids(line_ids: Vec<String>) -> Vec<String> {
+    if !line_ids.iter().any(|id| id == "london-overground") {
+        return line_ids;
+    }
+
+    let mut out = Vec::with_capacity(line_ids.len() + NAMED_OVERGROUND_LINES.len());
+    let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
+    let mut expanded = false;
+    for id in line_ids {
+        if id == "london-overground" {
+            if !expanded {
+                for &named in NAMED_OVERGROUND_LINES {
+                    if seen.insert(named.to_string()) {
+                        out.push(named.to_string());
+                    }
+                }
+                expanded = true;
+            }
+            continue;
+        }
+        if seen.insert(id.clone()) {
+            out.push(id);
+        }
+    }
+    out
 }
 
 pub(crate) async fn save_app_key_inner(
@@ -794,6 +847,116 @@ mod tests {
             validate_board_config(&cfg).is_ok(),
             "16 directions should pass"
         );
+    }
+
+    // -----------------------------------------------------------------------
+    // Legacy `london-overground` migration
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn migrate_legacy_line_ids_rewrites_legacy_overground() {
+        let input = vec![
+            "northern".to_string(),
+            "london-overground".to_string(),
+            "victoria".to_string(),
+        ];
+        let out = migrate_legacy_line_ids(input);
+        assert_eq!(
+            out,
+            vec![
+                "northern",
+                "liberty",
+                "lioness",
+                "mildmay",
+                "suffragette",
+                "weaver",
+                "windrush",
+                "victoria"
+            ]
+            .into_iter()
+            .map(String::from)
+            .collect::<Vec<_>>(),
+            "legacy id must expand in-place to the six named lines while preserving order"
+        );
+    }
+
+    #[test]
+    fn migrate_legacy_line_ids_is_idempotent() {
+        let input = vec!["london-overground".to_string()];
+        let once = migrate_legacy_line_ids(input);
+        let twice = migrate_legacy_line_ids(once.clone());
+        assert_eq!(once, twice, "second pass must be a no-op");
+    }
+
+    #[test]
+    fn migrate_legacy_line_ids_dedupes_against_existing_named_ids() {
+        // User had `mildmay` already and the legacy id; trailing windrush
+        // is also explicit. Expansion expands at the legacy id's position
+        // and skips ids already seen anywhere in the list.
+        let input = vec![
+            "mildmay".to_string(),
+            "london-overground".to_string(),
+            "windrush".to_string(),
+        ];
+        let out = migrate_legacy_line_ids(input);
+        assert_eq!(
+            out,
+            vec![
+                "mildmay",
+                "liberty",
+                "lioness",
+                "suffragette",
+                "weaver",
+                "windrush"
+            ]
+            .into_iter()
+            .map(String::from)
+            .collect::<Vec<_>>(),
+            "expansion must skip ids the user already has (mildmay, windrush) \
+             and preserve their original positions",
+        );
+    }
+
+    #[test]
+    fn migrate_legacy_line_ids_passes_through_modern_config() {
+        let input = vec!["northern".to_string(), "mildmay".to_string()];
+        let out = migrate_legacy_line_ids(input.clone());
+        assert_eq!(
+            out, input,
+            "configs without the legacy id must be returned unchanged"
+        );
+    }
+
+    #[tokio::test]
+    async fn load_config_migrates_legacy_london_overground_id() {
+        let state = fixture_state();
+        // Simulate a pre-2024 stored config by saving via the lower-level
+        // `set_raw` API on MemoryConfigStore — bypasses the modern
+        // validate_board_config which would reject the legacy id today.
+        let cfg = BoardConfig {
+            station_id: "940GZZLUBZP".to_string(),
+            line_ids: vec!["northern".to_string(), "london-overground".to_string()],
+            directions: vec![],
+            poll_seconds: 20,
+            theme: "classic-amber".to_string(),
+        };
+        state
+            .config_store
+            .save_config(&cfg)
+            .await
+            .expect("save legacy config");
+        let loaded = load_config_inner(&state).await.expect("load");
+        assert!(
+            !loaded.line_ids.iter().any(|id| id == "london-overground"),
+            "legacy id must be stripped on load; got {:?}",
+            loaded.line_ids
+        );
+        for &named in NAMED_OVERGROUND_LINES {
+            assert!(
+                loaded.line_ids.iter().any(|id| id == named),
+                "loaded config must include all six named Overground lines; missing {named}"
+            );
+        }
     }
 
     // -----------------------------------------------------------------------
@@ -1523,7 +1686,10 @@ mod tests {
     /// can leave the window unusable until the next launch.
     #[test]
     fn validate_board_size_rejects_out_of_range() {
-        assert!(validate_board_size(100.0, 600.0).is_err(), "width too small");
+        assert!(
+            validate_board_size(100.0, 600.0).is_err(),
+            "width too small"
+        );
         assert!(
             validate_board_size(2000.0, 600.0).is_err(),
             "width too large"

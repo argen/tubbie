@@ -16,10 +16,13 @@ use tfl_domain::{
 /// Belsize Park arrivals fixture, embedded at compile time.
 const BZP_FIXTURE: &str = include_str!("../../../fixtures/arrivals/940GZZLUBZP.json");
 
-/// Recorded-at timestamp from the fixture meta file.
-/// This makes `time_to_station` formatting deterministic regardless of when
-/// the test runs.
-const RECORDED_AT: &str = "2026-04-23T16:31:48Z";
+/// Recorded-at timestamp from the fixture meta file
+/// (`fixtures/arrivals/940GZZLUBZP.meta.json::recorded_at`). Update this
+/// constant whenever you re-record the BZP arrivals fixture, and run
+/// `cargo insta review` to accept the new snapshot output.
+/// This makes `time_to_station` formatting deterministic regardless of
+/// when the test runs.
+const RECORDED_AT: &str = "2026-04-29T09:16:06Z";
 
 fn parse_recorded_at() -> DateTime<Utc> {
     DateTime::parse_from_rfc3339(RECORDED_AT)

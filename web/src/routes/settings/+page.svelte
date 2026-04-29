@@ -58,6 +58,14 @@
     { id: 'Outbound', label: 'Outbound' },
   ];
 
+  // Master roster of selectable line chips. Tube + DLR + Elizabeth +
+  // the six named Overground lines (Mildmay/Lioness/Suffragette/Windrush/
+  // Weaver/Liberty — TfL split the Overground in November 2024). The
+  // visible/disabled subset for any station is intersected with that
+  // station's `Station.lines` field in `handleStationSelect`. Note: the
+  // backend accepts both `elizabeth` and `elizabeth-line` as aliases for
+  // the Elizabeth line; we keep the historical mode-name id here since
+  // it's what the existing config store has serialised for years.
   const KNOWN_LINES: { id: string; label: string }[] = [
     { id: 'bakerloo', label: 'Bakerloo' },
     { id: 'central', label: 'Central' },
@@ -71,6 +79,13 @@
     { id: 'piccadilly', label: 'Piccadilly' },
     { id: 'victoria', label: 'Victoria' },
     { id: 'waterloo-city', label: 'Waterloo & City' },
+    { id: 'dlr', label: 'DLR' },
+    { id: 'liberty', label: 'Liberty' },
+    { id: 'lioness', label: 'Lioness' },
+    { id: 'mildmay', label: 'Mildmay' },
+    { id: 'suffragette', label: 'Suffragette' },
+    { id: 'weaver', label: 'Weaver' },
+    { id: 'windrush', label: 'Windrush' },
   ];
 
   onMount(async () => {

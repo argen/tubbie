@@ -210,6 +210,58 @@ describe('Board — per-arrival line grouping', () => {
     expect(rows.length).toBe(2);
   });
 
+  // Overground arrivals carry `direction: "Inbound"` / `"Outbound"` (not
+  // compass headings) and have their own line ids — Mildmay, Windrush, etc.
+  // The frontend grouping must treat them identically to tube lines: one
+  // LineGroup per line id, with directions sorted into the canonical compass
+  // order that places Inbound/Outbound after the four headings.
+  it('renders Mildmay + Windrush at a multi-line Overground hub', () => {
+    const board = buildBoard([
+      platform('Inbound', [
+        arrival('mildmay', 'Mildmay', 'Inbound', 'Stratford', 'Inbound - Platform 2'),
+        arrival('windrush', 'Windrush', 'Inbound', 'Highbury & Islington', 'Inbound - Platform 1'),
+      ]),
+      platform('Outbound', [
+        arrival(
+          'mildmay',
+          'Mildmay',
+          'Outbound',
+          'Richmond',
+          'Outbound - Platform 3',
+          '2026-04-27T19:04:00Z',
+        ),
+        arrival(
+          'windrush',
+          'Windrush',
+          'Outbound',
+          'New Cross Gate',
+          'Outbound - Platform 4',
+          '2026-04-27T19:06:00Z',
+        ),
+      ]),
+    ]);
+
+    render(Board, { props: { board } });
+
+    expect(lineGroupIds()).toEqual(['mildmay', 'windrush']);
+    expect(directionLabelsFor('mildmay')).toEqual(['Inbound', 'Outbound']);
+    expect(directionLabelsFor('windrush')).toEqual(['Inbound', 'Outbound']);
+
+    // Stripe colour MUST resolve to the Mildmay CSS variable, not a
+    // generic Overground orange — the per-line stripe is what tells the
+    // user which train they're looking at when two lines share a column.
+    const mildmayRow = document.querySelector(
+      '.line-group[data-line-id="mildmay"] .arrival-row',
+    ) as HTMLElement | null;
+    expect(mildmayRow).not.toBeNull();
+    expect(mildmayRow!.style.getPropertyValue('--line-color')).toBe('var(--line-mildmay)');
+    const windrushRow = document.querySelector(
+      '.line-group[data-line-id="windrush"] .arrival-row',
+    ) as HTMLElement | null;
+    expect(windrushRow).not.toBeNull();
+    expect(windrushRow!.style.getPropertyValue('--line-color')).toBe('var(--line-windrush)');
+  });
+
   it('renders nothing meaningful for an empty board (no fake "unknown" group)', () => {
     const board = buildBoard([]);
     render(Board, { props: { board } });
