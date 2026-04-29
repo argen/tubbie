@@ -386,8 +386,7 @@ async fn refresh_drops_arrivals_for_lines_not_serving_the_station() {
     let cfg = BoardConfig::new("940GZZLUBZP");
     let board = svc.refresh(&cfg).await.expect("refresh BZP");
 
-    let mut surfaced_lines: std::collections::BTreeSet<String> =
-        std::collections::BTreeSet::new();
+    let mut surfaced_lines: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
     for platform in &board.platforms {
         for arrival in &platform.arrivals {
             surfaced_lines.insert(arrival.line_id.clone());
@@ -402,6 +401,106 @@ async fn refresh_drops_arrivals_for_lines_not_serving_the_station() {
         !surfaced_lines.contains("bakerloo"),
         "the phantom Bakerloo arrival must be dropped by the defensive \
          filter; surfaced lines: {surfaced_lines:?}"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Multi-mode coverage: Overground stations (Phase 3 + 4)
+// ---------------------------------------------------------------------------
+
+/// Hackney Central is an Overground-only station served by the Mildmay line
+/// (formerly the North London Line). With multi-mode stop-points fan-out in
+/// place, `allowed_line_ids_for("910GHACKNYC")` must return `{"mildmay"}`
+/// and legitimate Mildmay arrivals from the recorded fixture must reach
+/// the board untouched by the defensive filter.
+#[tokio::test]
+async fn refresh_emits_legitimate_overground_arrivals_at_overground_station() {
+    let svc = fixture_service("2026-04-29T09:16:00Z");
+    let cfg = BoardConfig::new("910GHACKNYC");
+
+    let board = svc
+        .refresh(&cfg)
+        .await
+        .expect("refresh against the recorded Hackney Central fixture should succeed");
+
+    let mut lines: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+    for p in &board.platforms {
+        for a in &p.arrivals {
+            lines.insert(a.line_id.clone());
+        }
+    }
+    assert!(
+        lines.contains("mildmay"),
+        "Mildmay arrivals must reach the board at Hackney Central; got {lines:?}"
+    );
+    // Hackney Central is single-line — no other line ids must surface.
+    let unexpected: Vec<&String> = lines.iter().filter(|l| l.as_str() != "mildmay").collect();
+    assert!(
+        unexpected.is_empty(),
+        "no non-Mildmay line should appear at Hackney Central; got {unexpected:?}"
+    );
+}
+
+/// Phantom Overground arrival at a tube-only station: the defensive filter
+/// must drop a Mildmay prediction injected at Belsize Park. Mirrors the
+/// existing `refresh_drops_arrivals_for_lines_not_serving_the_station`
+/// test that uses Bakerloo as the phantom — but exercises the post-merge
+/// allowed-set, which now includes Overground line ids for OG stations.
+#[tokio::test]
+async fn refresh_drops_phantom_overground_arrival_at_tube_only_station() {
+    use tfl_client::fixture::FixtureTflHttp;
+
+    // Hand-crafted phantom payload lives next to this file (Phase 0).
+    let phantom_payload: serde_json::Value =
+        serde_json::from_str(include_str!("data/phantom_overground_at_belsize_park.json"))
+            .expect("phantom fixture must parse");
+
+    struct InjectingHttp {
+        inner: FixtureTflHttp,
+        bzp_payload: serde_json::Value,
+    }
+
+    impl tfl_client::http::TflHttp for InjectingHttp {
+        async fn fetch(&self, kind: &str, id: &str) -> Result<serde_json::Value, TflError> {
+            if kind == "arrivals" && id == "940GZZLUBZP" {
+                return Ok(self.bzp_payload.clone());
+            }
+            self.inner.fetch(kind, id).await
+        }
+    }
+
+    let injecting = InjectingHttp {
+        inner: FixtureTflHttp::new(fixtures_dir()),
+        bzp_payload: phantom_payload,
+    };
+
+    let client = std::sync::Arc::new(TflClient::new(injecting));
+    client
+        .warm_stop_points_cache()
+        .await
+        .expect("warm stop-points");
+
+    let svc = BoardService::new(
+        std::sync::Arc::clone(&client),
+        FakeClock::from_rfc3339("2026-04-29T09:00:00Z").unwrap(),
+    );
+
+    let cfg = BoardConfig::new("940GZZLUBZP");
+    let board = svc.refresh(&cfg).await.expect("refresh BZP");
+
+    let mut lines: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+    for p in &board.platforms {
+        for a in &p.arrivals {
+            lines.insert(a.line_id.clone());
+        }
+    }
+    assert!(
+        lines.contains("northern"),
+        "legitimate Northern arrival must reach the board; got {lines:?}"
+    );
+    assert!(
+        !lines.contains("mildmay"),
+        "phantom Mildmay arrival must be dropped at Belsize Park; got {lines:?}"
     );
 }
 

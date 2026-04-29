@@ -73,10 +73,20 @@ impl<H: TflHttp + 'static, C: Clock + 'static> BoardService<H, C> {
         Ok(self.client.search_stations(query).await?)
     }
 
-    /// Pre-fetch the tube stop-points list so the first settings-search is
-    /// instant. Fire-and-forget from app startup; safe to call repeatedly.
+    /// Pre-fetch the multi-mode stop-points list so the first settings-search
+    /// is instant. Fire-and-forget from app startup; safe to call repeatedly.
+    /// Returns immediately if any data is already cached (fresh or stale);
+    /// only the first cold call blocks on the network fan-out.
     pub async fn warm_stop_points_cache(&self) -> Result<usize, BoardError> {
         Ok(self.client.warm_stop_points_cache().await?)
+    }
+
+    /// Force a stop-points refresh. Used by the periodic background task
+    /// in `lib.rs::run` to keep the cache fresh out-of-band, so
+    /// `search_stations` (and the hub-merge lookups in `get_arrivals`)
+    /// never block on a TTL-driven refresh past the initial warm.
+    pub async fn refresh_stop_points_cache(&self) -> Result<usize, BoardError> {
+        Ok(self.client.refresh_stop_points_cache().await?)
     }
 
     /// Fetch the current status for a single TfL line.
@@ -100,12 +110,8 @@ impl<H: TflHttp + 'static, C: Clock + 'static> BoardService<H, C> {
     pub async fn refresh(&self, cfg: &BoardConfig) -> Result<Board, BoardError> {
         let raw_arrivals = self.client.get_arrivals(&cfg.station_id).await?;
         let filtered = apply_filters(raw_arrivals, cfg);
-        let filtered = drop_arrivals_for_lines_not_serving(
-            &cfg.station_id,
-            filtered,
-            &self.client,
-        )
-        .await;
+        let filtered =
+            drop_arrivals_for_lines_not_serving(&cfg.station_id, filtered, &self.client).await;
         let board = build_board(&cfg.station_id, filtered, self.clock.now(), None);
         Ok(board)
     }

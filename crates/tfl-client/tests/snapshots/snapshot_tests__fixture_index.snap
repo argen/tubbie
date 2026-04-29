@@ -1,14 +1,22 @@
 ---
 source: crates/tfl-client/tests/snapshot_tests.rs
-assertion_line: 65
 expression: rendered
 ---
+arrivals/910GHACKNYC
 arrivals/940GZZLUBNK
 arrivals/940GZZLUBZP
+arrivals/940GZZLUHAI
 arrivals/940GZZLUKSX
 arrivals/940GZZLUOXC
+line-status/dlr
+line-status/elizabeth-line
+line-status/overground
 line-status/tube
 stop-point/HUBBAN
+stop-point/HUBHHY
 stop-point/HUBTCR
-stop-point/HUBWHC
+stop-point/HUBZWL
+stop-points/dlr
+stop-points/elizabeth-line
+stop-points/overground
 stop-points/tube

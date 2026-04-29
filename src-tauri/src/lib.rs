@@ -561,7 +561,9 @@ fn clamp_window_above_screen_bottom(window: &tauri::WebviewWindow) {
     let Ok(pos) = window.outer_position() else {
         return;
     };
-    let Ok(size) = window.outer_size() else { return };
+    let Ok(size) = window.outer_size() else {
+        return;
+    };
     let mon_pos = monitor.position();
     let mon_size = monitor.size();
     let win_bottom = pos.y + size.height as i32;
@@ -735,6 +737,35 @@ pub fn run() {
                 }
             });
 
+            // Periodic stop-points refresh.
+            //
+            // The cache is stale-while-revalidate: `search_stations` and
+            // the hub-merge lookups in `get_arrivals` always return
+            // whatever's currently cached (fresh or stale) — they never
+            // block on a TTL-driven refresh past the initial warm. This
+            // task is what keeps "whatever's currently cached" actually
+            // fresh: every ~14 minutes (just under the 15-min
+            // STOP_POINTS_TTL) it forces a single-flighted refresh. If a
+            // tick is missed (laptop sleep, transient TfL outage) the
+            // user sees slightly older station metadata until the next
+            // tick — acceptable because TfL station metadata is stable
+            // for months. The first tick is delayed by the period so it
+            // doesn't race with the initial warm above.
+            let refresh_bs = Arc::clone(&board_service);
+            tauri::async_runtime::spawn(async move {
+                let mut ticker = tokio::time::interval_at(
+                    tokio::time::Instant::now() + Duration::from_secs(14 * 60),
+                    Duration::from_secs(14 * 60),
+                );
+                ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+                loop {
+                    ticker.tick().await;
+                    if let Err(e) = refresh_bs.refresh_stop_points_cache().await {
+                        eprintln!("[tubbie] stop-points cache periodic refresh failed: {e}");
+                    }
+                }
+            });
+
             // Watcher loop: panic-recovery only. Routine config changes flow
             // through `cfg_tx` and the running stream picks them up on its
             // next tick — no respawn. This loop restarts the task only when
@@ -795,11 +826,12 @@ pub fn run() {
             // wrapper used by `save_display_mode` would deadlock here —
             // `run_on_main_thread` posts a user event that the main thread
             // can only process *after* setup returns.
-            apply_display_mode_effects_sync(&app.handle().clone(), &initial_display_mode)
-                .map_err(|e| {
+            apply_display_mode_effects_sync(&app.handle().clone(), &initial_display_mode).map_err(
+                |e| {
                     eprintln!("[tubbie] failed to apply initial display mode: {e}");
                     Box::<dyn std::error::Error>::from(e)
-                })?;
+                },
+            )?;
 
             Ok(())
         })

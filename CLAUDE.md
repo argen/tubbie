@@ -143,6 +143,130 @@ bottom of this doc, not just the unit tests.**
     because `platform_name` differs across the physical platforms the
     backend merged.
 
+12. **Multi-mode caches MUST cover tube + dlr + overground + elizabeth-line,
+    fetched per-mode and merged.** TfL's `/StopPoint/Mode/{mode}` and
+    `/Line/Mode/{mode}/Status` endpoints accept a single mode each.
+    Comma-separated multi-mode strings are forbidden by the
+    `[a-zA-Z0-9_-]{1,64}` validator in `crates/tfl-client/src/fixture.rs`,
+    and widening that regex is the path-traversal regression that
+    `architecture.md` warns against. The stop-points cache is one merged
+    `Vec<Station>` keyed by `Station.id` with line-list union on
+    collision; the line-status cache is one merged `Vec<TflLine>`. Both
+    fan out across `tfl_client::SUPPORTED_MODES` in parallel via
+    `futures::future::join_all` on cold-warm. A subset client for
+    memory-constrained downstream consumers (the iOS shell) goes
+    through `TflClient::with_modes(http, &[&str])`. Adding a mode
+    requires (a) extending `SUPPORTED_MODES`, (b) recording matching
+    `fixtures/{stop-points,line-status}/{mode}.json`, (c) extending
+    `is_supported_line_id` in `tfl-domain`, and (d) extending the
+    canonical-id prefix whitelist in #13 if its NaPTAN scheme differs.
+
+13. **Station search MUST use a NaPTAN canonical-prefix whitelist, not a
+    `modes` list.** Allowed prefixes are `940GZZLU` (tube canonical),
+    `940GZZDL` (DLR canonical), and `910G` filtered to stops whose
+    `modes` include `overground` or `elizabeth-line` — the 910G NaPTAN
+    range overlaps with National Rail-only operators (Gatwick Express,
+    Thameslink, Southern, …) which we don't surface. `9400ZZLU*`,
+    `4900*`, `2100*`, and `HUB*` MUST stay excluded — they're
+    platform-level children, NaPTAN bus-stop-at-station records, and
+    multi-mode aggregators with no stable arrivals id. Adding a mode
+    with a different prefix scheme requires extending the whitelist
+    and adding a regression test of the form
+    `search_stations_includes_<mode>_only_station` against a real
+    fixture entry.
+
+14. **Legacy `"london-overground"` config ids MUST be migrated on load.**
+    TfL stopped emitting predictions under the legacy id when the six
+    named lines launched in November 2024. `load_config_inner` calls
+    `migrate_legacy_line_ids` in `commands.rs`, which expands any
+    `"london-overground"` entry in `BoardConfig.line_ids` into the six
+    successor ids `[liberty, lioness, mildmay, suffragette, weaver,
+    windrush]` at the same position, deduping against existing entries.
+    Idempotent. Keep `"london-overground"` accepted by
+    `is_supported_line_id` so historical fixtures still parse. The
+    migration is the only thing standing between an upgrading user and
+    a silently-empty Overground board.
+
+15. **Hub-line cache MUST cache `NotFound` results.** `hub_lines_cached`
+    in `client.rs` stores an empty `Vec<LineRef>` on `TflError::NotFound`
+    so a hub the live API genuinely doesn't expose (e.g. one of the
+    ~190 tube hubs whose detail endpoint we've never recorded a fixture
+    for) is fetched once per process lifetime, not on every cold-warm.
+    Transient errors (transport, rate-limited) MUST NOT be cached — a
+    429 must retry on the next warm. Without this, a single warm cycle
+    fans out 190+ hub fetches; with it, it's bounded by the count of
+    hubs whose data has ever resolved.
+
+16. **`stop_points_cached` MUST single-flight concurrent refreshes.**
+    The sync `Mutex<Option<…>>` cache check is fast, but releasing the
+    lock and starting an async fan-out lets a debounced search burst
+    (200 ms typing → three keystrokes within a TTL-expiry window) each
+    see an empty cache and fire its own full per-mode + hub fan-out —
+    a 3× redundant TfL workload. The async `tokio::sync::Mutex` field
+    `stop_points_refresh` serialises refreshes: the first caller does
+    the work; subsequent callers await, then re-check the cache and
+    return immediately. Hold the lock across the per-mode + hub
+    fan-out so the second caller's re-check sees the freshly-stamped
+    cache. Read-only callers (post-warm cache hits) never touch the
+    refresh lock.
+
+17. **Hub fan-out MUST be deduped by `hub_naptan_code` before the
+    parallel fetch.** A single hub like `HUBKGX` is referenced by ~23
+    stations across the tube + DLR + Elizabeth + Overground feeds.
+    The naive `iter().enumerate()` approach fires one job per station,
+    but `hub_lines_cached` only caches AFTER its first fetch resolves —
+    so 23 racers all see an empty cache and each issue their own HTTP
+    request. Building `stations_per_hub: HashMap<hub_id, Vec<usize>>`
+    before the fan-out cuts a 757-fetch warm-time burst to 90 unique
+    hubs. Guarded by `warm_stop_points_dedupes_hub_fetches_before_fan_out`.
+
+18. **`search_stations` MUST dedupe canonical entries that share a
+    `hub_naptan_code`.** At multi-mode interchanges (Bank,
+    Farringdon, …) the per-mode `/StopPoint/Mode/{mode}` feeds each
+    return their own canonical entry — `940GZZLUBNK` and `940GZZDLBNK`
+    both have `hubNaptanCode: HUBBAN` because they're the same physical
+    station. After hub-merge they also carry the same union of lines,
+    so the dropdown would show two near-identical rows that route to
+    the same arrivals. Keep one canonical entry per hub code, with the
+    prefix priority **`940GZZLU` (tube) > `940GZZDL` (DLR) > `910G`
+    (Overground / Elizabeth)** — the user's mental model maps a hub to
+    its tube parent at every interchange we surface today. Stations
+    without a `hub_naptan_code` (Hampstead Heath, Belsize Park, single-
+    mode stops) MUST NOT be deduped — they have no hub partner.
+
+19. **`resolve_arrival_ids` and `allowed_line_ids_for` MUST read from
+    `read_cache_any`, not `read_fresh_cache`.** The 15-min stop-points
+    TTL controls when the cache *refreshes*, not when it stops being
+    *useful*. Past the TTL, a cached entry's `hub_naptan_code` and
+    `lines` fields remain valid (TfL station metadata changes
+    infrequently); the periodic background task in `lib.rs::run` will
+    refresh on its own schedule. If the stream's arrivals path uses
+    `read_fresh_cache` instead, the first tick after expiry loses
+    hub-merge — Bank/Euston/Whitechapel siblings are never fetched and
+    a user with the chip filter set (e.g. `line_ids = ["lioness"]` at
+    Euston) silently sees zero arrivals because the only data path
+    that could return Lioness predictions (the OG sibling fetch) was
+    bypassed. Guarded by
+    `allowed_line_ids_for_serves_stale_cache_past_ttl`.
+
+20. **Stop-points cache is stale-while-revalidate; refresh runs out-of-
+    band.** `stop_points_cached` returns whatever's currently cached
+    (fresh or stale) and only blocks on the network for a *cold* cache
+    (first call ever, never warmed). The TTL no longer gates user-
+    facing reads at all. A periodic task spawned in `lib.rs::run` calls
+    `client.refresh_stop_points_cache()` every ~14 minutes (just under
+    `STOP_POINTS_TTL`) to keep the cache fresh. That public refresh
+    method runs the single-flighted fan-out + hub-merge unconditionally
+    via `refresh_stop_points_inner(force = true)`. The cold-cache path
+    still goes through the same inner with `force = false` so a
+    concurrent refresher's stamp short-circuits us. Without this
+    decoupling, a debounced search burst at the TTL boundary blocks for
+    ~1–3 s on a redundant fan-out the user didn't ask for, and the
+    multi-mode hub-merge starves the chip filter at hub stations
+    until the next manual search triggers a refresh. Guarded by
+    `search_stations_does_not_refetch_when_cache_is_stale_but_present`
+    and `refresh_stop_points_cache_forces_refetch_even_when_fresh`.
+
 ## Test harness — the rules
 
 **Tests are not optional for this pipeline.** Visual smoke testing is
@@ -202,6 +326,31 @@ These tests must stay green or you're shipping a regression:
 | `src-tauri/src/commands.rs`                                   | `validate_board_size_rejects_non_finite`                 | NaN / infinity refused before reaching `NSWindow::setFrame:` |
 | `web/src/lib/__tests__/dom/board-line-groups.dom.test.ts`     | mixed-line direction bucket splits per-line; 5-line interchange renders 5 groups; directions sort by compass order; multi-platform merges within (line, direction) | line-grouped layout contract — covers Baker Street / King's Cross corner cases |
 | `web/src/lib/__tests__/dom/board-resize-request.dom.test.ts`  | each preset tier (1 / 2 / 3 / 4+ lines × menubar/window) triggers correct dims; same board re-render dedupes; switching stations re-fires | adaptive resize contract |
+| `crates/tfl-client/src/client_tests.rs`                       | `get_line_status_overground_returns_status`              | overground line statuses reach the ticker |
+| `crates/tfl-client/src/client_tests.rs`                       | `get_line_status_dlr_returns_status`                     | dlr line statuses reach the ticker |
+| `crates/tfl-client/src/client_tests.rs`                       | `get_line_status_elizabeth_returns_status`               | elizabeth line statuses reach the ticker |
+| `crates/tfl-client/src/client_tests.rs`                       | `client_with_subset_modes_only_fetches_those_modes`      | `with_modes` honoured by both line-status and stop-points fan-outs |
+| `crates/tfl-client/src/client_tests.rs`                       | `stop_points_cache_includes_overground_dlr_elizabeth_stations` | multi-mode cache fan-out |
+| `crates/tfl-client/src/client_tests.rs`                       | `search_stations_returns_overground_only_station`        | overground-only stops reachable in search |
+| `crates/tfl-client/src/client_tests.rs`                       | `search_stations_includes_dlr_only_station`              | latent DLR-only-station bug fixed |
+| `crates/tfl-client/src/client_tests.rs`                       | `search_stations_excludes_national_rail_only_910g_stations` | 910G NaPTAN range mode-filtered |
+| `crates/tfl-client/src/client_tests.rs`                       | `search_stations_excludes_platform_children_and_hubs`    | prefix whitelist still rejects 9400/4900/2100/HUB |
+| `crates/tfl-client/src/client_tests.rs`                       | `stop_points_cache_dedupes_station_id_across_modes_and_unions_lines` | cross-mode merge contract |
+| `crates/tfl-client/src/client_tests.rs`                       | `search_whitechapel_includes_elizabeth_and_windrush_chips` | hub-merge brings Overground + Elizabeth siblings into a tube parent |
+| `crates/tfl-board/tests/board_service_tests.rs`               | `refresh_emits_legitimate_overground_arrivals_at_overground_station` | end-to-end Overground at Hackney Central |
+| `crates/tfl-board/tests/board_service_tests.rs`               | `refresh_drops_phantom_overground_arrival_at_tube_only_station` | defensive filter rejects Mildmay phantom at BZP |
+| `src-tauri/src/commands.rs`                                   | `migrate_legacy_line_ids_rewrites_legacy_overground`     | one-shot rewrite of legacy id |
+| `src-tauri/src/commands.rs`                                   | `migrate_legacy_line_ids_is_idempotent`                  | re-running on migrated config is a no-op |
+| `src-tauri/src/commands.rs`                                   | `migrate_legacy_line_ids_dedupes_against_existing_named_ids` | merge preserves existing ids and positions |
+| `src-tauri/src/commands.rs`                                   | `load_config_migrates_legacy_london_overground_id`       | end-to-end load path runs the migration |
+| `web/src/lib/__tests__/dom/settings-overground-chips.dom.test.ts` | all 6 named OG chips + DLR appear; only station-served ones enabled; toggling Mildmay writes into line_ids | settings UI contract for the multi-mode rollout |
+| `web/src/lib/__tests__/dom/board-line-groups.dom.test.ts`     | Mildmay + Windrush at a multi-line OG hub: per-line stripe matches per-line group | line-stripe correctness invariant #11 holds for OG line ids |
+| `web/src/lib/__tests__/dom/ArrivalRow.dom.test.ts`            | each of the 6 named OG ids resolves to its own `--line-{id}` CSS variable | OG colours aren't aliased to a generic Overground orange |
+| `crates/tfl-client/src/client_tests.rs`                       | `search_stations_does_not_refetch_when_cache_is_stale_but_present` | SWR — search never blocks on TTL refresh |
+| `crates/tfl-client/src/client_tests.rs`                       | `refresh_stop_points_cache_forces_refetch_even_when_fresh` | periodic background refresh actually does the work |
+| `crates/tfl-client/src/client_tests.rs`                       | `allowed_line_ids_for_serves_stale_cache_past_ttl` | hub lookup survives the TTL boundary |
+| `crates/tfl-client/src/client_tests.rs`                       | `warm_stop_points_dedupes_hub_fetches_before_fan_out` | hub fan-out deduped (757 → 90) |
+| `crates/tfl-client/src/client_tests.rs`                       | `search_dedupes_multi_mode_interchange_to_one_row` | Bank/Farringdon collapse to single canonical |
 
 If you add a new failure mode, add a test row here.
 

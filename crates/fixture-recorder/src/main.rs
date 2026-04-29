@@ -85,19 +85,27 @@ pub fn sanitize_url(url: &str) -> String {
 // Stop-points trim logic
 // ---------------------------------------------------------------------------
 
-/// Trim a TfL `/StopPoint/Mode/tube` response to a compact representation.
+/// Trim a TfL `/StopPoint/Mode/{mode}` response to a compact representation.
 ///
-/// The raw TfL response is ~23 MB per request, bloated with unused fields
+/// The raw TfL response is multi-MB per request, bloated with unused fields
 /// (`additionalProperties`, `children`, `lineGroup`, etc.). This function
-/// discards everything M2's `search_stations` doesn't need and keeps only
+/// discards everything `search_stations` doesn't need and keeps only
 /// the fields required for station search and line-service display:
 ///
 /// Per stop point: `id`, `commonName`, `lat`, `lon`, `modes`,
-/// `lineModeGroups[].lineIdentifier`.
+/// `lineModeGroups[].lineIdentifier`, **and `hubNaptanCode` when present**.
+/// `hubNaptanCode` is what `stop_points_cached` uses to fan out the
+/// hub-merge fetch that brings DLR / Overground / Elizabeth siblings into
+/// a tube hub's `Station.lines` (Bank → DLR, Whitechapel → Mildmay +
+/// Elizabeth, etc.). Stripping it here previously meant the hub-merge
+/// silently no-op'd for every freshly-recorded fixture and the multi-mode
+/// chip tests went red for reasons unrelated to the code under test.
 ///
 /// Stop points whose `id` starts with `"HUB"` are excluded (hub aggregates,
-/// not real tube stations). The paginated envelope (`$type`, `total`,
-/// `stopPoints`) is preserved.
+/// not real stations) and stops that don't serve any mode in
+/// [`SURFACED_MODES`] are dropped. The paginated envelope (`$type`, `total`,
+/// `stopPoints`) is preserved. Used uniformly across the per-mode
+/// stop-points fetches (tube / overground / dlr / elizabeth-line).
 ///
 /// # Implementation note
 /// Always-on (not a flag): the stop-points fixture is the only one with this
@@ -123,8 +131,14 @@ pub fn trim_stop_points(raw: &Value) -> Value {
     })
 }
 
+/// Modes we trim stop-point fixtures down to. Stops not serving any of
+/// these are dropped on disk so the offline test fixtures stay focused
+/// on what tubbie actually surfaces. Mirrors `tfl_client::SUPPORTED_MODES`.
+const SURFACED_MODES: &[&str] = &["tube", "dlr", "overground", "elizabeth-line"];
+
 /// Trim a single stop point. Returns `None` if the stop should be dropped
-/// (e.g. `id` starts with `"HUB"` or `modes` doesn't include `"tube"`).
+/// (e.g. `id` starts with `"HUB"`, or `modes` doesn't include any of
+/// `SURFACED_MODES`).
 fn trim_stop_point(sp: &Value) -> Option<Value> {
     let obj = sp.as_object()?;
 
@@ -135,14 +149,17 @@ fn trim_stop_point(sp: &Value) -> Option<Value> {
         return None;
     }
 
-    // Drop stop points that don't serve tube.
+    // Drop stop points that don't serve any mode tubbie surfaces.
     let modes: Vec<Value> = obj
         .get("modes")
         .and_then(|v| v.as_array())
         .cloned()
         .unwrap_or_default();
-    let serves_tube = modes.iter().any(|m| m.as_str() == Some("tube"));
-    if !serves_tube {
+    let serves_surfaced_mode = modes
+        .iter()
+        .filter_map(|m| m.as_str())
+        .any(|m| SURFACED_MODES.contains(&m));
+    if !serves_surfaced_mode {
         return None;
     }
 
@@ -162,14 +179,28 @@ fn trim_stop_point(sp: &Value) -> Option<Value> {
         })
         .unwrap_or_default();
 
-    Some(serde_json::json!({
+    // hubNaptanCode is preserved when present, dropped when absent —
+    // matches `RawStation.hub_naptan_code: Option<String>` semantics so
+    // the runtime cache sees `None` for non-hub stops, not an empty string.
+    let mut output = serde_json::json!({
         "id": id,
         "commonName": obj.get("commonName").cloned().unwrap_or(Value::Null),
         "lat": obj.get("lat").cloned().unwrap_or(Value::Null),
         "lon": obj.get("lon").cloned().unwrap_or(Value::Null),
         "modes": modes,
         "lineModeGroups": line_mode_groups,
-    }))
+    });
+    if let Some(hub) = obj
+        .get("hubNaptanCode")
+        .and_then(|v| v.as_str())
+        .filter(|s| !s.is_empty())
+    {
+        output
+            .as_object_mut()
+            .expect("trim output is an object")
+            .insert("hubNaptanCode".to_string(), Value::String(hub.to_string()));
+    }
+    Some(output)
 }
 
 // ---------------------------------------------------------------------------
@@ -219,6 +250,7 @@ struct Endpoint {
 }
 
 const ENDPOINTS: &[Endpoint] = &[
+    // Tube arrivals (existing fixtures used by board_service_tests).
     Endpoint {
         slug: "arrivals",
         id: "940GZZLUBZP",
@@ -239,15 +271,92 @@ const ENDPOINTS: &[Endpoint] = &[
         id: "940GZZLUOXC",
         path: "/StopPoint/940GZZLUOXC/Arrivals",
     },
+    // Overground arrivals — Hackney Central is Mildmay-only, used as the
+    // canonical Overground-only station test target.
+    Endpoint {
+        slug: "arrivals",
+        id: "910GHACKNYC",
+        path: "/StopPoint/910GHACKNYC/Arrivals",
+    },
+    // Highbury & Islington tube parent — exercises hub-merge with
+    // Overground siblings (Mildmay + Windrush) at a mixed-mode station.
+    Endpoint {
+        slug: "arrivals",
+        id: "940GZZLUHAI",
+        path: "/StopPoint/940GZZLUHAI/Arrivals",
+    },
+    // Per-mode line-status. The client now fans out across all four modes
+    // in parallel; each fixture must be present for the merged cache to
+    // populate fully in offline tests.
     Endpoint {
         slug: "line-status",
         id: "tube",
         path: "/Line/Mode/tube/Status",
     },
     Endpoint {
+        slug: "line-status",
+        id: "overground",
+        path: "/Line/Mode/overground/Status",
+    },
+    Endpoint {
+        slug: "line-status",
+        id: "dlr",
+        path: "/Line/Mode/dlr/Status",
+    },
+    Endpoint {
+        slug: "line-status",
+        id: "elizabeth-line",
+        path: "/Line/Mode/elizabeth-line/Status",
+    },
+    // Per-mode stop-points. Each is trimmed independently; the runtime
+    // client merges them into a single `Vec<Station>` with line-list
+    // union on collisions across modes.
+    Endpoint {
         slug: "stop-points",
         id: "tube",
         path: "/StopPoint/Mode/tube",
+    },
+    Endpoint {
+        slug: "stop-points",
+        id: "overground",
+        path: "/StopPoint/Mode/overground",
+    },
+    Endpoint {
+        slug: "stop-points",
+        id: "dlr",
+        path: "/StopPoint/Mode/dlr",
+    },
+    Endpoint {
+        slug: "stop-points",
+        id: "elizabeth-line",
+        path: "/StopPoint/Mode/elizabeth-line",
+    },
+    // Hub StopPoint detail JSON for the multi-mode tube hubs the
+    // search-merge tests exercise. Bank and TCR retained their hub
+    // ids; Whitechapel was renamed by TfL from HUBWHC to HUBZWL after
+    // the November 2024 Overground rebrand. Highbury & Islington's
+    // tube parent is also a hub and is recorded so that the cross-mode
+    // merge path is covered for an Overground station, not just for
+    // tube + DLR / tube + Elizabeth.
+    Endpoint {
+        slug: "stop-point",
+        id: "HUBBAN",
+        path: "/StopPoint/HUBBAN",
+    },
+    Endpoint {
+        slug: "stop-point",
+        id: "HUBTCR",
+        path: "/StopPoint/HUBTCR",
+    },
+    Endpoint {
+        slug: "stop-point",
+        id: "HUBZWL",
+        path: "/StopPoint/HUBZWL",
+    },
+    Endpoint {
+        slug: "stop-point",
+        id: "HUBHHY",
+        path: "/StopPoint/HUBHHY",
     },
 ];
 
@@ -508,7 +617,7 @@ mod tests {
 
     /// (i) Bus-only stop point is dropped.
     #[test]
-    fn trim_drops_non_tube_stop() {
+    fn trim_drops_non_surfaced_mode_stop() {
         // A stop that only has bus mode — should be filtered out.
         let bus_stop = serde_json::json!({
             "id": "490004733B",
@@ -524,16 +633,65 @@ mod tests {
         assert!(stop_points.is_empty(), "bus stop should have been dropped");
     }
 
-    /// (ii) `children` array is stripped from output.
+    /// Overground-only stop is preserved (regression guard: previously
+    /// trim_stop_point only accepted "tube" mode and silently dropped
+    /// every Overground / DLR / Elizabeth station, producing empty
+    /// fixtures for those modes).
     #[test]
-    fn trim_strips_children() {
+    fn trim_keeps_overground_only_stop() {
+        let og_stop = serde_json::json!({
+            "id": "910GHACKNYC",
+            "commonName": "Hackney Central Rail Station",
+            "lat": 51.547105,
+            "lon": -0.056058,
+            "modes": ["overground"],
+            "lineModeGroups": [{
+                "modeName": "overground",
+                "lineIdentifier": ["mildmay"],
+            }],
+        });
+        let raw = make_raw_response(vec![og_stop]);
+        let trimmed = trim_stop_points(&raw);
+        let stop_points = trimmed["stopPoints"].as_array().unwrap();
+        assert_eq!(stop_points.len(), 1, "overground stop must be preserved");
+        assert_eq!(stop_points[0]["id"], "910GHACKNYC");
+    }
+
+    /// DLR-only stop is preserved (latent bug guard: search_stations
+    /// today silently excludes 940GZZDL* via the prefix filter, but
+    /// the recorder must capture DLR fixtures correctly so the new
+    /// search-filter rewrite has data to test against).
+    #[test]
+    fn trim_keeps_dlr_only_stop() {
+        let dlr_stop = serde_json::json!({
+            "id": "940GZZDLBNK",
+            "commonName": "Bank DLR Station",
+            "lat": 51.513,
+            "lon": -0.089,
+            "modes": ["dlr"],
+            "lineModeGroups": [{
+                "modeName": "dlr",
+                "lineIdentifier": ["dlr"],
+            }],
+        });
+        let raw = make_raw_response(vec![dlr_stop]);
+        let trimmed = trim_stop_points(&raw);
+        let stop_points = trimmed["stopPoints"].as_array().unwrap();
+        assert_eq!(stop_points.len(), 1, "DLR stop must be preserved");
+    }
+
+    /// (ii) `children` and other bloat are stripped, but `hubNaptanCode`
+    /// MUST be preserved — production hub-merge needs it to find sibling
+    /// stop-points for DLR / Overground / Elizabeth at hub stations.
+    #[test]
+    fn trim_strips_children_but_preserves_hub_naptan_code() {
         let sp = make_stop_point(
-            "940GZZLUBZP",
-            "Belsize Park Underground Station",
-            51.5505,
-            -0.1648,
+            "940GZZLUBNK",
+            "Bank Underground Station",
+            51.5125,
+            -0.0878,
             &["tube"],
-            &["northern"],
+            &["central", "northern", "waterloo-city"],
         );
         let raw = make_raw_response(vec![sp]);
         let trimmed = trim_stop_points(&raw);
@@ -546,9 +704,40 @@ mod tests {
             stop.get("additionalProperties").is_none(),
             "additionalProperties should be stripped"
         );
+        // make_stop_point inserts `hubNaptanCode: "HUBXXX"` for every fixture;
+        // confirm the trimmer keeps it intact.
+        assert_eq!(
+            stop.get("hubNaptanCode").and_then(|v| v.as_str()),
+            Some("HUBXXX"),
+            "hubNaptanCode MUST be preserved through trim — it drives hub-merge"
+        );
+    }
+
+    /// Regression guard: a stop without a hubNaptanCode (the common case —
+    /// a non-hub station like Belsize Park) MUST NOT have an empty
+    /// `hubNaptanCode: ""` in the output. The runtime deserializes that
+    /// field as `Option<String>` and an empty string would coerce to
+    /// `Some("")`, breaking the `is_some()`-driven hub-merge dispatch.
+    #[test]
+    fn trim_omits_hub_naptan_code_when_absent() {
+        let sp = serde_json::json!({
+            "id": "940GZZLUBZP",
+            "commonName": "Belsize Park Underground Station",
+            "lat": 51.5505,
+            "lon": -0.1648,
+            "modes": ["tube"],
+            "lineModeGroups": [{
+                "modeName": "tube",
+                "lineIdentifier": ["northern"],
+            }],
+            // no hubNaptanCode field — Belsize Park is not a hub.
+        });
+        let raw = make_raw_response(vec![sp]);
+        let trimmed = trim_stop_points(&raw);
+        let stop = &trimmed["stopPoints"][0];
         assert!(
             stop.get("hubNaptanCode").is_none(),
-            "hubNaptanCode should be stripped"
+            "hubNaptanCode must not be inserted for non-hub stops; got: {stop}"
         );
     }
 

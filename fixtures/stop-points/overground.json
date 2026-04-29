@@ -1,0 +1,7983 @@
+{
+  "$type": "Tfl.Api.Presentation.Entities.StopPointsResponse, Tfl.Api.Presentation.Entities",
+  "stopPoints": [
+    {
+      "commonName": "Bushey Rail Station",
+      "hubNaptanCode": "HUBBSH",
+      "id": "2100BUSHEY0",
+      "lat": 51.645628,
+      "lineModeGroups": [],
+      "lon": -0.3856,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Bushey Rail Station",
+      "hubNaptanCode": "HUBBSH",
+      "id": "2100BUSHEY1",
+      "lat": 51.645754,
+      "lineModeGroups": [],
+      "lon": -0.384367,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Bushey Rail Station",
+      "hubNaptanCode": "HUBBSH",
+      "id": "2100BUSHYDC0",
+      "lat": 51.645691,
+      "lineModeGroups": [],
+      "lon": -0.384355,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Bushey Rail Station",
+      "hubNaptanCode": "HUBBSH",
+      "id": "2100BUSHYDC1",
+      "lat": 51.645691,
+      "lineModeGroups": [],
+      "lon": -0.385612,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Cheshunt Rail Station",
+      "id": "2100CHESHNT0",
+      "lat": 51.702949,
+      "lineModeGroups": [],
+      "lon": -0.024101,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Carpenders Park Rail Station",
+      "id": "2100CRPNDPK0",
+      "lat": 51.628564,
+      "lineModeGroups": [],
+      "lon": -0.385874,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Theobalds Grove Rail Station",
+      "id": "2100THBLDSG0",
+      "lat": 51.692273,
+      "lineModeGroups": [],
+      "lon": -0.034709,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Watford High Street Rail Station",
+      "id": "2100WATFDHS0",
+      "lat": 51.652671,
+      "lineModeGroups": [],
+      "lon": -0.391667,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Watford Junction Rail Station",
+      "hubNaptanCode": "HUBWFJ",
+      "id": "2100WATFDJ0",
+      "lat": 51.663767,
+      "lineModeGroups": [],
+      "lon": -0.396913,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Watford Junction Rail Station",
+      "hubNaptanCode": "HUBWFJ",
+      "id": "2100WATFJDC0",
+      "lat": 51.663693,
+      "lineModeGroups": [],
+      "lon": -0.396815,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Acton Central Station",
+      "id": "4900ACTNCTL1",
+      "lat": 51.50862,
+      "lineModeGroups": [],
+      "lon": -0.26351,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Acton Central Station",
+      "id": "4900ACTNCTL2",
+      "lat": 51.50892,
+      "lineModeGroups": [],
+      "lon": -0.2626,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Anerley Station",
+      "id": "4900ANERLEY1",
+      "lat": 51.41221,
+      "lineModeGroups": [],
+      "lon": -0.06544,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Anerley Station",
+      "id": "4900ANERLEY2",
+      "lat": 51.4121,
+      "lineModeGroups": [],
+      "lon": -0.06629,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Barking Station",
+      "hubNaptanCode": "HUBBKG",
+      "id": "4900BARKING1",
+      "lat": 51.53944,
+      "lineModeGroups": [],
+      "lon": 0.08143,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Bush Hill Park Station",
+      "id": "4900BHILLPK1",
+      "lat": 51.64162,
+      "lineModeGroups": [],
+      "lon": -0.069,
+      "modes": [
+        "overground",
+        "bus"
+      ]
+    },
+    {
+      "commonName": "Bush Hill Park Station",
+      "id": "4900BHILLPK2",
+      "lat": 51.64137,
+      "lineModeGroups": [],
+      "lon": -0.06962,
+      "modes": [
+        "overground",
+        "bus"
+      ]
+    },
+    {
+      "commonName": "Barking Riverside Station",
+      "id": "4900BKRVS1",
+      "lat": 51.51935,
+      "lineModeGroups": [],
+      "lon": 0.11663,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Barking Riverside Station",
+      "id": "4900BKRVS2",
+      "lat": 51.51953,
+      "lineModeGroups": [],
+      "lon": 0.11596,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Blackhorse Rd Stn   / Blackhorse Lane",
+      "hubNaptanCode": "HUBBHO",
+      "id": "4900BLCHSRD1",
+      "lat": 51.58699,
+      "lineModeGroups": [],
+      "lon": -0.04058,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Blackhorse Road Station",
+      "hubNaptanCode": "HUBBHO",
+      "id": "4900BLCHSRD2",
+      "lat": 51.58712,
+      "lineModeGroups": [],
+      "lon": -0.04074,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Blackhorse Rd Stn   / Blackhorse Lane",
+      "hubNaptanCode": "HUBBHO",
+      "id": "4900BLCHSRD3",
+      "lat": 51.58698,
+      "lineModeGroups": [],
+      "lon": -0.04171,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Brondesbury Station",
+      "id": "4900BRBY1",
+      "lat": 51.54525,
+      "lineModeGroups": [],
+      "lon": -0.20193,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Brondesbury Park Station",
+      "id": "4900BRBYPK1",
+      "lat": 51.54093,
+      "lineModeGroups": [],
+      "lon": -0.2099,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Brockley Station",
+      "id": "4900BROCKLY1",
+      "lat": 51.46446,
+      "lineModeGroups": [],
+      "lon": -0.03752,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Brockley Station",
+      "id": "4900BROCKLY2",
+      "lat": 51.46434,
+      "lineModeGroups": [],
+      "lon": -0.03824,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Bruce Grove Station",
+      "id": "4900BRUCGRV1",
+      "lat": 51.59411,
+      "lineModeGroups": [],
+      "lon": -0.06983,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Bruce Grove Station",
+      "id": "4900BRUCGRV2",
+      "lat": 51.59419,
+      "lineModeGroups": [],
+      "lon": -0.07007,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Bethnal Green Rail Station",
+      "id": "4900BTHNLGR1",
+      "lat": 51.52389,
+      "lineModeGroups": [],
+      "lon": -0.05948,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Cambridge Heath Station",
+      "id": "4900CAMHTH1",
+      "lat": 51.53238,
+      "lineModeGroups": [],
+      "lon": -0.05723,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Chingford Station",
+      "id": "4900CHINGFD1",
+      "lat": 51.63349,
+      "lineModeGroups": [],
+      "lon": 0.0101,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Clapton Station",
+      "id": "4900CLAPTON1",
+      "lat": 51.56145,
+      "lineModeGroups": [],
+      "lon": -0.05721,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Caledonian Road & Barnsbury Station",
+      "id": "4900CLDNNRB1",
+      "lat": 51.54317,
+      "lineModeGroups": [],
+      "lon": -0.11563,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Clapham High Street",
+      "id": "4900CLPHHS1",
+      "lat": 51.46508,
+      "lineModeGroups": [],
+      "lon": -0.13199,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Clapham Junction Station",
+      "hubNaptanCode": "HUBCLJ",
+      "id": "4900CLPHMJC1",
+      "lat": 51.4636,
+      "lineModeGroups": [],
+      "lon": -0.17001,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Clapham Junction Station",
+      "hubNaptanCode": "HUBCLJ",
+      "id": "4900CLPHMJC2",
+      "lat": 51.46419,
+      "lineModeGroups": [],
+      "lon": -0.16917,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Clapham Junction Station",
+      "hubNaptanCode": "HUBCLJ",
+      "id": "4900CLPHMJC3",
+      "lat": 51.46551,
+      "lineModeGroups": [],
+      "lon": -0.17067,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Camden Road Station",
+      "id": "4900CMDNRD1",
+      "lat": 51.54169,
+      "lineModeGroups": [],
+      "lon": -0.1386,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Canada Water Station",
+      "hubNaptanCode": "HUBZCW",
+      "id": "4900CNDAW1",
+      "lat": 51.49806,
+      "lineModeGroups": [],
+      "lon": -0.0499,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Canada Water Station",
+      "hubNaptanCode": "HUBZCW",
+      "id": "4900CNDAW2",
+      "lat": 51.49855,
+      "lineModeGroups": [],
+      "lon": -0.04932,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Canada Water Station",
+      "hubNaptanCode": "HUBZCW",
+      "id": "4900CNDAW3",
+      "lat": 51.49759,
+      "lineModeGroups": [],
+      "lon": -0.04935,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Canonbury Station",
+      "id": "4900CNNB1",
+      "lat": 51.54872,
+      "lineModeGroups": [],
+      "lon": -0.09195,
+      "modes": [
+        "overground",
+        "bus"
+      ]
+    },
+    {
+      "commonName": "Crouch Hill Station",
+      "id": "4900CROUCHH1",
+      "lat": 51.57116,
+      "lineModeGroups": [],
+      "lon": -0.11714,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Crystal Palace Station",
+      "hubNaptanCode": "HUBCYP",
+      "id": "4900CRYSTLP1",
+      "lat": 51.41803,
+      "lineModeGroups": [],
+      "lon": -0.07307,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Imperial Wharf Stn  / Chelsea Harbour",
+      "hubNaptanCode": "HUBIMP",
+      "id": "4900CSEAH1",
+      "lat": 51.47481,
+      "lineModeGroups": [],
+      "lon": -0.18274,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Imperial Wharf Stn  / Chelsea Harbour",
+      "hubNaptanCode": "HUBIMP",
+      "id": "4900CSEAH3",
+      "lat": 51.47518,
+      "lineModeGroups": [],
+      "lon": -0.18277,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Imperial Wharf Stn  / Chelsea Harbour",
+      "hubNaptanCode": "HUBIMP",
+      "id": "4900CSEAH4",
+      "lat": 51.47474,
+      "lineModeGroups": [],
+      "lon": -0.18293,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Dalston Junction Station",
+      "id": "4900DALS1",
+      "lat": 51.54618,
+      "lineModeGroups": [],
+      "lon": -0.07526,
+      "modes": [
+        "overground",
+        "bus"
+      ]
+    },
+    {
+      "commonName": "Dalston Junction Station",
+      "id": "4900DALS2",
+      "lat": 51.54541,
+      "lineModeGroups": [],
+      "lon": -0.07527,
+      "modes": [
+        "overground",
+        "bus"
+      ]
+    },
+    {
+      "commonName": "Dalston Kingsland Station",
+      "id": "4900DALSKLD1",
+      "lat": 51.54822,
+      "lineModeGroups": [],
+      "lon": -0.0757,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Denmark Hill Station",
+      "id": "4900DENMRKH1",
+      "lat": 51.46817,
+      "lineModeGroups": [],
+      "lon": -0.08985,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Edmonton Green Station",
+      "id": "4900EDMNGRN1",
+      "lat": 51.62492,
+      "lineModeGroups": [],
+      "lon": -0.06087,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Emerson Park Station",
+      "id": "4900EMRSPKH1",
+      "lat": 51.56904,
+      "lineModeGroups": [],
+      "lon": 0.2197,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Enfield Town Station",
+      "id": "4900ENFLDTN1",
+      "lat": 51.65213,
+      "lineModeGroups": [],
+      "lon": -0.07963,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Enfield Town Station",
+      "id": "4900ENFLDTN2",
+      "lat": 51.6529,
+      "lineModeGroups": [],
+      "lon": -0.08053,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Euston Station",
+      "hubNaptanCode": "HUBEUS",
+      "id": "4900EUSTON0",
+      "lat": 51.52761,
+      "lineModeGroups": [],
+      "lon": -0.1336,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Euston Station",
+      "hubNaptanCode": "HUBEUS",
+      "id": "4900EUSTON1",
+      "lat": 51.52776,
+      "lineModeGroups": [],
+      "lon": -0.13511,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Euston Station",
+      "hubNaptanCode": "HUBEUS",
+      "id": "4900EUSTON3",
+      "lat": 51.52764,
+      "lineModeGroups": [],
+      "lon": -0.13219,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Finchley Road & Frognal Station",
+      "id": "4900FNCHLYR1",
+      "lat": 51.5502,
+      "lineModeGroups": [],
+      "lon": -0.1828,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Forest Hill Station",
+      "id": "4900FORESTH1",
+      "lat": 51.43938,
+      "lineModeGroups": [],
+      "lon": -0.05435,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Forest Hill Station",
+      "id": "4900FORESTH2",
+      "lat": 51.43934,
+      "lineModeGroups": [],
+      "lon": -0.05387,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Forest Hill Station",
+      "id": "4900FORESTH3",
+      "lat": 51.44009,
+      "lineModeGroups": [],
+      "lon": -0.05191,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Forest Hill Station",
+      "id": "4900FORESTH4",
+      "lat": 51.43921,
+      "lineModeGroups": [],
+      "lon": -0.05302,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Gunnersbury Station",
+      "hubNaptanCode": "HUBGUN",
+      "id": "4900GNRSBRY1",
+      "lat": 51.49229,
+      "lineModeGroups": [],
+      "lon": -0.27549,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Gunnersbury Station",
+      "hubNaptanCode": "HUBGUN",
+      "id": "4900GNRSBRY2",
+      "lat": 51.49157,
+      "lineModeGroups": [],
+      "lon": -0.2748,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Gospel Oak Station",
+      "id": "4900GOSPLOK1",
+      "lat": 51.55511,
+      "lineModeGroups": [],
+      "lon": -0.151,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Hackney Central Station",
+      "id": "4900HACKNYC1",
+      "lat": 51.54728,
+      "lineModeGroups": [],
+      "lon": -0.05542,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Hackney Central Station",
+      "id": "4900HACKNYC2",
+      "lat": 51.54756,
+      "lineModeGroups": [],
+      "lon": -0.05614,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Hackney Central Station",
+      "id": "4900HACKNYC3",
+      "lat": 51.54719,
+      "lineModeGroups": [],
+      "lon": -0.05712,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Hackney Central Station",
+      "id": "4900HACKNYC4",
+      "lat": 51.54679,
+      "lineModeGroups": [],
+      "lon": -0.05619,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Hackney Wick Station",
+      "id": "4900HACKNYW1",
+      "lat": 51.54317,
+      "lineModeGroups": [],
+      "lon": -0.02542,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Hackney Wick Station",
+      "id": "4900HACKNYW2",
+      "lat": 51.54356,
+      "lineModeGroups": [],
+      "lon": -0.02507,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Haggerston Station",
+      "id": "4900HAGGERS1",
+      "lat": 51.53847,
+      "lineModeGroups": [],
+      "lon": -0.07559,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Hackney Downs Station",
+      "id": "4900HAKNYNM1",
+      "lat": 51.54894,
+      "lineModeGroups": [],
+      "lon": -0.06132,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Hackney Downs Station",
+      "id": "4900HAKNYNM2",
+      "lat": 51.54791,
+      "lineModeGroups": [],
+      "lon": -0.06019,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Harlesden Station",
+      "hubNaptanCode": "HUBHDN",
+      "id": "4900HARLSDN1",
+      "lat": 51.53613,
+      "lineModeGroups": [],
+      "lon": -0.25721,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Headstone Lane Station",
+      "id": "4900HEDSTNL1",
+      "lat": 51.60231,
+      "lineModeGroups": [],
+      "lon": -0.35652,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Headstone Lane Station",
+      "id": "4900HEDSTNL2",
+      "lat": 51.60279,
+      "lineModeGroups": [],
+      "lon": -0.35733,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Highbury & Islington Station",
+      "hubNaptanCode": "HUBHHY",
+      "id": "4900HGHI",
+      "lat": 51.54622,
+      "lineModeGroups": [],
+      "lon": -0.1035,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Highams Park Station",
+      "id": "4900HGHMSPK1",
+      "lat": 51.60835,
+      "lineModeGroups": [],
+      "lon": -0.00021,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Highams Park Station",
+      "id": "4900HGHMSPK2",
+      "lat": 51.60779,
+      "lineModeGroups": [],
+      "lon": -0.00069,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Highams Park Station",
+      "id": "4900HGHMSPK3",
+      "lat": 51.60846,
+      "lineModeGroups": [],
+      "lon": -0.00071,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Hampstead Heath Station",
+      "id": "4900HMPSTDH1",
+      "lat": 51.55541,
+      "lineModeGroups": [],
+      "lon": -0.16573,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Homerton Station",
+      "id": "4900HOMRTON1",
+      "lat": 51.54697,
+      "lineModeGroups": [],
+      "lon": -0.04235,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Honor Oak Park Station",
+      "id": "4900HONROPK1",
+      "lat": 51.44993,
+      "lineModeGroups": [],
+      "lon": -0.04587,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Hoxton Station",
+      "id": "4900HOXTON1",
+      "lat": 51.53103,
+      "lineModeGroups": [],
+      "lon": -0.07589,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Hoxton Station",
+      "id": "4900HOXTON2",
+      "lat": 51.53102,
+      "lineModeGroups": [],
+      "lon": -0.07567,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Harringay Green Lanes Station",
+      "id": "4900HRGYGL1",
+      "lat": 51.57702,
+      "lineModeGroups": [],
+      "lon": -0.0988,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Harringay Green Lanes Station",
+      "id": "4900HRGYGL2",
+      "lat": 51.57718,
+      "lineModeGroups": [],
+      "lon": -0.09879,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Harrow & Wealdstone Station",
+      "hubNaptanCode": "HUBHRW",
+      "id": "4900HROW1",
+      "lat": 51.59245,
+      "lineModeGroups": [],
+      "lon": -0.3343,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Harrow & Wealdstone Station",
+      "hubNaptanCode": "HUBHRW",
+      "id": "4900HROW2",
+      "lat": 51.5918,
+      "lineModeGroups": [],
+      "lon": -0.33473,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Hatch End Station",
+      "id": "4900HTCHEND1",
+      "lat": 51.6093,
+      "lineModeGroups": [],
+      "lon": -0.36885,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Kensington Olympia",
+      "hubNaptanCode": "HUBKPA",
+      "id": "4900KENOLYM1",
+      "lat": 51.49776,
+      "lineModeGroups": [],
+      "lon": -0.2105,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Kensington Olympia Station",
+      "hubNaptanCode": "HUBKPA",
+      "id": "4900KENOLYM2",
+      "lat": 51.4982,
+      "lineModeGroups": [],
+      "lon": -0.2095,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Kensal Rise Station",
+      "id": "4900KENR1",
+      "lat": 51.53437,
+      "lineModeGroups": [],
+      "lon": -0.21995,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Kensal Rise Station",
+      "id": "4900KENR2",
+      "lat": 51.53478,
+      "lineModeGroups": [],
+      "lon": -0.21965,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Kensal Green Station",
+      "hubNaptanCode": "HUBKNL",
+      "id": "4900KENSLG1",
+      "lat": 51.53017,
+      "lineModeGroups": [],
+      "lon": -0.2248,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Kew Gardens Station",
+      "hubNaptanCode": "HUBKWG",
+      "id": "4900KEWGRDN1",
+      "lat": 51.47712,
+      "lineModeGroups": [],
+      "lon": -0.28563,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Kew Gardens Station",
+      "hubNaptanCode": "HUBKWG",
+      "id": "4900KEWGRDN2",
+      "lat": 51.47701,
+      "lineModeGroups": [],
+      "lon": -0.28481,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Kilburn High Rd Stn  / Cambridge Avenue",
+      "id": "4900KLBRNHR1",
+      "lat": 51.53739,
+      "lineModeGroups": [],
+      "lon": -0.19262,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Kentish Town West Station",
+      "id": "4900KNTSHTW1",
+      "lat": 51.54643,
+      "lineModeGroups": [],
+      "lon": -0.14652,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Kenton Station",
+      "hubNaptanCode": "HUBKNT",
+      "id": "4900KTON1",
+      "lat": 51.58202,
+      "lineModeGroups": [],
+      "lon": -0.31707,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Leyton Midland Road Station",
+      "id": "4900LEYTNMR1",
+      "lat": 51.56982,
+      "lineModeGroups": [],
+      "lon": -0.0079,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Leyton Midland Road Station",
+      "id": "4900LEYTNMR2",
+      "lat": 51.56973,
+      "lineModeGroups": [],
+      "lon": -0.00835,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "London Fields Station",
+      "id": "4900LONFLDS1",
+      "lat": 51.54103,
+      "lineModeGroups": [],
+      "lon": -0.05779,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "London Fields Station",
+      "id": "4900LONFLDS2",
+      "lat": 51.54102,
+      "lineModeGroups": [],
+      "lon": -0.05818,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Leytonstone High Road Station",
+      "id": "4900LYTNSHR1",
+      "lat": 51.56333,
+      "lineModeGroups": [],
+      "lon": 0.00857,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "New Cross Gate Station",
+      "hubNaptanCode": "HUBNXG",
+      "id": "4900NEWXGTE1",
+      "lat": 51.47509,
+      "lineModeGroups": [],
+      "lon": -0.04041,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Norwood Junction Station",
+      "hubNaptanCode": "HUBNWD",
+      "id": "4900NORWDJ1",
+      "lat": 51.39725,
+      "lineModeGroups": [],
+      "lon": -0.07416,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Norwood Junction Station",
+      "hubNaptanCode": "HUBNWD",
+      "id": "4900NORWDJ2",
+      "lat": 51.39811,
+      "lineModeGroups": [],
+      "lon": -0.07239,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Norwood Junction Station",
+      "hubNaptanCode": "HUBNWD",
+      "id": "4900NORWDJ3",
+      "lat": 51.39743,
+      "lineModeGroups": [],
+      "lon": -0.07513,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "New Cross Station",
+      "hubNaptanCode": "HUBNWX",
+      "id": "4900NWCRELL1",
+      "lat": 51.47651,
+      "lineModeGroups": [],
+      "lon": -0.03219,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "North Wembley Station",
+      "hubNaptanCode": "HUBNWB",
+      "id": "4900NWEMBLY1",
+      "lat": 51.56283,
+      "lineModeGroups": [],
+      "lon": -0.30399,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Queen's Road Peckham Station",
+      "id": "4900PCKHMQD1",
+      "lat": 51.47382,
+      "lineModeGroups": [],
+      "lon": -0.05739,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Peckham Rye Station",
+      "id": "4900PCKHMRY1",
+      "lat": 51.47011,
+      "lineModeGroups": [],
+      "lon": -0.0694,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Penge West Station",
+      "id": "4900PENEW1",
+      "lat": 51.41767,
+      "lineModeGroups": [],
+      "lon": -0.06112,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Queen's Park Station",
+      "hubNaptanCode": "HUBQPW",
+      "id": "4900QPRK",
+      "lat": 51.53407,
+      "lineModeGroups": [],
+      "lon": -0.20449,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Rectory Road Station",
+      "id": "4900RCTRYRD1",
+      "lat": 51.55857,
+      "lineModeGroups": [],
+      "lon": -0.06857,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Richmond Station",
+      "hubNaptanCode": "HUBRMD",
+      "id": "4900RICHMND1",
+      "lat": 51.46326,
+      "lineModeGroups": [],
+      "lon": -0.302,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Richmond Station",
+      "hubNaptanCode": "HUBRMD",
+      "id": "4900RICHMND2",
+      "lat": 51.46347,
+      "lineModeGroups": [],
+      "lon": -0.29983,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Romford Station",
+      "id": "4900ROMFORD1",
+      "lat": 51.57491,
+      "lineModeGroups": [],
+      "lon": 0.18314,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Romford Station",
+      "id": "4900ROMFORD2",
+      "lat": 51.57472,
+      "lineModeGroups": [],
+      "lon": 0.18316,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Rotherhithe Station",
+      "id": "4900RTHERHI1",
+      "lat": 51.50075,
+      "lineModeGroups": [],
+      "lon": -0.05209,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "South Acton Station",
+      "id": "4900SACTON1",
+      "lat": 51.49923,
+      "lineModeGroups": [],
+      "lon": -0.27035,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "South Acton Station",
+      "id": "4900SACTON2",
+      "lat": 51.49946,
+      "lineModeGroups": [],
+      "lon": -0.27058,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Southbury Station",
+      "id": "4900SBURY1",
+      "lat": 51.64887,
+      "lineModeGroups": [],
+      "lon": -0.05263,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Seven Sisters Station",
+      "hubNaptanCode": "HUBSVS",
+      "id": "4900SEVNSIS",
+      "lat": 51.58201,
+      "lineModeGroups": [],
+      "lon": -0.07531,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Shadwell Rail Station",
+      "hubNaptanCode": "HUBSDE",
+      "id": "4900SHADWEL1",
+      "lat": 51.51141,
+      "lineModeGroups": [],
+      "lon": -0.05671,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Shadwell Rail Station",
+      "hubNaptanCode": "HUBSDE",
+      "id": "4900SHADWEL2",
+      "lat": 51.51117,
+      "lineModeGroups": [],
+      "lon": -0.05672,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "South Hampstead Station",
+      "id": "4900SHMPSTD1",
+      "lat": 51.54147,
+      "lineModeGroups": [],
+      "lon": -0.17937,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Shepherd's Bush Rail Station",
+      "hubNaptanCode": "HUBSPB",
+      "id": "4900SHPDSB1",
+      "lat": 51.50514,
+      "lineModeGroups": [],
+      "lon": -0.21801,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Shepherd's Bush Rail Station",
+      "hubNaptanCode": "HUBSPB",
+      "id": "4900SHPDSB2",
+      "lat": 51.50588,
+      "lineModeGroups": [],
+      "lon": -0.21818,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Shoreditch High Street Station",
+      "id": "4900SHRDHST1",
+      "lat": 51.52348,
+      "lineModeGroups": [],
+      "lon": -0.07543,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Silver Street Station",
+      "id": "4900SIVRST1",
+      "lat": 51.61474,
+      "lineModeGroups": [],
+      "lon": -0.06719,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "South Kenton Station",
+      "hubNaptanCode": "HUBSOK",
+      "id": "4900SKENTON1",
+      "lat": 51.57071,
+      "lineModeGroups": [],
+      "lon": -0.30909,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "South Kenton Station",
+      "hubNaptanCode": "HUBSOK",
+      "id": "4900SKENTON2",
+      "lat": 51.57068,
+      "lineModeGroups": [],
+      "lon": -0.30814,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Stratford Station",
+      "hubNaptanCode": "HUBSRA",
+      "id": "4900STFD1",
+      "lat": 51.54163,
+      "lineModeGroups": [],
+      "lon": -0.00244,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Stratford Station",
+      "hubNaptanCode": "HUBSRA",
+      "id": "4900STFD2",
+      "lat": 51.54221,
+      "lineModeGroups": [],
+      "lon": -0.00207,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Stratford Station",
+      "hubNaptanCode": "HUBSRA",
+      "id": "4900STFD3",
+      "lat": 51.54277,
+      "lineModeGroups": [],
+      "lon": -0.0045,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Stratford Station",
+      "hubNaptanCode": "HUBSRA",
+      "id": "4900STFD4",
+      "lat": 51.54104,
+      "lineModeGroups": [],
+      "lon": -0.00345,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "St James's Street Station",
+      "id": "4900STJMSST1",
+      "lat": 51.58106,
+      "lineModeGroups": [],
+      "lon": -0.03316,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Stoke Newington Station",
+      "id": "4900STKNWNG1",
+      "lat": 51.56532,
+      "lineModeGroups": [],
+      "lon": -0.07311,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Stamford Hill Station",
+      "id": "4900STMFDHL1",
+      "lat": 51.57444,
+      "lineModeGroups": [],
+      "lon": -0.07673,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Stonebridge Park Station",
+      "hubNaptanCode": "HUBSBP",
+      "id": "4900STNBGPK1",
+      "lat": 51.54357,
+      "lineModeGroups": [],
+      "lon": -0.27523,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "South Tottenham Station",
+      "id": "4900STOTNHM1",
+      "lat": 51.58044,
+      "lineModeGroups": [],
+      "lon": -0.07272,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Surrey Quays Station",
+      "id": "4900SURREYQ1",
+      "lat": 51.49354,
+      "lineModeGroups": [],
+      "lon": -0.04795,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Surrey Quays Station",
+      "id": "4900SURREYQ2",
+      "lat": 51.49345,
+      "lineModeGroups": [],
+      "lon": -0.04818,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Sydenham Station",
+      "hubNaptanCode": "HUBSYD",
+      "id": "4900SYDENHM1",
+      "lat": 51.42751,
+      "lineModeGroups": [],
+      "lon": -0.05471,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Sydenham Station",
+      "hubNaptanCode": "HUBSYD",
+      "id": "4900SYDENHM2",
+      "lat": 51.42735,
+      "lineModeGroups": [],
+      "lon": -0.05422,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Sydenham Station",
+      "hubNaptanCode": "HUBSYD",
+      "id": "4900SYDENHM3",
+      "lat": 51.42714,
+      "lineModeGroups": [],
+      "lon": -0.05406,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Turkey Street Station",
+      "id": "4900TURKYST1",
+      "lat": 51.6726,
+      "lineModeGroups": [],
+      "lon": -0.04707,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Upminster Station",
+      "hubNaptanCode": "HUBUPM",
+      "id": "4900UPMNSTR1",
+      "lat": 51.5591,
+      "lineModeGroups": [],
+      "lon": 0.25049,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Upminster Station",
+      "hubNaptanCode": "HUBUPM",
+      "id": "4900UPMNSTR2",
+      "lat": 51.5587,
+      "lineModeGroups": [],
+      "lon": 0.25156,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Upper Holloway Station",
+      "id": "4900UPRHLWY1",
+      "lat": 51.56393,
+      "lineModeGroups": [],
+      "lon": -0.1297,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Upper Holloway Station",
+      "id": "4900UPRHLWY2",
+      "lat": 51.56379,
+      "lineModeGroups": [],
+      "lon": -0.12926,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Wapping Station",
+      "id": "4900WAPPING1",
+      "lat": 51.50438,
+      "lineModeGroups": [],
+      "lon": -0.05599,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "West Brompton Station",
+      "hubNaptanCode": "HUBWBP",
+      "id": "4900WBRMPTN",
+      "lat": 51.48738,
+      "lineModeGroups": [],
+      "lon": -0.19564,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Whitechapel Station",
+      "hubNaptanCode": "HUBZWL",
+      "id": "4900WCHAPEL1",
+      "lat": 51.5192,
+      "lineModeGroups": [],
+      "lon": -0.05961,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Whitechapel Station",
+      "hubNaptanCode": "HUBZWL",
+      "id": "4900WCHAPEL2",
+      "lat": 51.51992,
+      "lineModeGroups": [],
+      "lon": -0.05981,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "West Croydon Station",
+      "hubNaptanCode": "HUBWCY",
+      "id": "4900WCROYDN1",
+      "lat": 51.37809,
+      "lineModeGroups": [],
+      "lon": -0.10277,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "West Croydon Station",
+      "hubNaptanCode": "HUBWCY",
+      "id": "4900WCROYDN2",
+      "lat": 51.37839,
+      "lineModeGroups": [],
+      "lon": -0.10303,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "West Croydon Station",
+      "hubNaptanCode": "HUBWCY",
+      "id": "4900WCROYDN3",
+      "lat": 51.37896,
+      "lineModeGroups": [],
+      "lon": -0.10169,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Woodgrange Park Station",
+      "id": "4900WDGRNPK1",
+      "lat": 51.5494,
+      "lineModeGroups": [],
+      "lon": 0.044,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Wood Street Station",
+      "id": "4900WDST1",
+      "lat": 51.58645,
+      "lineModeGroups": [],
+      "lon": -0.00261,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "White Hart Lane Station",
+      "id": "4900WHHRTLA1",
+      "lat": 51.60533,
+      "lineModeGroups": [],
+      "lon": -0.071,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "West Hampstead Overground Station",
+      "hubNaptanCode": "HUBWHD",
+      "id": "4900WHMDSTD0",
+      "lat": 51.54747,
+      "lineModeGroups": [],
+      "lon": -0.19116,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Willesden Junction Station",
+      "hubNaptanCode": "HUBWIJ",
+      "id": "4900WLSDJHL1",
+      "lat": 51.53222,
+      "lineModeGroups": [],
+      "lon": -0.24524,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Willesden Junction Station",
+      "hubNaptanCode": "HUBWIJ",
+      "id": "4900WLSDJHL2",
+      "lat": 51.53276,
+      "lineModeGroups": [],
+      "lon": -0.23978,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Willesden Junction Station",
+      "hubNaptanCode": "HUBWIJ",
+      "id": "4900WLSDJHL3",
+      "lat": 51.53185,
+      "lineModeGroups": [],
+      "lon": -0.24401,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Walthamstow Queens Road Station",
+      "id": "4900WLTHQRD1",
+      "lat": 51.58148,
+      "lineModeGroups": [],
+      "lon": -0.02411,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Walthamstow Central Station",
+      "hubNaptanCode": "HUBWHC",
+      "id": "4900WLTWCEN1",
+      "lat": 51.58317,
+      "lineModeGroups": [],
+      "lon": -0.02001,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Walthamstow Central Station",
+      "hubNaptanCode": "HUBWHC",
+      "id": "4900WLTWCEN2",
+      "lat": 51.58276,
+      "lineModeGroups": [],
+      "lon": -0.01965,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Walthamstow Central Station",
+      "hubNaptanCode": "HUBWHC",
+      "id": "4900WLTWCEN3",
+      "lat": 51.58317,
+      "lineModeGroups": [],
+      "lon": -0.02029,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Wembley Central Station",
+      "hubNaptanCode": "HUBWMB",
+      "id": "4900WMBY1",
+      "lat": 51.55239,
+      "lineModeGroups": [],
+      "lon": -0.29682,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Wembley Central Station",
+      "hubNaptanCode": "HUBWMB",
+      "id": "4900WMBY2",
+      "lat": 51.55185,
+      "lineModeGroups": [],
+      "lon": -0.29442,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Wembley Central Station",
+      "hubNaptanCode": "HUBWMB",
+      "id": "4900WMBY3",
+      "lat": 51.55188,
+      "lineModeGroups": [],
+      "lon": -0.29618,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Wandsworth Road Station",
+      "id": "4900WNDSWRD1",
+      "lat": 51.47043,
+      "lineModeGroups": [],
+      "lon": -0.13841,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Wanstead Park Station",
+      "id": "4900WNSTDPK1",
+      "lat": 51.55191,
+      "lineModeGroups": [],
+      "lon": 0.02523,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Seven Sisters Station",
+      "hubNaptanCode": "HUBSVS",
+      "id": "4900ZZLUSVS1",
+      "lat": 51.58189,
+      "lineModeGroups": [],
+      "lon": -0.07519,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Seven Sisters Station",
+      "hubNaptanCode": "HUBSVS",
+      "id": "4900ZZLUSVS2",
+      "lat": 51.58379,
+      "lineModeGroups": [],
+      "lon": -0.07236,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Seven Sisters Station",
+      "hubNaptanCode": "HUBSVS",
+      "id": "4900ZZLUSVS3",
+      "lat": 51.5832,
+      "lineModeGroups": [],
+      "lon": -0.07244,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Seven Sisters Station",
+      "hubNaptanCode": "HUBSVS",
+      "id": "4900ZZLUSVS4",
+      "lat": 51.5837,
+      "lineModeGroups": [],
+      "lon": -0.07198,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Seven Sisters Station",
+      "hubNaptanCode": "HUBSVS",
+      "id": "4900ZZLUSVS5",
+      "lat": 51.58328,
+      "lineModeGroups": [],
+      "lon": -0.07207,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Acton Central Station",
+      "id": "9100ACTNCTL0",
+      "lat": 51.508655,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.263059,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Acton Central Station",
+      "id": "9100ACTNCTL1",
+      "lat": 51.50865,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.262714,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Anerley Station",
+      "id": "9100ANERLEY0",
+      "lat": 51.412468,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "southern"
+          ]
+        }
+      ],
+      "lon": -0.065384,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Anerley Station",
+      "id": "9100ANERLEY1",
+      "lat": 51.412516,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "southern"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.065525,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Barking Station",
+      "hubNaptanCode": "HUBBKG",
+      "id": "9100BARKING1",
+      "lat": 51.539588,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "c2c"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "suffragette"
+          ]
+        }
+      ],
+      "lon": 0.080229,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Barking Riverside Station",
+      "id": "9100BARKRIV1",
+      "lat": 51.520523,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "suffragette"
+          ]
+        }
+      ],
+      "lon": 0.116911,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Barking Riverside Station",
+      "id": "9100BARKRIV2",
+      "lat": 51.520766,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "suffragette"
+          ]
+        }
+      ],
+      "lon": 0.116922,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Bush Hill Park Station",
+      "id": "9100BHILLPK0",
+      "lat": 51.641831,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        }
+      ],
+      "lon": -0.069612,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Bush Hill Park Station",
+      "id": "9100BHILLPK1",
+      "lat": 51.641873,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        }
+      ],
+      "lon": -0.069466,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Blackhorse Road Station",
+      "hubNaptanCode": "HUBBHO",
+      "id": "9100BLCHSRD0",
+      "lat": 51.586538,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "suffragette"
+          ]
+        }
+      ],
+      "lon": -0.041498,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Blackhorse Road Station",
+      "hubNaptanCode": "HUBBHO",
+      "id": "9100BLCHSRD1",
+      "lat": 51.586628,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "suffragette"
+          ]
+        }
+      ],
+      "lon": -0.041495,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Brondesbury Station",
+      "id": "9100BRBY0",
+      "lat": 51.545089,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.202571,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Brondesbury Station",
+      "id": "9100BRBY1",
+      "lat": 51.545052,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.202515,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Brondesbury Park Station",
+      "id": "9100BRBYPK0",
+      "lat": 51.540734,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.210054,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Brondesbury Park Station",
+      "id": "9100BRBYPK1",
+      "lat": 51.540816,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.210137,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Brockley Station",
+      "id": "9100BROCKLY0",
+      "lat": 51.464014,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "southern"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.037765,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Brockley Station",
+      "id": "9100BROCKLY1",
+      "lat": 51.464027,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "southern"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.037966,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Bruce Grove Station",
+      "id": "9100BRUCGRV0",
+      "lat": 51.593515,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        }
+      ],
+      "lon": -0.070175,
+      "modes": [
+        "national-rail",
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Bruce Grove Station",
+      "id": "9100BRUCGRV1",
+      "lat": 51.593485,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        }
+      ],
+      "lon": -0.070046,
+      "modes": [
+        "national-rail",
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Bethnal Green Rail Station",
+      "id": "9100BTHNLGR0",
+      "lat": 51.523842,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        }
+      ],
+      "lon": -0.059917,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Bethnal Green Rail Station",
+      "id": "9100BTHNLGR1",
+      "lat": 51.523725,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        }
+      ],
+      "lon": -0.059893,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Bushey Rail Station",
+      "hubNaptanCode": "HUBBSH",
+      "id": "9100BUSHYDC1",
+      "lat": 51.645877,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.385302,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Bushey Rail Station",
+      "hubNaptanCode": "HUBBSH",
+      "id": "9100BUSHYDC2",
+      "lat": 51.645894,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.385229,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Cambridge Heath Station",
+      "id": "9100CAMHTH0",
+      "lat": 51.532085,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        }
+      ],
+      "lon": -0.057563,
+      "modes": [
+        "national-rail",
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Cambridge Heath Station",
+      "id": "9100CAMHTH2",
+      "lat": 51.532109,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        }
+      ],
+      "lon": -0.057345,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Cheshunt Rail Station",
+      "id": "9100CHESHNT1",
+      "lat": 51.702444,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        }
+      ],
+      "lon": -0.02395,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Cheshunt Rail Station",
+      "id": "9100CHESHNT3",
+      "lat": 51.702455,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        }
+      ],
+      "lon": -0.024036,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Chingford Station",
+      "id": "9100CHINGFD0",
+      "lat": 51.633272,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        }
+      ],
+      "lon": 0.010108,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Clapton Station",
+      "id": "9100CLAPTON0",
+      "lat": 51.561757,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        }
+      ],
+      "lon": -0.056818,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Clapton Station",
+      "id": "9100CLAPTON1",
+      "lat": 51.561702,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        }
+      ],
+      "lon": -0.056705,
+      "modes": [
+        "national-rail",
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Caledonian Road & Barnsbury Station",
+      "id": "9100CLDNNRB1",
+      "lat": 51.543445,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.115588,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Clapham High Street",
+      "id": "9100CLPHHS0",
+      "lat": 51.465504,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "southeastern"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.132276,
+      "modes": [
+        "national-rail",
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Clapham High Street",
+      "id": "9100CLPHHS1",
+      "lat": 51.465566,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.132216,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Clapham Junction Rail Station",
+      "hubNaptanCode": "HUBCLJ",
+      "id": "9100CLPHMJ1",
+      "lat": 51.464187,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay",
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.170221,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Clapham Junction Station",
+      "hubNaptanCode": "HUBCLJ",
+      "id": "9100CLPHMJC1",
+      "lat": 51.46423,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "southern"
+          ]
+        }
+      ],
+      "lon": -0.169529,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Camden Road Station",
+      "id": "9100CMDNRD0",
+      "lat": 51.541905,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.139086,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Camden Road Station",
+      "id": "9100CMDNRD1",
+      "lat": 51.54178,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.139134,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Canada Water Station",
+      "hubNaptanCode": "HUBZCW",
+      "id": "9100CNDAW1",
+      "lat": 51.49799,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.04972,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Canada Water Station",
+      "hubNaptanCode": "HUBZCW",
+      "id": "9100CNDAW2",
+      "lat": 51.498021,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.049935,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Canonbury Station",
+      "id": "9100CNNB1",
+      "lat": 51.54859,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.09286,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Canonbury Station",
+      "id": "9100CNNB2",
+      "lat": 51.548732,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.092191,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Canonbury Station",
+      "id": "9100CNNB3",
+      "lat": 51.548557,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.093006,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Canonbury Station",
+      "id": "9100CNNB4",
+      "lat": 51.548647,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.093045,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Crouch Hill Station",
+      "id": "9100CROUCHH0",
+      "lat": 51.571588,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "suffragette"
+          ]
+        }
+      ],
+      "lon": -0.116473,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Crouch Hill Station",
+      "id": "9100CROUCHH1",
+      "lat": 51.571707,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "suffragette"
+          ]
+        }
+      ],
+      "lon": -0.116598,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Carpenders Park Rail Station",
+      "id": "9100CRPNDPK1",
+      "lat": 51.627689,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.385544,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Carpenders Park Rail Station",
+      "id": "9100CRPNDPK2",
+      "lat": 51.627705,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.385355,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Crystal Palace Station",
+      "hubNaptanCode": "HUBCYP",
+      "id": "9100CRYSTLP5",
+      "lat": 51.417551,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.072015,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Imperial Wharf Station",
+      "hubNaptanCode": "HUBIMP",
+      "id": "9100CSEAH0",
+      "lat": 51.475658,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "southern"
+          ]
+        }
+      ],
+      "lon": -0.183299,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Imperial Wharf Station",
+      "hubNaptanCode": "HUBIMP",
+      "id": "9100CSEAH1",
+      "lat": 51.475535,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.183491,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Dalston Junction Station",
+      "id": "9100DALS0",
+      "lat": 51.546089,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.075167,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Dalston Kingsland Station",
+      "id": "9100DALSKL1",
+      "lat": 51.548222,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.076361,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Dalston Kingsland Station",
+      "id": "9100DALSKLD0",
+      "lat": 51.548312,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.076357,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Denmark Hill Station",
+      "id": "9100DENMRKH1",
+      "lat": 51.468255,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "southeastern"
+          ]
+        }
+      ],
+      "lon": -0.089287,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Denmark Hill Station",
+      "id": "9100DENMRKH2",
+      "lat": 51.468228,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "thameslink",
+            "southeastern"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.089273,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Edmonton Green Station",
+      "id": "9100EDMNGRN0",
+      "lat": 51.624521,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        }
+      ],
+      "lon": -0.061477,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Edmonton Green Station",
+      "id": "9100EDMNGRN1",
+      "lat": 51.624491,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        }
+      ],
+      "lon": -0.06129,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Emerson Park Station",
+      "id": "9100EMRSPKH0",
+      "lat": 51.568716,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "liberty"
+          ]
+        }
+      ],
+      "lon": 0.220492,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Enfield Town Station",
+      "id": "9100ENFLDTN0",
+      "lat": 51.651757,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        }
+      ],
+      "lon": -0.078876,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Euston Station",
+      "hubNaptanCode": "HUBEUS",
+      "id": "9100EUSTON0",
+      "lat": 51.528954,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "west-midlands-trains",
+            "avanti-west-coast"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.135,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Finchley Road & Frognal Station",
+      "id": "9100FNCHLRY1",
+      "lat": 51.549869,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.184195,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Finchley Road & Frognal Station",
+      "id": "9100FNCHLYR0",
+      "lat": 51.549996,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.184276,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Forest Hill Station",
+      "id": "9100FORESTH0",
+      "lat": 51.439029,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "southern"
+          ]
+        }
+      ],
+      "lon": -0.053182,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Forest Hill Station",
+      "id": "9100FORESTH1",
+      "lat": 51.438999,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "southern"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.053011,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Gunnersbury Station",
+      "hubNaptanCode": "HUBGUN",
+      "id": "9100GNRSBRY0",
+      "lat": 51.491386,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.275614,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Gospel Oak Station",
+      "id": "9100GOSPLOK1",
+      "lat": 51.555471,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.151399,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Gospel Oak Station",
+      "id": "9100GOSPLOK2",
+      "lat": 51.555634,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "suffragette"
+          ]
+        }
+      ],
+      "lon": -0.151465,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Gospel Oak Station",
+      "id": "9100GOSPLOK3",
+      "lat": 51.555365,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.151519,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Hackney Central Station",
+      "id": "9100HACKNYC1",
+      "lat": 51.54717,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.056213,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Hackney Central Station",
+      "id": "9100HACKNYC2",
+      "lat": 51.547089,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.056202,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Hackney Wick Station",
+      "id": "9100HACKNYW0",
+      "lat": 51.543054,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.024589,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Hackney Wick Station",
+      "id": "9100HACKNYW1",
+      "lat": 51.543405,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.024617,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Haggerston Station",
+      "id": "9100HAGGERS0",
+      "lat": 51.538705,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.075666,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Haggerston Station",
+      "id": "9100HAGGERS1",
+      "lat": 51.538522,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.075458,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Hackney Downs Station",
+      "id": "9100HAKNYNM1",
+      "lat": 51.54865,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        }
+      ],
+      "lon": -0.060867,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Hackney Downs Station",
+      "id": "9100HAKNYNM2",
+      "lat": 51.548634,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        }
+      ],
+      "lon": -0.060954,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Harlesden Station",
+      "hubNaptanCode": "HUBHDN",
+      "id": "9100HARLSDN0",
+      "lat": 51.536241,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.257467,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Harlesden Station",
+      "hubNaptanCode": "HUBHDN",
+      "id": "9100HARLSDN1",
+      "lat": 51.536253,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.257683,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Headstone Lane Station",
+      "id": "9100HEDSTNL0",
+      "lat": 51.602612,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.356528,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Headstone Lane Station",
+      "id": "9100HEDSTNL1",
+      "lat": 51.602524,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.356647,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Highams Park Station",
+      "id": "9100HGHMSPK0",
+      "lat": 51.608794,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        }
+      ],
+      "lon": -0.000419,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Highams Park Station",
+      "id": "9100HGHMSPK1",
+      "lat": 51.608782,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        }
+      ],
+      "lon": -0.000261,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Highbury & Islington Station",
+      "hubNaptanCode": "HUBHHY",
+      "id": "9100HIGBYA3",
+      "lat": 51.546032,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.104246,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Highbury & Islington Station",
+      "hubNaptanCode": "HUBHHY",
+      "id": "9100HIGHBYA1",
+      "lat": 51.545925,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.104841,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Highbury & Islington Station",
+      "hubNaptanCode": "HUBHHY",
+      "id": "9100HIGHBYA2",
+      "lat": 51.54587,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay",
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.104815,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Hampstead Heath Station",
+      "id": "9100HMPSTDH0",
+      "lat": 51.555306,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.164937,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Hampstead Heath Station",
+      "id": "9100HMPSTDH1",
+      "lat": 51.555397,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.165005,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Homerton Station",
+      "id": "9100HOMRTON1",
+      "lat": 51.547131,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.043004,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Homerton Station",
+      "id": "9100HOMRTON2",
+      "lat": 51.547032,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.043008,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Honor Oak Park Station",
+      "id": "9100HONROPK0",
+      "lat": 51.450407,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "southern"
+          ]
+        }
+      ],
+      "lon": -0.045243,
+      "modes": [
+        "national-rail",
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Honor Oak Park Station",
+      "id": "9100HONROPK1",
+      "lat": 51.450491,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "southern"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.045412,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Hoxton Station",
+      "id": "9100HOXTON0",
+      "lat": 51.531512,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.075681,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Hoxton Station",
+      "id": "9100HOXTON1",
+      "lat": 51.53163,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.075749,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Harringay Green Lanes Station",
+      "id": "9100HRGYGL0",
+      "lat": 51.577278,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "suffragette"
+          ]
+        }
+      ],
+      "lon": -0.097966,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Harringay Green Lanes Station",
+      "id": "9100HRGYGL1",
+      "lat": 51.577404,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "suffragette"
+          ]
+        }
+      ],
+      "lon": -0.097961,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Harrow & Wealdstone Station",
+      "hubNaptanCode": "HUBHRW",
+      "id": "9100HROWDC1",
+      "lat": 51.59223,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.335103,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Harrow & Wealdstone Station",
+      "hubNaptanCode": "HUBHRW",
+      "id": "9100HROWDC2",
+      "lat": 51.592186,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.335148,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Hatch End",
+      "id": "9100HTCHEND0",
+      "lat": 51.609737,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.368344,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Hatch End",
+      "id": "9100HTCHEND1",
+      "lat": 51.609658,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.368492,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Kensington (Olympia) Station",
+      "hubNaptanCode": "HUBKPA",
+      "id": "9100KENOLYM0",
+      "lat": 51.49788,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "southern"
+          ]
+        }
+      ],
+      "lon": -0.210293,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Kensington (Olympia) Station",
+      "hubNaptanCode": "HUBKPA",
+      "id": "9100KENOLYM1",
+      "lat": 51.497959,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "southern"
+          ]
+        }
+      ],
+      "lon": -0.210174,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Kensal Rise Station",
+      "id": "9100KENR0",
+      "lat": 51.534487,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.220262,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Kensal Rise Station",
+      "id": "9100KENR1",
+      "lat": 51.534405,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.220179,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Kensal Green Station",
+      "hubNaptanCode": "HUBKNL",
+      "id": "9100KENSLG0",
+      "lat": 51.530642,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.224666,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Kensal Green Station",
+      "hubNaptanCode": "HUBKNL",
+      "id": "9100KENSLG1",
+      "lat": 51.530519,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.224887,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Kew Gardens Station",
+      "hubNaptanCode": "HUBKWG",
+      "id": "9100KEWGRDN0",
+      "lat": 51.476868,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.285133,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Kew Gardens Station",
+      "hubNaptanCode": "HUBKWG",
+      "id": "9100KEWGRDN1",
+      "lat": 51.476848,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.285048,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Kilburn High Road Station",
+      "id": "9100KLBRNHR1",
+      "lat": 51.537688,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.191457,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Kilburn High Road Station",
+      "id": "9100KLBRNHR2",
+      "lat": 51.537761,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.191526,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Kentish Town West Station",
+      "id": "9100KNTSHTW0",
+      "lat": 51.546847,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.146816,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Kentish Town West Station",
+      "id": "9100KNTSHTW1",
+      "lat": 51.546863,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.146657,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Kenton Station",
+      "hubNaptanCode": "HUBKNT",
+      "id": "9100KTON0",
+      "lat": 51.58162,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.316829,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Kenton Station",
+      "hubNaptanCode": "HUBKNT",
+      "id": "9100KTON1",
+      "lat": 51.581663,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.316755,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Leyton Midland Road Station",
+      "id": "9100LEYTNMR0",
+      "lat": 51.569466,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "suffragette"
+          ]
+        }
+      ],
+      "lon": -0.007081,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Leyton Midland Road Station",
+      "id": "9100LEYTNMR1",
+      "lat": 51.569421,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "suffragette"
+          ]
+        }
+      ],
+      "lon": -0.007097,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Liverpool Street Station",
+      "hubNaptanCode": "HUBLST",
+      "id": "9100LIVST0",
+      "lat": 51.518381,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "c2c",
+            "greater-anglia"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.081092,
+      "modes": [
+        "overground",
+        "national-rail",
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "London Fields Station",
+      "id": "9100LONFLDS0",
+      "lat": 51.541633,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        }
+      ],
+      "lon": -0.057935,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "London Fields Station",
+      "id": "9100LONFLDS1",
+      "lat": 51.54163,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        }
+      ],
+      "lon": -0.057776,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Leytonstone High Road Station",
+      "id": "9100LYTNSHR0",
+      "lat": 51.563838,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "suffragette"
+          ]
+        }
+      ],
+      "lon": 0.007607,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Leytonstone High Road Station",
+      "id": "9100LYTNSHR1",
+      "lat": 51.563891,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "suffragette"
+          ]
+        }
+      ],
+      "lon": 0.007667,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "New Cross Gate Station",
+      "hubNaptanCode": "HUBNXG",
+      "id": "9100NEWXGTE0",
+      "lat": 51.47579,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "southern"
+          ]
+        }
+      ],
+      "lon": -0.040687,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "New Cross Gate Station",
+      "hubNaptanCode": "HUBNXG",
+      "id": "9100NEWXGTE2",
+      "lat": 51.475748,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "southern"
+          ]
+        }
+      ],
+      "lon": -0.040905,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Norwood Junction Station",
+      "hubNaptanCode": "HUBNWD",
+      "id": "9100NORWDJ0",
+      "lat": 51.397341,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "southern",
+            "thameslink"
+          ]
+        }
+      ],
+      "lon": -0.074547,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Norwood Junction Station",
+      "hubNaptanCode": "HUBNWD",
+      "id": "9100NORWDJ2",
+      "lat": 51.397399,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "southern",
+            "southeastern"
+          ]
+        }
+      ],
+      "lon": -0.074817,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "New Cross Station",
+      "hubNaptanCode": "HUBNWX",
+      "id": "9100NWCRELL1",
+      "lat": 51.47684,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.033053,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "North Wembley Station",
+      "hubNaptanCode": "HUBNWB",
+      "id": "9100NWEMBLY1",
+      "lat": 51.562488,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.303974,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "North Wembley Station",
+      "hubNaptanCode": "HUBNWB",
+      "id": "9100NWEMBLY2",
+      "lat": 51.562505,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.303886,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Queens Road Peckham Station",
+      "id": "9100PCKHMQD0",
+      "lat": 51.473801,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "southern"
+          ]
+        }
+      ],
+      "lon": -0.057361,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Peckham Rye Station",
+      "id": "9100PCKHMRY2",
+      "lat": 51.470056,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "southeastern",
+            "thameslink"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.070191,
+      "modes": [
+        "national-rail",
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Penge West Station",
+      "id": "9100PENEW0",
+      "lat": 51.417555,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "southern"
+          ]
+        }
+      ],
+      "lon": -0.060811,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Penge West Station",
+      "id": "9100PENEW1",
+      "lat": 51.417555,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "southern"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.060811,
+      "modes": [
+        "national-rail",
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Peckham Rye Station",
+      "id": "9100PKHMRYC1",
+      "lat": 51.469692,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "thameslink",
+            "southern"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.069918,
+      "modes": [
+        "national-rail",
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Queen's Park Station (London)",
+      "hubNaptanCode": "HUBQPW",
+      "id": "9100QPRK1",
+      "lat": 51.53397,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.205259,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Queen's Park Station (London)",
+      "hubNaptanCode": "HUBQPW",
+      "id": "9100QPRK2",
+      "lat": 51.534142,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.205338,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Rectory Road Station",
+      "id": "9100RCTRYD1",
+      "lat": 51.559248,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        }
+      ],
+      "lon": -0.068783,
+      "modes": [
+        "national-rail",
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Rectory Road Station",
+      "id": "9100RCTRYRD0",
+      "lat": 51.559232,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        }
+      ],
+      "lon": -0.0689,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Richmond Station",
+      "hubNaptanCode": "HUBRMD",
+      "id": "9100RICHNLL0",
+      "lat": 51.463091,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.301197,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Romford Station",
+      "id": "9100ROMFORD0",
+      "lat": 51.575087,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "liberty"
+          ]
+        }
+      ],
+      "lon": 0.18387,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Rotherhithe Station",
+      "id": "9100RTHERHI1",
+      "lat": 51.500817,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.052048,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Rotherhithe Station",
+      "id": "9100RTHERHI2",
+      "lat": 51.500817,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.052048,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "South Acton Station",
+      "id": "9100SACTON0",
+      "lat": 51.499886,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.269689,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "South Acton Station",
+      "id": "9100SACTON1",
+      "lat": 51.499886,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.269703,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Southbury Station",
+      "id": "9100SBURY0",
+      "lat": 51.648152,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        }
+      ],
+      "lon": -0.052706,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Southbury Station",
+      "id": "9100SBURY1",
+      "lat": 51.648182,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        }
+      ],
+      "lon": -0.052864,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Seven Sisters Station",
+      "hubNaptanCode": "HUBSVS",
+      "id": "9100SEVNSIS0",
+      "lat": 51.582602,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        }
+      ],
+      "lon": -0.075357,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Seven Sisters Station",
+      "hubNaptanCode": "HUBSVS",
+      "id": "9100SEVNSIS1",
+      "lat": 51.5826,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        }
+      ],
+      "lon": -0.075227,
+      "modes": [
+        "national-rail",
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Shadwell Rail Station",
+      "hubNaptanCode": "HUBSDE",
+      "id": "9100SHADWEL1",
+      "lat": 51.511284,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.056934,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Shadwell Rail Station",
+      "hubNaptanCode": "HUBSDE",
+      "id": "9100SHADWEL2",
+      "lat": 51.511308,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.056732,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "South Hampstead Station",
+      "id": "9100SHMPSTD0",
+      "lat": 51.541588,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.178511,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "South Hampstead Station",
+      "id": "9100SHMPSTD1",
+      "lat": 51.541661,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.178537,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Shepherd's Bush Rail Station",
+      "hubNaptanCode": "HUBSPB",
+      "id": "9100SHPDSB0",
+      "lat": 51.505729,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "southern"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.217867,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Shepherd's Bush Rail Station",
+      "hubNaptanCode": "HUBSPB",
+      "id": "9100SHPDSB1",
+      "lat": 51.505762,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.217707,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Shoreditch High Street Station",
+      "id": "9100SHRDHST0",
+      "lat": 51.523375,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.075246,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Shoreditch High Street Station",
+      "id": "9100SHRDHST1",
+      "lat": 51.523546,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.076334,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Silver Street Station",
+      "id": "9100SIVRST0",
+      "lat": 51.615654,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        }
+      ],
+      "lon": -0.066896,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Silver Street Station",
+      "id": "9100SIVRST1",
+      "lat": 51.615606,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        }
+      ],
+      "lon": -0.06671,
+      "modes": [
+        "national-rail",
+        "overground"
+      ]
+    },
+    {
+      "commonName": "South Kenton Station",
+      "hubNaptanCode": "HUBSOK",
+      "id": "9100SKENTON1",
+      "lat": 51.570133,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.308451,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Stratford Station",
+      "hubNaptanCode": "HUBSRA",
+      "id": "9100STFD4",
+      "lat": 51.542847,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.003297,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "St James Street Station",
+      "id": "9100STJMSST0",
+      "lat": 51.581229,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        }
+      ],
+      "lon": -0.032186,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "St James Street Station",
+      "id": "9100STJMSST1",
+      "lat": 51.581138,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        }
+      ],
+      "lon": -0.032118,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Stoke Newington Station",
+      "id": "9100STKNWNG0",
+      "lat": 51.564959,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        }
+      ],
+      "lon": -0.072625,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Stoke Newington Station",
+      "id": "9100STKNWNG1",
+      "lat": 51.56502,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        }
+      ],
+      "lon": -0.07255,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Stamford Hill Station",
+      "id": "9100STMFDHL0",
+      "lat": 51.575089,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        }
+      ],
+      "lon": -0.076223,
+      "modes": [
+        "national-rail",
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Stamford Hill Station",
+      "id": "9100STMFDHL1",
+      "lat": 51.575024,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        }
+      ],
+      "lon": -0.076052,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Stonebridge Park Station",
+      "hubNaptanCode": "HUBSBP",
+      "id": "9100STNBGPK0",
+      "lat": 51.544031,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.275903,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Stonebridge Park Station",
+      "hubNaptanCode": "HUBSBP",
+      "id": "9100STNBGPK1",
+      "lat": 51.543978,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.275949,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "South Tottenham Station",
+      "id": "9100STOTNHM0",
+      "lat": 51.58065,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "suffragette"
+          ]
+        }
+      ],
+      "lon": -0.071485,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "South Tottenham Station",
+      "id": "9100STOTNHM1",
+      "lat": 51.580578,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "suffragette"
+          ]
+        }
+      ],
+      "lon": -0.071488,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Surrey Quays Station",
+      "id": "9100SURREYQ1",
+      "lat": 51.493196,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.047519,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Surrey Quays Station",
+      "id": "9100SURREYQ2",
+      "lat": 51.493196,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.047519,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Sydenham Station",
+      "hubNaptanCode": "HUBSYD",
+      "id": "9100SYDENHM0",
+      "lat": 51.427661,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "southern"
+          ]
+        }
+      ],
+      "lon": -0.054183,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Sydenham Station",
+      "hubNaptanCode": "HUBSYD",
+      "id": "9100SYDENHM1",
+      "lat": 51.42769,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "southern"
+          ]
+        }
+      ],
+      "lon": -0.05434,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Theobalds Grove Rail Station",
+      "id": "9100THBLDSG0",
+      "lat": 51.692118,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        }
+      ],
+      "lon": -0.035569,
+      "modes": [
+        "national-rail",
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Theobalds Grove Rail Station",
+      "id": "9100THBLDSG1",
+      "lat": 51.691999,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        }
+      ],
+      "lon": -0.03543,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Turkey Street Station",
+      "id": "9100TURKYST0",
+      "lat": 51.673008,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        }
+      ],
+      "lon": -0.047345,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Turkey Street Station",
+      "id": "9100TURKYST1",
+      "lat": 51.672988,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        }
+      ],
+      "lon": -0.047201,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Upminster Station",
+      "hubNaptanCode": "HUBUPM",
+      "id": "9100UPMNSP61",
+      "lat": 51.559349,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "liberty"
+          ]
+        }
+      ],
+      "lon": 0.251473,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Upper Holloway Station",
+      "id": "9100UPRHLWY0",
+      "lat": 51.563214,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "suffragette"
+          ]
+        }
+      ],
+      "lon": -0.13041,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Upper Holloway Station",
+      "id": "9100UPRHLWY1",
+      "lat": 51.563149,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "suffragette"
+          ]
+        }
+      ],
+      "lon": -0.130283,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Wapping Station",
+      "id": "9100WAPPING1",
+      "lat": 51.504388,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.055931,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Wapping Station",
+      "id": "9100WAPPING2",
+      "lat": 51.504743,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.056161,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Watford High Street Rail Station",
+      "id": "9100WATFDHS1",
+      "lat": 51.65228,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.392577,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Watford High Street Rail Station",
+      "id": "9100WATFDHS2",
+      "lat": 51.652189,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.392465,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Watford Junction Rail Station",
+      "hubNaptanCode": "HUBWFJ",
+      "id": "9100WATFJDC2",
+      "lat": 51.663251,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.395891,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "West Brompton Station",
+      "hubNaptanCode": "HUBWBP",
+      "id": "9100WBRMPTN0",
+      "lat": 51.48672,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "southern"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.195044,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "West Brompton Station",
+      "hubNaptanCode": "HUBWBP",
+      "id": "9100WBRMPTN1",
+      "lat": 51.4868,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "southern"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.194984,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Whitechapel Station",
+      "hubNaptanCode": "HUBZWL",
+      "id": "9100WCHAPEL1",
+      "lat": 51.519469,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.059757,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Whitechapel Station",
+      "hubNaptanCode": "HUBZWL",
+      "id": "9100WCHAPEL2",
+      "lat": 51.51943,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.060191,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "West Croydon Station",
+      "hubNaptanCode": "HUBWCY",
+      "id": "9100WCROYDN2",
+      "lat": 51.378605,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "southern"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.102434,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Woodgrange Park Station",
+      "id": "9100WDGRNPK0",
+      "lat": 51.549181,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "suffragette"
+          ]
+        }
+      ],
+      "lon": 0.044549,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Woodgrange Park Station",
+      "id": "9100WDGRNPK1",
+      "lat": 51.549269,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "suffragette"
+          ]
+        }
+      ],
+      "lon": 0.044611,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Wood Street Station",
+      "id": "9100WDST0",
+      "lat": 51.586955,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        }
+      ],
+      "lon": -0.002201,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Wood Street Station",
+      "id": "9100WDST1",
+      "lat": 51.586881,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        }
+      ],
+      "lon": -0.002075,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "White Hart Lane Station",
+      "id": "9100WHHRTLA0",
+      "lat": 51.604798,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        }
+      ],
+      "lon": -0.071155,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "White Hart Lane Station",
+      "id": "9100WHHRTLA1",
+      "lat": 51.604805,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        }
+      ],
+      "lon": -0.070996,
+      "modes": [
+        "national-rail",
+        "overground"
+      ]
+    },
+    {
+      "commonName": "West Hampstead Overground Station",
+      "hubNaptanCode": "HUBWHD",
+      "id": "9100WHMDSTD0",
+      "lat": 51.547309,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.191998,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "West Hampstead Overground Station",
+      "hubNaptanCode": "HUBWHD",
+      "id": "9100WHMDSTD1",
+      "lat": 51.547255,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.191957,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Willesden Junction Station",
+      "hubNaptanCode": "HUBWIJ",
+      "id": "9100WLSDJHL1",
+      "lat": 51.531992,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.243284,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Willesden Junction Station",
+      "hubNaptanCode": "HUBWIJ",
+      "id": "9100WLSDNJL1",
+      "lat": 51.532428,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.244796,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Walthamstow Queens Road Station",
+      "id": "9100WLTHQRD0",
+      "lat": 51.581679,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "suffragette"
+          ]
+        }
+      ],
+      "lon": -0.024156,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Walthamstow Queens Road Station",
+      "id": "9100WLTHQRD1",
+      "lat": 51.581731,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "suffragette"
+          ]
+        }
+      ],
+      "lon": -0.024067,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Walthamstow Central Station",
+      "hubNaptanCode": "HUBWHC",
+      "id": "9100WLTWCEN1",
+      "lat": 51.582898,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        }
+      ],
+      "lon": -0.020191,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Walthamstow Central Station",
+      "hubNaptanCode": "HUBWHC",
+      "id": "9100WLTWCEN2",
+      "lat": 51.582835,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        }
+      ],
+      "lon": -0.020179,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Wembley Central Station",
+      "hubNaptanCode": "HUBWMB",
+      "id": "9100WMBYDC1",
+      "lat": 51.55195,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.296591,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Wembley Central Station",
+      "hubNaptanCode": "HUBWMB",
+      "id": "9100WMBYDC2",
+      "lat": 51.551993,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.296503,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Wandsworth Road Station",
+      "id": "9100WNDSWRD1",
+      "lat": 51.469826,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.138276,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Wandsworth Road Station",
+      "id": "9100WNDSWRD2",
+      "lat": 51.469798,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "southeastern"
+          ]
+        }
+      ],
+      "lon": -0.138249,
+      "modes": [
+        "national-rail",
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Wanstead Park Station",
+      "id": "9100WNSTDPK0",
+      "lat": 51.551832,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "suffragette"
+          ]
+        }
+      ],
+      "lon": 0.02596,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Wanstead Park Station",
+      "id": "9100WNSTDPK1",
+      "lat": 51.551744,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "suffragette"
+          ]
+        }
+      ],
+      "lon": 0.025884,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Acton Central Rail Station",
+      "id": "910GACTNCTL",
+      "lat": 51.508716,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.262971,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Anerley Rail Station",
+      "id": "910GANERLEY",
+      "lat": 51.412153,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "southern"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.065886,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Barking Rail Station",
+      "hubNaptanCode": "HUBBKG",
+      "id": "910GBARKING",
+      "lat": 51.539495,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "c2c"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "suffragette"
+          ]
+        }
+      ],
+      "lon": 0.080903,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Barking Riverside",
+      "id": "910GBARKRIV",
+      "lat": 51.51953,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "suffragette"
+          ]
+        }
+      ],
+      "lon": 0.11596,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Bush Hill Park Rail Station",
+      "id": "910GBHILLPK",
+      "lat": 51.641519,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "377"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        }
+      ],
+      "lon": -0.069221,
+      "modes": [
+        "bus",
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Blackhorse Road Rail Station",
+      "hubNaptanCode": "HUBBHO",
+      "id": "910GBLCHSRD",
+      "lat": 51.586605,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "suffragette"
+          ]
+        }
+      ],
+      "lon": -0.041236,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Brondesbury Rail Station",
+      "id": "910GBRBY",
+      "lat": 51.545166,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.202309,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Brondesbury Park Rail Station",
+      "id": "910GBRBYPK",
+      "lat": 51.540699,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.210128,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Brockley Rail Station",
+      "id": "910GBROCKLY",
+      "lat": 51.464649,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "southern"
+          ]
+        }
+      ],
+      "lon": -0.037537,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Bruce Grove Rail Station",
+      "id": "910GBRUCGRV",
+      "lat": 51.593959,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        }
+      ],
+      "lon": -0.069867,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Bethnal Green Rail Station",
+      "id": "910GBTHNLGR",
+      "lat": 51.523917,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        }
+      ],
+      "lon": -0.059568,
+      "modes": [
+        "national-rail",
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Bushey Rail Station",
+      "hubNaptanCode": "HUBBSH",
+      "id": "910GBUSHEY",
+      "lat": 51.645582,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "west-midlands-trains"
+          ]
+        }
+      ],
+      "lon": -0.384749,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Bushey Rail Station",
+      "hubNaptanCode": "HUBBSH",
+      "id": "910GBUSHYDC",
+      "lat": 51.645894,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.385229,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Cambridge Heath (London) Rail Station",
+      "id": "910GCAMHTH",
+      "lat": 51.531973,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        }
+      ],
+      "lon": -0.057279,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Cheshunt Rail Station",
+      "id": "910GCHESHNT",
+      "lat": 51.702876,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        }
+      ],
+      "lon": -0.02396,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Chingford Rail Station",
+      "id": "910GCHINGFD",
+      "lat": 51.633087,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        }
+      ],
+      "lon": 0.009897,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Clapton Rail Station",
+      "id": "910GCLAPTON",
+      "lat": 51.561644,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        }
+      ],
+      "lon": -0.057025,
+      "modes": [
+        "national-rail",
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Caledonian Road & Barnsbury Rail Station",
+      "id": "910GCLDNNRB",
+      "lat": 51.543041,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.116729,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Clapham High Street Rail Station",
+      "id": "910GCLPHHS",
+      "lat": 51.465481,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "southeastern"
+          ]
+        }
+      ],
+      "lon": -0.132522,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Clapham Junction Rail Station",
+      "hubNaptanCode": "HUBCLJ",
+      "id": "910GCLPHMJ1",
+      "lat": 51.464187,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay",
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.170221,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Clapham Junction Rail Station",
+      "hubNaptanCode": "HUBCLJ",
+      "id": "910GCLPHMJC",
+      "lat": 51.464188,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "south-western-railway",
+            "southern"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.170293,
+      "modes": [
+        "national-rail",
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Camden Road Rail Station",
+      "id": "910GCMDNRD",
+      "lat": 51.541791,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.138701,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Canada Water Rail Station",
+      "hubNaptanCode": "HUBZCW",
+      "id": "910GCNDAW",
+      "lat": 51.49799,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.04972,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Canonbury Rail Station",
+      "id": "910GCNNB",
+      "lat": 51.548732,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay",
+            "windrush"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "236"
+          ]
+        }
+      ],
+      "lon": -0.092191,
+      "modes": [
+        "overground",
+        "bus"
+      ]
+    },
+    {
+      "commonName": "Crouch Hill Rail Station",
+      "id": "910GCROUCHH",
+      "lat": 51.571302,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "suffragette"
+          ]
+        }
+      ],
+      "lon": -0.117149,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Carpenders Park Rail Station",
+      "id": "910GCRPNDPK",
+      "lat": 51.628351,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.385939,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Crystal Palace Rail Station",
+      "hubNaptanCode": "HUBCYP",
+      "id": "910GCRYSTLP",
+      "lat": 51.418109,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "southern"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.07261,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Imperial Wharf Rail Station",
+      "hubNaptanCode": "HUBIMP",
+      "id": "910GCSEAH",
+      "lat": 51.474949,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "southern"
+          ]
+        }
+      ],
+      "lon": -0.182823,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Dalston Junction Rail Station",
+      "id": "910GDALS",
+      "lat": 51.546116,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "243",
+            "242",
+            "n242",
+            "149",
+            "76",
+            "67",
+            "277",
+            "488"
+          ]
+        }
+      ],
+      "lon": -0.075137,
+      "modes": [
+        "bus",
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Dalston Kingsland Rail Station",
+      "id": "910GDALSKLD",
+      "lat": 51.548148,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.075701,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Denmark Hill Rail Station",
+      "id": "910GDENMRKH",
+      "lat": 51.468203,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "southeastern",
+            "thameslink"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.089361,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Edmonton Green Rail Station",
+      "id": "910GEDMNGRN",
+      "lat": 51.624929,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        }
+      ],
+      "lon": -0.061112,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Emerson Park Rail Station",
+      "id": "910GEMRSPKH",
+      "lat": 51.568642,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "liberty"
+          ]
+        }
+      ],
+      "lon": 0.220113,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Enfield Town Rail Station",
+      "id": "910GENFLDTN",
+      "lat": 51.652026,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        }
+      ],
+      "lon": -0.079328,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "London Euston Rail Station",
+      "hubNaptanCode": "HUBEUS",
+      "id": "910GEUSTON",
+      "lat": 51.528136,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "avanti-west-coast",
+            "west-midlands-trains"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.133924,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Finchley Road & Frognal Rail Station",
+      "id": "910GFNCHLYR",
+      "lat": 51.550266,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.183141,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Forest Hill Rail Station",
+      "id": "910GFORESTH",
+      "lat": 51.43928,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "southern"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.053157,
+      "modes": [
+        "national-rail",
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Gunnersbury Rail Station",
+      "hubNaptanCode": "HUBGUN",
+      "id": "910GGNRSBRY",
+      "lat": 51.491678,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.275286,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Gospel Oak Rail Station",
+      "id": "910GGOSPLOK",
+      "lat": 51.555335,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay",
+            "suffragette"
+          ]
+        }
+      ],
+      "lon": -0.15077,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Hackney Central Rail Station",
+      "id": "910GHACKNYC",
+      "lat": 51.547105,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.056058,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Hackney Wick Rail Station",
+      "id": "910GHACKNYW",
+      "lat": 51.54341,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.02492,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Haggerston Rail Station",
+      "id": "910GHAGGERS",
+      "lat": 51.538705,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.075666,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Hackney Downs Rail Station",
+      "id": "910GHAKNYNM",
+      "lat": 51.548757,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        }
+      ],
+      "lon": -0.060819,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Harlesden Rail Station",
+      "hubNaptanCode": "HUBHDN",
+      "id": "910GHARLSDN",
+      "lat": 51.536289,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.257667,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Headstone Lane Rail Station",
+      "id": "910GHEDSTNL",
+      "lat": 51.602649,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.35722,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Highbury & Islington Rail Station",
+      "hubNaptanCode": "HUBHHY",
+      "id": "910GHGHI",
+      "lat": 51.546177,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "great-northern"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "windrush",
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.103764,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Highams Park Rail Station",
+      "id": "910GHGHMSPK",
+      "lat": 51.60835,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        }
+      ],
+      "lon": -0.000222,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Hampstead Heath Rail Station",
+      "id": "910GHMPSTDH",
+      "lat": 51.55521,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.165705,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Homerton Rail Station",
+      "id": "910GHOMRTON",
+      "lat": 51.547012,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.04236,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Honor Oak Park Rail Station",
+      "id": "910GHONROPK",
+      "lat": 51.449989,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "southern"
+          ]
+        }
+      ],
+      "lon": -0.045505,
+      "modes": [
+        "national-rail",
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Hoxton Rail Station",
+      "id": "910GHOXTON",
+      "lat": 51.531512,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.075681,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Harringay Green Lanes Rail Station",
+      "id": "910GHRGYGL",
+      "lat": 51.577182,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "suffragette"
+          ]
+        }
+      ],
+      "lon": -0.098144,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Harrow & Wealdstone Rail Station",
+      "hubNaptanCode": "HUBHRW",
+      "id": "910GHROW",
+      "lat": 51.592169,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "southern",
+            "west-midlands-trains"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.334571,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Hatch End Rail Station",
+      "id": "910GHTCHEND",
+      "lat": 51.609417,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.368601,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Kensington (Olympia) Rail Station",
+      "hubNaptanCode": "HUBKPA",
+      "id": "910GKENOLYM",
+      "lat": 51.497899,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "southern"
+          ]
+        }
+      ],
+      "lon": -0.210364,
+      "modes": [
+        "national-rail",
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Kensal Rise Rail Station",
+      "id": "910GKENR",
+      "lat": 51.534554,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.219957,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Kensal Green Rail Station",
+      "hubNaptanCode": "HUBKNL",
+      "id": "910GKENSLG",
+      "lat": 51.53054,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.225088,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Kew Gardens Rail Station",
+      "hubNaptanCode": "HUBKWG",
+      "id": "910GKEWGRDN",
+      "lat": 51.477073,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.285054,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Kilburn High Road Rail Station",
+      "id": "910GKLBRNHR",
+      "lat": 51.537277,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.192237,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Kentish Town West Rail Station",
+      "id": "910GKNTSHTW",
+      "lat": 51.546548,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.146655,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Kenton Rail Station",
+      "hubNaptanCode": "HUBKNT",
+      "id": "910GKTON",
+      "lat": 51.581802,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.316981,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Leyton Midland Road Rail Station",
+      "id": "910GLEYTNMR",
+      "lat": 51.569725,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "suffragette"
+          ]
+        }
+      ],
+      "lon": -0.008051,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "London Liverpool Street Rail Station",
+      "hubNaptanCode": "HUBLST",
+      "id": "910GLIVST",
+      "lat": 51.517991,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "c2c",
+            "greater-anglia"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        }
+      ],
+      "lon": -0.081426,
+      "modes": [
+        "overground",
+        "national-rail",
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "London Fields Rail Station",
+      "id": "910GLONFLDS",
+      "lat": 51.541153,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        }
+      ],
+      "lon": -0.057753,
+      "modes": [
+        "national-rail",
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Leytonstone High Road Rail Station",
+      "id": "910GLYTNSHR",
+      "lat": 51.563554,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "suffragette"
+          ]
+        }
+      ],
+      "lon": 0.008416,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "New Cross Gate Rail Station",
+      "hubNaptanCode": "HUBNXG",
+      "id": "910GNEWXGTE",
+      "lat": 51.475128,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "southern"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.040399,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Norwood Junction Rail Station",
+      "hubNaptanCode": "HUBNWD",
+      "id": "910GNORWDJ",
+      "lat": 51.397019,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "southern",
+            "thameslink",
+            "southeastern"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.075221,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "New Cross ELL Rail Station",
+      "hubNaptanCode": "HUBNWX",
+      "id": "910GNWCRELL",
+      "lat": 51.476344,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "southeastern"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.032441,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "North Wembley Rail Station",
+      "hubNaptanCode": "HUBNWB",
+      "id": "910GNWEMBLY",
+      "lat": 51.562596,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.303984,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Queens Road Peckham Rail Station",
+      "id": "910GPCKHMQD",
+      "lat": 51.473566,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "southern"
+          ]
+        }
+      ],
+      "lon": -0.057313,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Peckham Rye Rail Station",
+      "id": "910GPCKHMRY",
+      "lat": 51.470034,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "thameslink",
+            "southern",
+            "southeastern"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.069414,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Penge West Rail Station",
+      "id": "910GPENEW",
+      "lat": 51.417555,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "southern"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.06084,
+      "modes": [
+        "national-rail",
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Queens Park (London) Rail Station",
+      "hubNaptanCode": "HUBQPW",
+      "id": "910GQPRK",
+      "lat": 51.533966,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.204985,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Rectory Road Rail Station",
+      "id": "910GRCTRYRD",
+      "lat": 51.558502,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        }
+      ],
+      "lon": -0.068267,
+      "modes": [
+        "national-rail",
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Richmond (London) Rail Station",
+      "hubNaptanCode": "HUBRMD",
+      "id": "910GRICHMND",
+      "lat": 51.463061,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "south-western-railway"
+          ]
+        }
+      ],
+      "lon": -0.301558,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Romford Rail Station",
+      "id": "910GROMFORD",
+      "lat": 51.574829,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "liberty"
+          ]
+        }
+      ],
+      "lon": 0.183237,
+      "modes": [
+        "overground",
+        "national-rail",
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "Rotherhithe Rail Station",
+      "id": "910GRTHERHI",
+      "lat": 51.500817,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.052048,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "South Acton Rail Station",
+      "id": "910GSACTON",
+      "lat": 51.499695,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.270157,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Southbury Rail Station",
+      "id": "910GSBURY",
+      "lat": 51.648705,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        }
+      ],
+      "lon": -0.052437,
+      "modes": [
+        "national-rail",
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Seven Sisters Rail Station",
+      "hubNaptanCode": "HUBSVS",
+      "id": "910GSEVNSIS",
+      "lat": 51.582268,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        }
+      ],
+      "lon": -0.07527,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Shadwell Rail Station",
+      "hubNaptanCode": "HUBSDE",
+      "id": "910GSHADWEL",
+      "lat": 51.511284,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.056934,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "South Hampstead Rail Station",
+      "id": "910GSHMPSTD",
+      "lat": 51.541432,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.178878,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Shepherds Bush Rail Station",
+      "hubNaptanCode": "HUBSPB",
+      "id": "910GSHPDSB",
+      "lat": 51.505285,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "southern"
+          ]
+        }
+      ],
+      "lon": -0.217654,
+      "modes": [
+        "national-rail",
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Shoreditch High Street Rail Station",
+      "id": "910GSHRDHST",
+      "lat": 51.523375,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.075246,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Silver Street Rail Station",
+      "id": "910GSIVRST",
+      "lat": 51.614688,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        }
+      ],
+      "lon": -0.06724,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "South Kenton Rail Station",
+      "hubNaptanCode": "HUBSOK",
+      "id": "910GSKENTON",
+      "lat": 51.570214,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.308462,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Stratford (London) Rail Station",
+      "hubNaptanCode": "HUBSRA",
+      "id": "910GSTFD",
+      "lat": 51.541895,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "greater-anglia",
+            "c2c"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "elizabeth"
+          ]
+        }
+      ],
+      "lon": -0.003397,
+      "modes": [
+        "overground",
+        "national-rail",
+        "elizabeth-line"
+      ]
+    },
+    {
+      "commonName": "St James Street (London) Rail Station",
+      "id": "910GSTJMSST",
+      "lat": 51.580981,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        }
+      ],
+      "lon": -0.032918,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Stoke Newington Rail Station",
+      "id": "910GSTKNWNG",
+      "lat": 51.565233,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        }
+      ],
+      "lon": -0.072887,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Stamford Hill Rail Station",
+      "id": "910GSTMFDHL",
+      "lat": 51.574467,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        }
+      ],
+      "lon": -0.076682,
+      "modes": [
+        "national-rail",
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Stonebridge Park Rail Station",
+      "hubNaptanCode": "HUBSBP",
+      "id": "910GSTNBGPK",
+      "lat": 51.544111,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.275828,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "South Tottenham Rail Station",
+      "id": "910GSTOTNHM",
+      "lat": 51.580372,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "suffragette"
+          ]
+        }
+      ],
+      "lon": -0.072103,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Surrey Quays Rail Station",
+      "id": "910GSURREYQ",
+      "lat": 51.493196,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.047519,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Sydenham Rail Station",
+      "hubNaptanCode": "HUBSYD",
+      "id": "910GSYDENHM",
+      "lat": 51.427248,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "southern"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.054244,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Theobalds Grove Rail Station",
+      "id": "910GTHBLDSG",
+      "lat": 51.692457,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        }
+      ],
+      "lon": -0.034831,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Turkey Street Rail Station",
+      "id": "910GTURKYST",
+      "lat": 51.672628,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        }
+      ],
+      "lon": -0.047217,
+      "modes": [
+        "national-rail",
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Upminster Rail Station",
+      "hubNaptanCode": "HUBUPM",
+      "id": "910GUPMNSTR",
+      "lat": 51.559018,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "liberty"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "c2c"
+          ]
+        }
+      ],
+      "lon": 0.25088,
+      "modes": [
+        "national-rail",
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Upper Holloway Rail Station",
+      "id": "910GUPRHLWY",
+      "lat": 51.563631,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "suffragette"
+          ]
+        }
+      ],
+      "lon": -0.129513,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Wapping Rail Station",
+      "id": "910GWAPPING",
+      "lat": 51.504388,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.055931,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Watford High Street Rail Station",
+      "id": "910GWATFDHS",
+      "lat": 51.652655,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.391711,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Watford Junction Rail Station",
+      "hubNaptanCode": "HUBWFJ",
+      "id": "910GWATFDJ",
+      "lat": 51.663908,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "avanti-west-coast",
+            "west-midlands-trains",
+            "southern"
+          ]
+        }
+      ],
+      "lon": -0.395925,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Watford Junction Rail Station",
+      "hubNaptanCode": "HUBWFJ",
+      "id": "910GWATFJDC",
+      "lat": 51.663529,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.396517,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "West Brompton Rail Station",
+      "hubNaptanCode": "HUBWBP",
+      "id": "910GWBRMPTN",
+      "lat": 51.487061,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "southern"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.195593,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Whitechapel Rail Station",
+      "hubNaptanCode": "HUBZWL",
+      "id": "910GWCHAPEL",
+      "lat": 51.519469,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.059757,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "West Croydon Rail Station",
+      "hubNaptanCode": "HUBWCY",
+      "id": "910GWCROYDN",
+      "lat": 51.378428,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "southern"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        }
+      ],
+      "lon": -0.102585,
+      "modes": [
+        "national-rail",
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Woodgrange Park Rail Station",
+      "id": "910GWDGRNPK",
+      "lat": 51.549264,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "suffragette"
+          ]
+        }
+      ],
+      "lon": 0.044423,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Wood Street Rail Station",
+      "id": "910GWDST",
+      "lat": 51.58658,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        }
+      ],
+      "lon": -0.002405,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "White Hart Lane Rail Station",
+      "id": "910GWHHRTLA",
+      "lat": 51.605037,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "greater-anglia"
+          ]
+        }
+      ],
+      "lon": -0.070914,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "West Hampstead Rail Station",
+      "hubNaptanCode": "HUBWHD",
+      "id": "910GWHMDSTD",
+      "lat": 51.547468,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.191185,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Willesden Junction Rail Station",
+      "hubNaptanCode": "HUBWIJ",
+      "id": "910GWLSDJHL",
+      "lat": 51.532497,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "lioness",
+            "mildmay"
+          ]
+        }
+      ],
+      "lon": -0.244548,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Walthamstow Queens Road Rail Station",
+      "id": "910GWLTHQRD",
+      "lat": 51.581503,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "suffragette"
+          ]
+        }
+      ],
+      "lon": -0.023846,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Walthamstow Central Rail Station",
+      "hubNaptanCode": "HUBWHC",
+      "id": "910GWLTWCEN",
+      "lat": 51.582919,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "weaver"
+          ]
+        }
+      ],
+      "lon": -0.019815,
+      "modes": [
+        "overground"
+      ]
+    },
+    {
+      "commonName": "Wembley Central Rail Station",
+      "hubNaptanCode": "HUBWMB",
+      "id": "910GWMBY",
+      "lat": 51.552325,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "southern"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "lioness"
+          ]
+        }
+      ],
+      "lon": -0.296433,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Wandsworth Road Rail Station",
+      "id": "910GWNDSWRD",
+      "lat": 51.470216,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "windrush"
+          ]
+        },
+        {
+          "lineIdentifier": [
+            "southeastern"
+          ]
+        }
+      ],
+      "lon": -0.13852,
+      "modes": [
+        "overground",
+        "national-rail"
+      ]
+    },
+    {
+      "commonName": "Wanstead Park Rail Station",
+      "id": "910GWNSTDPK",
+      "lat": 51.551693,
+      "lineModeGroups": [
+        {
+          "lineIdentifier": [
+            "suffragette"
+          ]
+        }
+      ],
+      "lon": 0.026213,
+      "modes": [
+        "overground"
+      ]
+    }
+  ],
+  "total": 546
+}

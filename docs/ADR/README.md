@@ -17,3 +17,5 @@ To supersede an ADR: update its Status field; never renumber or rename.
 | 5  | [open-sourcing-checklist](./open-sourcing-checklist.md) | Proposed |
 | 6  | [northern-line-branch-inference](./northern-line-branch-inference.md) | Accepted |
 | 7  | [distribution-roadmap](./distribution-roadmap.md) | Proposed |
+| 8  | [crates-as-public-contract](./crates-as-public-contract.md) | Accepted |
+| 9  | [multi-mode-stop-points-cache](./multi-mode-stop-points-cache.md) | Accepted |
