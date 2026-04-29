@@ -267,6 +267,21 @@ bottom of this doc, not just the unit tests.**
     `search_stations_does_not_refetch_when_cache_is_stale_but_present`
     and `refresh_stop_points_cache_forces_refetch_even_when_fresh`.
 
+21. **Per-mode stop-points fetch MUST retry on transient errors.**
+    The 4-mode parallel fan-out in `refresh_stop_points_inner` retries
+    each mode up to `STOP_POINTS_FETCH_ATTEMPTS` times (currently 4)
+    with exponential backoff (`STOP_POINTS_FETCH_BACKOFF`: 500 ms /
+    1.5 s / 4.5 s) on `RateLimited`, `Transport`, and `Http` errors.
+    `NotFound`, `Parse`, and `ParseAt` are terminal — retrying won't
+    fix bad JSON or a missing endpoint. Without retries, a single 429
+    mid-burst (common on the anonymous 50 req/min budget — observed
+    on iOS over cellular without an `app_key`) leaves a whole mode
+    missing from the cache for the full 14-minute periodic-refresh
+    window. The user's symptom: "tube doesn't appear in search but
+    DLR does" until the next periodic refresh. Guarded by
+    `warm_retries_per_mode_on_transient_failure` and
+    `warm_does_not_retry_on_terminal_errors`.
+
 ## Test harness — the rules
 
 **Tests are not optional for this pipeline.** Visual smoke testing is
@@ -351,6 +366,8 @@ These tests must stay green or you're shipping a regression:
 | `crates/tfl-client/src/client_tests.rs`                       | `allowed_line_ids_for_serves_stale_cache_past_ttl` | hub lookup survives the TTL boundary |
 | `crates/tfl-client/src/client_tests.rs`                       | `warm_stop_points_dedupes_hub_fetches_before_fan_out` | hub fan-out deduped (757 → 90) |
 | `crates/tfl-client/src/client_tests.rs`                       | `search_dedupes_multi_mode_interchange_to_one_row` | Bank/Farringdon collapse to single canonical |
+| `crates/tfl-client/src/client_tests.rs`                       | `warm_retries_per_mode_on_transient_failure` | per-mode retry on 429 / transport blip |
+| `crates/tfl-client/src/client_tests.rs`                       | `warm_does_not_retry_on_terminal_errors` | NotFound / Parse never retried |
 
 If you add a new failure mode, add a test row here.
 

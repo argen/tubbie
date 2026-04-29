@@ -80,6 +80,30 @@ pub const SUPPORTED_MODES: &[&str] = &["tube", "overground", "dlr", "elizabeth-l
 /// station-metadata edits within a lunchbreak.
 const STOP_POINTS_TTL: Duration = Duration::from_secs(15 * 60);
 
+/// Number of retries per mode when `stop_points_cached` fans out across
+/// `SUPPORTED_MODES`. With 4 attempts and the backoff schedule below, a
+/// single 429 mid-burst (common on the anonymous 50 req/min budget) no
+/// longer leaves a mode missing from the cache for the full
+/// [`STOP_POINTS_TTL`] window.
+///
+/// The retry count is small (4) because a mode that fails repeatedly is
+/// almost certainly hitting a sustained outage, not a transient burst —
+/// keep going past 4 and we just stretch the warm without changing the
+/// outcome. Bigger blast radius is bounded by the periodic background
+/// refresh, which retries every 14 minutes.
+const STOP_POINTS_FETCH_ATTEMPTS: usize = 4;
+
+/// Exponential-backoff schedule between per-mode retries. Indexed by the
+/// retry attempt number (0 = wait before the second attempt, 1 = wait
+/// before the third, …). 500 ms / 1.5 s / 4.5 s puts the worst-case
+/// total wait at ~6.5 s — long enough to outlast a typical 429
+/// `Retry-After` window, short enough not to make the user notice.
+const STOP_POINTS_FETCH_BACKOFF: [Duration; STOP_POINTS_FETCH_ATTEMPTS - 1] = [
+    Duration::from_millis(500),
+    Duration::from_millis(1500),
+    Duration::from_millis(4500),
+];
+
 /// How long the `line-status/tube` response is cached.
 ///
 /// 60 s matches the frontend ticker period, so UI calls for each visible
@@ -748,6 +772,75 @@ impl<H: TflHttp> TflClient<H> {
         self.refresh_stop_points_inner(false).await
     }
 
+    /// Fetch one mode's stop-points list with bounded retries on
+    /// transient errors. Retries on `RateLimited`, `Transport`, and
+    /// `Http` (5xx) per [`STOP_POINTS_FETCH_BACKOFF`]; gives up
+    /// immediately on `NotFound` (the mode genuinely doesn't exist as a
+    /// fixture / endpoint), `Parse`, and `ParseAt` (bad data, retrying
+    /// won't help). Returns `(Some(stations), None)` on success,
+    /// `(None, Some(err))` on terminal failure (logged so the dev log
+    /// shows which mode dropped out).
+    async fn fetch_stop_points_for_mode_with_retry(
+        &self,
+        mode: &str,
+    ) -> (Option<Vec<Station>>, Option<TflError>) {
+        // Build an iterator of (attempt_idx, optional backoff to wait
+        // BEFORE the next attempt). The last entry's backoff is `None`,
+        // signalling "this is the final attempt — don't sleep, just
+        // give up if it fails". Using `Option` here drives the
+        // give-up decision off the schedule itself rather than a
+        // separate index check.
+        let schedule = STOP_POINTS_FETCH_BACKOFF
+            .iter()
+            .copied()
+            .map(Some)
+            .chain(std::iter::once(None))
+            .enumerate();
+
+        let mut last_err: Option<TflError> = None;
+        for (attempt, backoff) in schedule {
+            match self.http.fetch("stop-points", mode).await {
+                Ok(value) => {
+                    let arr = value.get("stopPoints").unwrap_or(&value).clone();
+                    match serde_json::from_value::<Vec<Station>>(arr) {
+                        Ok(s) => return (Some(s), None),
+                        Err(e) => {
+                            // Parse failures are deterministic — don't retry.
+                            eprintln!("[tfl-client] stop-points/{mode} parse failed: {e}");
+                            return (None, None);
+                        }
+                    }
+                }
+                Err(err) => {
+                    let is_terminal = matches!(
+                        err,
+                        TflError::NotFound(_) | TflError::Parse(_) | TflError::ParseAt { .. }
+                    );
+                    let is_last = backoff.is_none();
+                    if is_terminal || is_last {
+                        eprintln!(
+                            "[tfl-client] stop-points/{mode} fetch failed (attempt {}/{}): {err}",
+                            attempt + 1,
+                            STOP_POINTS_FETCH_ATTEMPTS,
+                        );
+                        return (None, Some(err));
+                    }
+                    eprintln!(
+                        "[tfl-client] stop-points/{mode} attempt {} failed (will retry): {err}",
+                        attempt + 1,
+                    );
+                    last_err = Some(err);
+                    if let Some(wait) = backoff {
+                        tokio::time::sleep(wait).await;
+                    }
+                }
+            }
+        }
+        // Unreachable in practice (the loop returns on either success or
+        // last-attempt failure) but keeps the type system happy.
+        (None, last_err)
+    }
+
     /// Single-flighted refresh: acquires the async lock, optionally
     /// short-circuits if a prior holder already produced fresh data,
     /// then runs the per-mode + hub fan-out and writes the result back
@@ -772,27 +865,24 @@ impl<H: TflHttp> TflClient<H> {
         }
 
         // Parallel fan-out across surfaced modes. Each per-mode fetch is
-        // independent; failures are isolated.
-        let fetches = self.modes.iter().map(|mode| async move {
-            match self.http.fetch("stop-points", mode).await {
-                Ok(value) => {
-                    let arr = value.get("stopPoints").unwrap_or(&value).clone();
-                    match serde_json::from_value::<Vec<Station>>(arr) {
-                        Ok(s) => (Some(s), None),
-                        Err(e) => {
-                            eprintln!("[tfl-client] stop-points/{mode} parse failed: {e}");
-                            (None, None)
-                        }
-                    }
-                }
-                Err(e) => {
-                    eprintln!("[tfl-client] stop-points/{mode} fetch failed: {e}");
-                    // Surface the first error so an entirely-failed fan-out
-                    // can propagate something meaningful.
-                    (None, Some(e))
-                }
-            }
-        });
+        // independent; failures are isolated. Each fetch retries on
+        // transient errors (rate-limit / transport) up to
+        // [`STOP_POINTS_FETCH_RETRIES`] times with exponential backoff so a
+        // single 429 during the first warm doesn't leave a whole mode
+        // missing from the cache for the full 14-minute periodic-refresh
+        // window. `Parse` errors don't retry — bad JSON is bad JSON; the
+        // fixture or upstream data shape needs fixing, not retrying.
+        //
+        // This matters most for users without an `app_key` who hit TfL's
+        // 50 req/min anonymous gate during the burst: we send 4 mode
+        // fetches in parallel; one of them losing the race and getting a
+        // 429 is common, and the user's symptom is "tube doesn't appear
+        // in search but DLR does" until the next periodic refresh
+        // ~14 minutes later.
+        let fetches = self
+            .modes
+            .iter()
+            .map(|mode| async move { self.fetch_stop_points_for_mode_with_retry(mode).await });
         let per_mode = futures::future::join_all(fetches).await;
 
         // Merge by id (tube hubs like Stratford appear in multiple mode

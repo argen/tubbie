@@ -1622,6 +1622,124 @@ mod tests {
         );
     }
 
+    /// **Per-mode warm retry on transient errors.** Without this, a single
+    /// 429 (or transport blip) on the tube fetch during the parallel
+    /// fan-out leaves the cache populated with DLR + Overground +
+    /// Elizabeth only — and the user can't search for any tube station
+    /// until the next 14-min periodic refresh. Reproduced on iOS over
+    /// cellular without an `app_key` (anonymous 50 req/min budget).
+    ///
+    /// This test wraps the fixture transport with a flaky-tube layer
+    /// that fails the first `stop-points/tube` fetch with `RateLimited`,
+    /// then succeeds. After the warm completes, the cache MUST contain
+    /// tube stations (Belsize Park) — proving the retry recovered.
+    #[tokio::test(flavor = "current_thread")]
+    async fn warm_retries_per_mode_on_transient_failure() {
+        struct FlakyTubeHttp<H: TflHttp> {
+            inner: H,
+            tube_calls: Arc<AtomicUsize>,
+        }
+        impl<H: TflHttp> TflHttp for FlakyTubeHttp<H> {
+            fn fetch(
+                &self,
+                endpoint: &str,
+                id: &str,
+            ) -> impl std::future::Future<Output = Result<Value, TflError>> + Send {
+                let is_first_tube_warm = endpoint == "stop-points"
+                    && id == "tube"
+                    && self.tube_calls.fetch_add(1, Ordering::SeqCst) == 0;
+                let inner_fut = self.inner.fetch(endpoint, id);
+                async move {
+                    if is_first_tube_warm {
+                        Err(TflError::RateLimited { retry_after: None })
+                    } else {
+                        inner_fut.await
+                    }
+                }
+            }
+        }
+
+        let tube_calls = Arc::new(AtomicUsize::new(0));
+        let http = FlakyTubeHttp {
+            inner: FixtureTflHttp::new(workspace_fixtures_dir()),
+            tube_calls: tube_calls.clone(),
+        };
+        let client = TflClient::new(http);
+
+        client
+            .warm_stop_points_cache()
+            .await
+            .expect("warm should ultimately succeed via per-mode retry");
+
+        // First call returned RateLimited → retried → succeeded.
+        // We expect at least 2 tube fetches: the failure + the recovery.
+        assert!(
+            tube_calls.load(Ordering::SeqCst) >= 2,
+            "tube fetch must have retried at least once; got {} calls",
+            tube_calls.load(Ordering::SeqCst),
+        );
+
+        // The cache must contain a tube-only station (BZP) — if the
+        // retry hadn't recovered, BZP would be missing and search would
+        // return empty, exactly the iOS symptom this fix addresses.
+        let bzp = client.allowed_line_ids_for("940GZZLUBZP").await.unwrap();
+        assert!(
+            bzp.contains("northern"),
+            "Belsize Park (tube) must be in the cache after the retry recovered; got {bzp:?}"
+        );
+    }
+
+    /// `Parse` and `NotFound` errors MUST NOT retry — they're
+    /// deterministic and retrying just stretches the warm with no chance
+    /// of recovery.
+    #[tokio::test(flavor = "current_thread")]
+    async fn warm_does_not_retry_on_terminal_errors() {
+        struct AlwaysNotFoundDlrHttp<H: TflHttp> {
+            inner: H,
+            dlr_calls: Arc<AtomicUsize>,
+        }
+        impl<H: TflHttp> TflHttp for AlwaysNotFoundDlrHttp<H> {
+            fn fetch(
+                &self,
+                endpoint: &str,
+                id: &str,
+            ) -> impl std::future::Future<Output = Result<Value, TflError>> + Send {
+                let count_dlr = endpoint == "stop-points" && id == "dlr";
+                if count_dlr {
+                    self.dlr_calls.fetch_add(1, Ordering::SeqCst);
+                }
+                let inner_fut = self.inner.fetch(endpoint, id);
+                async move {
+                    if count_dlr {
+                        Err(TflError::NotFound("simulated".to_string()))
+                    } else {
+                        inner_fut.await
+                    }
+                }
+            }
+        }
+
+        let dlr_calls = Arc::new(AtomicUsize::new(0));
+        let http = AlwaysNotFoundDlrHttp {
+            inner: FixtureTflHttp::new(workspace_fixtures_dir()),
+            dlr_calls: dlr_calls.clone(),
+        };
+        let client = TflClient::new(http);
+
+        // Other modes succeed; DLR's terminal NotFound is logged and
+        // skipped. Warm completes (other modes' data populates the cache).
+        client
+            .warm_stop_points_cache()
+            .await
+            .expect("warm completes when at least one mode succeeds");
+
+        assert_eq!(
+            dlr_calls.load(Ordering::SeqCst),
+            1,
+            "NotFound is terminal — DLR must be tried exactly once, not retried"
+        );
+    }
+
     /// Stale-while-revalidate: once the cache has data, `search_stations`
     /// MUST never block on a refresh — even if the entry is past the
     /// `STOP_POINTS_TTL`. The periodic background task in `lib.rs::run`
