@@ -45,11 +45,14 @@ bottom of this doc, not just the unit tests.**
    `stream_refreshes_immediately_on_station_id_change` test guards this
    in `crates/tfl-board/src/service.rs`.
 
-3. **Filter / theme / `line_ids` / `directions` changes MUST NOT
-   trigger a fresh fetch.** That was the whole point of the watch-channel
-   refactor: chip-toggle bursts must coalesce. The
+3. **Filter / theme / `directions` changes MUST NOT trigger a fresh
+   fetch.** That was the whole point of the watch-channel refactor:
+   chip-toggle bursts must coalesce. The
    `save_config_filter_change_does_not_force_immediate_refresh` test
-   asserts the no-fetch behaviour.
+   asserts the no-fetch behaviour. **Note:** `line_ids` was previously
+   on this list but moved to frontend-only display filtering (invariant
+   #22) — backend `apply_filters` no longer touches it, so the
+   "MUST NOT refetch" rule is moot for that field today.
 
 4. **The stream is infinite. The consumer MUST NOT `break` on `Err`.**
    `BoardService::stream` is contractually infinite — on fetch failure
@@ -282,6 +285,23 @@ bottom of this doc, not just the unit tests.**
     `warm_retries_per_mode_on_transient_failure` and
     `warm_does_not_retry_on_terminal_errors`.
 
+22. **The user-facing `line_ids` chip filter is a frontend-only
+    display mask.** `Board.svelte`'s `linesGrouped` derivation skips
+    arrivals whose `line_id` is not in the user's `lineIds` prop;
+    backend `apply_filters` (`crates/tfl-board/src/filter.rs`) does
+    NOT filter by `line_ids` and MUST keep handing the full set
+    through. Why: chip toggles update the visible board in a frame —
+    no waiting for the next ~30 s periodic stream tick to re-emit a
+    backend-filtered payload. Two related filters that DO stay in the
+    backend: (a) `directions` (still in `apply_filters`; toggled
+    infrequently enough that the tick latency is invisible), (b)
+    `drop_arrivals_for_lines_not_serving` (the per-station defensive
+    integrity filter — independent of user preference, drops phantom
+    predictions). Guarded by
+    `crates/tfl-board/src/filter.rs::apply_filters_does_not_filter_by_line_id`,
+    `src-tauri/src/commands.rs::save_config_then_get_board_applies_station_but_does_not_filter_lines`,
+    and `web/src/lib/__tests__/dom/board-line-id-display-filter.dom.test.ts`.
+
 ## Test harness — the rules
 
 **Tests are not optional for this pipeline.** Visual smoke testing is
@@ -368,6 +388,9 @@ These tests must stay green or you're shipping a regression:
 | `crates/tfl-client/src/client_tests.rs`                       | `search_dedupes_multi_mode_interchange_to_one_row` | Bank/Farringdon collapse to single canonical |
 | `crates/tfl-client/src/client_tests.rs`                       | `warm_retries_per_mode_on_transient_failure` | per-mode retry on 429 / transport blip |
 | `crates/tfl-client/src/client_tests.rs`                       | `warm_does_not_retry_on_terminal_errors` | NotFound / Parse never retried |
+| `crates/tfl-board/src/filter.rs`                              | `apply_filters_does_not_filter_by_line_id` | line_ids is a frontend display mask, not a backend filter |
+| `src-tauri/src/commands.rs`                                   | `save_config_then_get_board_applies_station_but_does_not_filter_lines` | end-to-end: backend hands full set through; chip filter is display-only |
+| `web/src/lib/__tests__/dom/board-line-id-display-filter.dom.test.ts` | lineIds prop masks line groups in `linesGrouped`; empty = show all | frontend chip filter contract |
 
 If you add a new failure mode, add a test row here.
 

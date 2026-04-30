@@ -177,14 +177,26 @@
   // Two parallel arrays rather than a `Map` — the lint forbids mutable
   // Maps even when scoped to a single derivation pass. With only ~20
   // arrivals and ~5 lines on a busy station, O(n²) lookup is irrelevant.
+  //
+  // The user's `lineIds` chip filter is applied HERE at the display
+  // layer, NOT in the Rust `apply_filters`. CLAUDE.md invariant #22:
+  // toggling a chip in Settings re-derives `linesGrouped` instantly
+  // off the locally-stored `$board`, so the visible board updates in
+  // a frame — no waiting for the next ~30 s periodic stream tick to
+  // re-emit a backend-filtered payload. Non-empty `lineIds` masks
+  // arrivals whose `line_id` is not in the set; empty = show all.
   const linesGrouped = $derived.by(() => {
     // Insertion order in `lineBuckets` is the first-seen order across
     // arrivals. `find` keeps TS happy without an out-of-bounds-aware
     // index, and at ≤6 lines per station the linear scan is irrelevant.
     const lineBuckets: LineBucket[] = [];
+    const lineFilterActive = lineIds.length > 0;
 
     for (const platform of board.platforms) {
       for (const arrival of platform.arrivals) {
+        if (lineFilterActive && !lineIds.includes(arrival.line_id)) {
+          continue;
+        }
         const { line_id: lineId, line_name: lineName } = arrival;
         let bucket = lineBuckets.find((b) => b.lineId === lineId);
         if (bucket === undefined) {

@@ -1177,16 +1177,22 @@ mod tests {
         assert_eq!(board.station_id, "940GZZLUKSX");
     }
 
-    /// End-to-end proof: saving a new station + multi-line filter is honoured
-    /// when the board is next requested — the two UX changes the user cares
-    /// about ("does changing station actually work?" and "can I pick more
-    /// than one line?") share the same pipeline.
+    /// End-to-end: saving a new station with a multi-line `line_ids`
+    /// filter MUST land the station, but MUST NOT pre-filter arrivals
+    /// — `line_ids` is a frontend-only display mask now (CLAUDE.md
+    /// invariant #22). The backend's `Board` payload contains every
+    /// arrival the station serves; the chip filter is applied at the
+    /// `Board.svelte::displayPlatforms` derivation in the renderer.
+    /// Guarding the contract here keeps a future refactor of
+    /// `apply_filters` from accidentally re-introducing backend
+    /// line filtering, which would re-introduce the
+    /// 30-second tick delay between chip toggle and visible effect.
     #[tokio::test]
-    async fn save_config_then_get_board_applies_station_and_multi_line_filter() {
+    async fn save_config_then_get_board_applies_station_but_does_not_filter_lines() {
         let state = fixture_state();
 
-        // 1. Save a config pointing at King's Cross (multi-line station) with
-        //    two explicitly-allowed lines.
+        // 1. Save a config pointing at King's Cross (multi-line station)
+        //    with TWO line ids set — the user's chip-filter preference.
         let cfg = BoardConfig {
             station_id: "940GZZLUKSX".to_string(),
             line_ids: vec!["northern".to_string(), "victoria".to_string()],
@@ -1198,7 +1204,7 @@ mod tests {
             .await
             .expect("save should succeed");
 
-        // 2. Refresh the board. Station and filter should both have landed.
+        // 2. Refresh the board. Station MUST be the saved one.
         let board = get_board_inner(&state)
             .await
             .expect("get_board should succeed");
@@ -1207,8 +1213,11 @@ mod tests {
             "station_id from saved config must drive refresh"
         );
 
-        // 3. Every arrival on every platform must belong to one of the two
-        //    allowed lines — nothing else may leak through.
+        // 3. The backend MUST hand through arrivals from lines OTHER
+        //    than `[northern, victoria]` — King's Cross's fixture
+        //    contains Circle / Hammersmith & City / Metropolitan /
+        //    Piccadilly arrivals that the frontend will mask out, but
+        //    the backend's payload is the unfiltered set.
         let seen_lines: std::collections::HashSet<String> = board
             .platforms
             .iter()
@@ -1216,19 +1225,16 @@ mod tests {
             .collect();
         assert!(
             !seen_lines.is_empty(),
-            "filtered board should still have arrivals"
+            "King's Cross fixture should produce arrivals"
         );
-        for line_id in &seen_lines {
-            assert!(
-                line_id == "northern" || line_id == "victoria",
-                "unexpected line_id {line_id:?} leaked past the line_ids filter; saw: {seen_lines:?}"
-            );
-        }
-        // And at least one of the two allowed lines must actually appear,
-        // otherwise the filter is vacuously satisfied.
+        let unfiltered_lines: Vec<&String> = seen_lines
+            .iter()
+            .filter(|id| id.as_str() != "northern" && id.as_str() != "victoria")
+            .collect();
         assert!(
-            seen_lines.contains("northern") || seen_lines.contains("victoria"),
-            "expected northern or victoria in filtered board, got: {seen_lines:?}"
+            !unfiltered_lines.is_empty(),
+            "backend MUST pass non-allowed lines through (frontend masks them); \
+             saw only: {seen_lines:?}"
         );
     }
 
