@@ -10,11 +10,14 @@ import {
   type Board,
   type BoardConfig,
   type BoardErrorPayload,
+  type Favorite,
+  type LineRef,
   type LineStatus,
   type Station,
   isBoard,
   isBoardConfig,
   isBoardErrorPayload,
+  isFavorite,
   isLineStatus,
   isStation,
 } from './types.js';
@@ -136,6 +139,50 @@ export async function saveDisplayMode(mode: DisplayMode): Promise<string> {
  */
 export async function applyBoardSize(width: number, height: number): Promise<void> {
   await invoke<undefined>('apply_board_size', { width, height });
+}
+
+// ---------------------------------------------------------------------------
+// Favorites
+// ---------------------------------------------------------------------------
+
+/** Coerce an unknown IPC response into a `Favorite[]`, stripping malformed entries. */
+function asFavoriteList(raw: unknown): Favorite[] {
+  if (!Array.isArray(raw)) {
+    throw new TypeError('favorites: expected array response');
+  }
+  return raw.filter((item): item is Favorite => isFavorite(item));
+}
+
+/** Return the saved favorites list (empty if none). */
+export async function listFavorites(): Promise<Favorite[]> {
+  const raw = await invoke<unknown>('list_favorites');
+  return asFavoriteList(raw);
+}
+
+/**
+ * Add a station to favorites. Idempotent on duplicate `station_id`.
+ * Does NOT touch the cfg pipeline — selecting a favorite goes through
+ * the existing `saveConfig` path.
+ *
+ * Returns the updated list.
+ */
+export async function addFavorite(
+  stationId: string,
+  commonName: string,
+  lines: LineRef[],
+): Promise<Favorite[]> {
+  const raw = await invoke<unknown>('add_favorite', {
+    stationId,
+    commonName,
+    lines,
+  });
+  return asFavoriteList(raw);
+}
+
+/** Remove a station from favorites. Returns the updated list. */
+export async function removeFavorite(stationId: string): Promise<Favorite[]> {
+  const raw = await invoke<unknown>('remove_favorite', { stationId });
+  return asFavoriteList(raw);
 }
 
 // ---------------------------------------------------------------------------

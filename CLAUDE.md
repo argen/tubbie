@@ -415,6 +415,16 @@ These tests must stay green or you're shipping a regression:
 | `src-tauri/src/commands.rs`                                   | `save_config_then_get_board_applies_station_but_does_not_filter_lines` | end-to-end: backend hands full set through; chip filter is display-only |
 | `web/src/lib/__tests__/dom/board-line-id-display-filter.dom.test.ts` | lineIds prop masks line groups in `linesGrouped`; empty = show all | frontend chip filter contract |
 | `crates/tfl-domain/tests/compass_from_towards.rs`             | per-line `towards` → compass mapping for Elizabeth + the 6 named OG lines; tube prefix path unchanged; DLR falls back to inbound/outbound | direction inference for non-tube lines (invariant #23) |
+| `src-tauri/src/commands.rs`                                   | `add_favorite_does_not_publish_to_cfg_tx` | favorites mutation bypasses the stream pipeline |
+| `src-tauri/src/commands.rs`                                   | `remove_favorite_does_not_publish_to_cfg_tx` | remove path same |
+| `src-tauri/src/commands.rs`                                   | `add_favorite_persists_and_list_returns_it` | round-trip through new `"favorites"` store key |
+| `src-tauri/src/commands.rs`                                   | `add_favorite_is_idempotent_on_duplicate_station_id` | UI double-click safety |
+| `src-tauri/src/commands.rs`                                   | `selecting_favorite_via_save_config_triggers_immediate_refresh` | composes invariant #2 — clicking a favorite refreshes the board immediately |
+| `src-tauri/src/commands.rs`                                   | `add_favorite_rejects_invalid_station_id` | reuses `validate_station_id` |
+| `src-tauri/src/commands.rs`                                   | `add_favorite_rejects_unsupported_line_id` | line whitelist applied to `Favorite.lines` |
+| `src-tauri/src/commands.rs`                                   | `migrate_favorites_legacy_overground_ids` | invariant #14 — `Favorite.lines` rewritten on load |
+| `src-tauri/src/commands.rs`                                   | `load_favorites_idempotent_on_already_migrated` | re-running migration is a no-op |
+| `web/src/lib/__tests__/dom/settings-favorites.dom.test.ts`    | star_toggle_adds_and_removes; clicking_favorite_calls_save_config_with_new_station_id; favorite_row_renders_line_chips_from_snapshot | favorites UI contract |
 
 If you add a new failure mode, add a test row here.
 

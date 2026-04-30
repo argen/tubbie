@@ -478,6 +478,27 @@ pub struct Platform {
 }
 
 // ---------------------------------------------------------------------------
+// Favorite
+// ---------------------------------------------------------------------------
+
+/// A station saved as a favorite by the user.
+///
+/// `lines` is a snapshot of the lines served at save time so the Favorites
+/// list can render line chips even when the stop-points cache is cold.
+///
+/// Stored under the `"favorites"` key in the Tauri plugin-store (sibling of
+/// `"board_config"`). Mutations bypass `cfg_tx` entirely — selecting a
+/// favorite goes through the existing `save_config` path.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Favorite {
+    pub station_id: String,
+    pub common_name: String,
+    /// Lines served at save time (snapshotted). Used for rendering chips
+    /// in the Favorites list without requiring a hot station-cache lookup.
+    pub lines: Vec<LineRef>,
+}
+
+// ---------------------------------------------------------------------------
 // Theme (from M6 plan — lives in tfl-domain)
 // ---------------------------------------------------------------------------
 // (Defined in theme.rs; re-exported from lib.rs.)

@@ -35,7 +35,7 @@
 use tauri::State;
 
 use tfl_board::{BoardConfig, VALID_THEME_IDS};
-use tfl_domain::{Board, LineStatus, Station};
+use tfl_domain::{is_supported_line_id, Board, Favorite, LineRef, LineStatus, Station};
 
 use crate::state::AppState;
 
@@ -286,6 +286,97 @@ pub(crate) fn migrate_legacy_line_ids(line_ids: Vec<String>) -> Vec<String> {
     out
 }
 
+// ---------------------------------------------------------------------------
+// Favorites inner functions
+// ---------------------------------------------------------------------------
+
+/// Run `migrate_legacy_line_ids` over each favorite's `lines` field so a
+/// favorite saved before the November 2024 Overground rename still displays
+/// the correct chips (invariant #14).
+fn migrate_favorite_lines(favorites: Vec<Favorite>) -> Vec<Favorite> {
+    favorites
+        .into_iter()
+        .map(|mut fav| {
+            let line_ids: Vec<String> = fav.lines.iter().map(|l| l.id.clone()).collect();
+            let migrated_ids = migrate_legacy_line_ids(line_ids);
+            // Rebuild LineRef list: keep existing name where id is unchanged,
+            // synthesise a name for newly-expanded ids.
+            fav.lines = migrated_ids
+                .into_iter()
+                .map(|id| {
+                    // Prefer the existing LineRef name if the id is unchanged.
+                    if let Some(existing) = fav.lines.iter().find(|l| l.id == id) {
+                        existing.clone()
+                    } else {
+                        LineRef {
+                            name: tfl_domain::pretty_line_name(&id).to_string(),
+                            id,
+                        }
+                    }
+                })
+                .collect();
+            fav
+        })
+        .collect()
+}
+
+pub(crate) async fn load_favorites_inner(state: &AppState) -> Result<Vec<Favorite>, String> {
+    let raw = state.favorites_store.load_favorites().await?;
+    Ok(migrate_favorite_lines(raw))
+}
+
+pub(crate) async fn add_favorite_inner(
+    station_id: String,
+    common_name: String,
+    lines: Vec<LineRef>,
+    state: &AppState,
+) -> Result<Vec<Favorite>, String> {
+    // Validate station_id.
+    validate_station_id(&station_id)?;
+    // Validate each line id.
+    for line in &lines {
+        validate_line_id(&line.id)?;
+        if !is_supported_line_id(&line.id) {
+            return Err(format!(
+                "validation: line_id {:?} is not a supported TfL line",
+                line.id
+            ));
+        }
+    }
+
+    let mut favorites = load_favorites_inner(state).await?;
+
+    // Idempotent: skip if station_id already present.
+    if favorites.iter().any(|f| f.station_id == station_id) {
+        return Ok(favorites);
+    }
+
+    favorites.push(Favorite {
+        station_id,
+        common_name,
+        lines,
+    });
+    state
+        .favorites_store
+        .save_favorites(&favorites)
+        .await?;
+    Ok(favorites)
+}
+
+pub(crate) async fn remove_favorite_inner(
+    station_id: String,
+    state: &AppState,
+) -> Result<Vec<Favorite>, String> {
+    validate_station_id(&station_id)?;
+    let mut favorites = load_favorites_inner(state).await?;
+    favorites.retain(|f| f.station_id != station_id);
+    state
+        .favorites_store
+        .save_favorites(&favorites)
+        .await?;
+    Ok(favorites)
+}
+
 pub(crate) async fn save_app_key_inner(
     key: Option<String>,
     state: &AppState,
@@ -513,6 +604,42 @@ pub async fn load_display_mode(state: State<'_, AppState>) -> Result<String, Str
     load_display_mode_inner(&state).await
 }
 
+/// Return the current favorites list, applying legacy-id migration on load.
+#[tauri::command]
+pub async fn list_favorites(state: State<'_, AppState>) -> Result<Vec<Favorite>, String> {
+    load_favorites_inner(&state).await
+}
+
+/// Add a station to favorites.
+///
+/// Idempotent: if `station_id` is already in the list this is a no-op.
+/// Returns the updated list.
+///
+/// Does **not** publish to `cfg_tx` — the stream pipeline is unchanged.
+/// Selecting a favorite goes through the existing `save_config` command.
+#[tauri::command]
+pub async fn add_favorite(
+    station_id: String,
+    common_name: String,
+    lines: Vec<LineRef>,
+    state: State<'_, AppState>,
+) -> Result<Vec<Favorite>, String> {
+    add_favorite_inner(station_id, common_name, lines, &state).await
+}
+
+/// Remove a station from favorites by `station_id`.
+///
+/// If the station is not in the list this is a no-op. Returns the updated list.
+///
+/// Does **not** publish to `cfg_tx`.
+#[tauri::command]
+pub async fn remove_favorite(
+    station_id: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<Favorite>, String> {
+    remove_favorite_inner(station_id, &state).await
+}
+
 /// Resize the main window to fit the current board.
 ///
 /// The renderer picks `(width, height)` from a small preset table tied to
@@ -541,7 +668,7 @@ pub async fn apply_board_size(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::state::MemoryConfigStore;
+    use crate::state::{MemoryConfigStore, MemoryFavoritesStore};
     use std::sync::Arc;
     use tfl_board::{BoardService, LifecyclePhase};
     use tfl_client::{clock::FakeClock, fixture::FixtureTflHttp, TflClient};
@@ -569,10 +696,13 @@ mod tests {
         let board_service =
             Arc::new(BoardService::new(client, clock)) as Arc<dyn crate::state::AnyBoardService>;
         let config_store = Arc::new(MemoryConfigStore::new()) as Arc<dyn crate::state::ConfigStore>;
+        let favorites_store =
+            Arc::new(MemoryFavoritesStore::new()) as Arc<dyn crate::state::FavoritesStore>;
         let (cfg_tx, _cfg_rx) = watch::channel::<BoardConfig>(crate::state::default_board_config());
         AppState {
             board_service,
             config_store,
+            favorites_store,
             stream_abort: Arc::new(RwLock::new(None)),
             cfg_tx: Arc::new(cfg_tx),
             display_mode: Arc::new(std::sync::RwLock::new("window".to_string())),
@@ -612,6 +742,8 @@ mod tests {
         let stream_svc = BoardService::new(Arc::clone(&client), clock);
 
         let config_store = Arc::new(MemoryConfigStore::new()) as Arc<dyn crate::state::ConfigStore>;
+        let favorites_store =
+            Arc::new(MemoryFavoritesStore::new()) as Arc<dyn crate::state::FavoritesStore>;
         let (cfg_tx, cfg_rx) = watch::channel::<BoardConfig>(seed);
         let cfg_tx = Arc::new(cfg_tx);
 
@@ -620,6 +752,7 @@ mod tests {
         let state = AppState {
             board_service,
             config_store,
+            favorites_store,
             stream_abort: Arc::new(RwLock::new(None)),
             cfg_tx,
             display_mode: Arc::new(std::sync::RwLock::new("window".to_string())),
@@ -1801,5 +1934,314 @@ mod tests {
         let (w, h) = validate_board_size(980.0, 720.0).unwrap();
         assert_eq!(w, 980.0);
         assert_eq!(h, 720.0);
+    }
+
+    // -----------------------------------------------------------------------
+    // Favorites — add / list / remove
+    // -----------------------------------------------------------------------
+
+    fn make_fav(station_id: &str) -> (String, String, Vec<LineRef>) {
+        (
+            station_id.to_string(),
+            format!("{station_id} Station"),
+            vec![LineRef {
+                id: "northern".to_string(),
+                name: "Northern".to_string(),
+            }],
+        )
+    }
+
+    /// `add_favorite` followed by `load_favorites` must round-trip.
+    /// Guards the new store key path end-to-end.
+    #[tokio::test]
+    async fn add_favorite_persists_and_list_returns_it() {
+        let state = fixture_state();
+        let (sid, name, lines) = make_fav("940GZZLUBZP");
+        let result = add_favorite_inner(sid.clone(), name.clone(), lines.clone(), &state)
+            .await
+            .expect("add should succeed");
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].station_id, sid);
+        assert_eq!(result[0].common_name, name);
+
+        let loaded = load_favorites_inner(&state).await.expect("load should succeed");
+        assert_eq!(loaded.len(), 1);
+        assert_eq!(loaded[0].station_id, sid);
+    }
+
+    /// Calling `add_favorite` twice with the same `station_id` must produce
+    /// exactly one entry in the list. Guards double-click / double-mount.
+    #[tokio::test]
+    async fn add_favorite_is_idempotent_on_duplicate_station_id() {
+        let state = fixture_state();
+        let (sid, name, lines) = make_fav("940GZZLUBZP");
+        add_favorite_inner(sid.clone(), name.clone(), lines.clone(), &state)
+            .await
+            .expect("first add should succeed");
+        let result = add_favorite_inner(sid.clone(), name.clone(), lines.clone(), &state)
+            .await
+            .expect("second add should be a no-op");
+        assert_eq!(result.len(), 1, "duplicate add must not grow the list");
+    }
+
+    /// `add_favorite` must reject an invalid `station_id` with a validation
+    /// error — same gating as `save_config`. Guards path-traversal via IPC.
+    #[tokio::test]
+    async fn add_favorite_rejects_invalid_station_id() {
+        let state = fixture_state();
+        let err = add_favorite_inner(
+            "../etc/passwd".to_string(),
+            "Bad".to_string(),
+            vec![],
+            &state,
+        )
+        .await
+        .expect_err("invalid station_id should be rejected");
+        assert!(err.contains("validation:"), "error: {err}");
+    }
+
+    /// `add_favorite` must reject a line id that is not in the supported
+    /// whitelist — attacker-controlled JSON from the renderer can supply any
+    /// string for `lines`.
+    #[tokio::test]
+    async fn add_favorite_rejects_unsupported_line_id() {
+        let state = fixture_state();
+        let lines = vec![LineRef {
+            id: "gatwick-express".to_string(),
+            name: "Gatwick Express".to_string(),
+        }];
+        let err = add_favorite_inner(
+            "940GZZLUBZP".to_string(),
+            "Belsize Park".to_string(),
+            lines,
+            &state,
+        )
+        .await
+        .expect_err("unsupported line_id should be rejected");
+        assert!(err.contains("validation:"), "error: {err}");
+    }
+
+    /// `remove_favorite` reduces the list by one.
+    #[tokio::test]
+    async fn remove_favorite_removes_entry() {
+        let state = fixture_state();
+        let (sid, name, lines) = make_fav("940GZZLUBZP");
+        add_favorite_inner(sid.clone(), name, lines, &state)
+            .await
+            .expect("add should succeed");
+        let result = remove_favorite_inner(sid.clone(), &state)
+            .await
+            .expect("remove should succeed");
+        assert!(result.is_empty(), "list must be empty after removing sole entry");
+
+        let loaded = load_favorites_inner(&state).await.expect("load should succeed");
+        assert!(loaded.is_empty(), "stored list must be empty too");
+    }
+
+    /// `remove_favorite` on a station not in the list is a no-op (not an error).
+    #[tokio::test]
+    async fn remove_favorite_is_noop_when_absent() {
+        let state = fixture_state();
+        let result = remove_favorite_inner("940GZZLUBZP".to_string(), &state)
+            .await
+            .expect("remove of absent station must succeed");
+        assert!(result.is_empty());
+    }
+
+    /// `add_favorite` and `remove_favorite` MUST NOT publish to `cfg_tx`.
+    /// Any emission here would regress the chip-toggle burst protection (no
+    /// unwanted fetch per invariant #3). Uses `fixture_state_with_stream` +
+    /// 50 ms timeout to prove no emit fires — the same pattern as
+    /// `save_config_filter_change_does_not_force_immediate_refresh`.
+    #[tokio::test(start_paused = true)]
+    async fn add_favorite_does_not_publish_to_cfg_tx() {
+        use futures::StreamExt;
+        use std::time::Duration;
+
+        let initial_cfg = BoardConfig {
+            station_id: "940GZZLUBZP".to_string(),
+            line_ids: vec![],
+            directions: vec![],
+            poll_seconds: 60,
+            theme: "classic-amber".to_string(),
+        };
+        let (state, mut stream) = fixture_state_with_stream(initial_cfg.clone());
+        // Let the stream emit its initial board so we start from a known state.
+        let _ = stream.next().await.unwrap().unwrap();
+
+        // add_favorite MUST NOT cause an immediate emit.
+        let (sid, name, lines) = make_fav("940GZZLUKSX");
+        add_favorite_inner(sid, name, lines, &state)
+            .await
+            .expect("add should succeed");
+
+        // No time advance — if cfg_tx were published, the stream would emit.
+        let immediate = tokio::time::timeout(Duration::from_millis(50), stream.next()).await;
+        assert!(
+            immediate.is_err(),
+            "add_favorite must NOT publish to cfg_tx (no emit expected)"
+        );
+    }
+
+    /// Same as `add_favorite_does_not_publish_to_cfg_tx` but for the remove path.
+    #[tokio::test(start_paused = true)]
+    async fn remove_favorite_does_not_publish_to_cfg_tx() {
+        use futures::StreamExt;
+        use std::time::Duration;
+
+        let initial_cfg = BoardConfig {
+            station_id: "940GZZLUBZP".to_string(),
+            line_ids: vec![],
+            directions: vec![],
+            poll_seconds: 60,
+            theme: "classic-amber".to_string(),
+        };
+        let (state, mut stream) = fixture_state_with_stream(initial_cfg.clone());
+        // Consume initial emit.
+        let _ = stream.next().await.unwrap().unwrap();
+
+        // Pre-seed so remove has something to remove.
+        let (sid, name, lines) = make_fav("940GZZLUKSX");
+        add_favorite_inner(sid.clone(), name, lines, &state)
+            .await
+            .unwrap();
+
+        remove_favorite_inner(sid, &state)
+            .await
+            .expect("remove should succeed");
+
+        let immediate = tokio::time::timeout(Duration::from_millis(50), stream.next()).await;
+        assert!(
+            immediate.is_err(),
+            "remove_favorite must NOT publish to cfg_tx (no emit expected)"
+        );
+    }
+
+    /// Selecting a favorite via `save_config` MUST trigger an immediate
+    /// stream refresh — same as invariant #2. This test exists to prove the
+    /// "select favorite → board updates" path works end-to-end.
+    #[tokio::test(start_paused = true)]
+    async fn selecting_favorite_via_save_config_triggers_immediate_refresh() {
+        use futures::StreamExt;
+        use std::time::Duration;
+
+        let initial_cfg = BoardConfig {
+            station_id: "940GZZLUBZP".to_string(),
+            line_ids: vec![],
+            directions: vec![],
+            poll_seconds: 60,
+            theme: "classic-amber".to_string(),
+        };
+        let (state, mut stream) = fixture_state_with_stream(initial_cfg.clone());
+
+        // First emit: BZP.
+        let _ = stream.next().await.unwrap().unwrap();
+
+        // Simulate "user clicks KSX in favorites" → frontend calls save_config.
+        let new_cfg = BoardConfig {
+            station_id: "940GZZLUKSX".to_string(),
+            ..initial_cfg
+        };
+        save_config_inner(&new_cfg, &state)
+            .await
+            .expect("save_config must succeed");
+
+        let before = tokio::time::Instant::now();
+        let board = tokio::time::timeout(Duration::from_secs(5), stream.next())
+            .await
+            .expect("stream must emit after selecting favorite via save_config")
+            .unwrap()
+            .unwrap();
+        let elapsed = before.elapsed();
+
+        assert_eq!(
+            board.station_id, "940GZZLUKSX",
+            "selecting a favorite via save_config must update the board"
+        );
+        assert!(
+            elapsed < Duration::from_secs(5),
+            "selection must trigger an immediate refresh; took {elapsed:?}"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // Favorites — legacy migration
+    // -----------------------------------------------------------------------
+
+    /// `load_favorites_inner` must rewrite `"london-overground"` in each
+    /// favorite's `lines` field to the six named successor ids (invariant #14).
+    #[tokio::test]
+    async fn migrate_favorites_legacy_overground_ids() {
+        let state = fixture_state();
+
+        // Save a favorite with the legacy overground id directly to bypass
+        // `add_favorite_inner`'s whitelist (which already rejects the legacy id).
+        let fav_with_legacy = vec![Favorite {
+            station_id: "940GZZLUBZP".to_string(),
+            common_name: "Belsize Park".to_string(),
+            lines: vec![
+                LineRef {
+                    id: "northern".to_string(),
+                    name: "Northern".to_string(),
+                },
+                LineRef {
+                    id: "london-overground".to_string(),
+                    name: "Overground".to_string(),
+                },
+            ],
+        }];
+        state
+            .favorites_store
+            .save_favorites(&fav_with_legacy)
+            .await
+            .expect("save legacy favorite");
+
+        // load_favorites_inner must migrate on load.
+        let loaded = load_favorites_inner(&state).await.expect("load");
+        assert_eq!(loaded.len(), 1);
+
+        let line_ids: Vec<&str> = loaded[0].lines.iter().map(|l| l.id.as_str()).collect();
+        assert!(
+            !line_ids.contains(&"london-overground"),
+            "legacy id must be stripped; got {line_ids:?}"
+        );
+        for &named in NAMED_OVERGROUND_LINES {
+            assert!(
+                line_ids.contains(&named),
+                "expanded named id {named} must appear; got {line_ids:?}"
+            );
+        }
+    }
+
+    /// Running `load_favorites_inner` on an already-migrated config is a no-op.
+    #[tokio::test]
+    async fn load_favorites_idempotent_on_already_migrated() {
+        let state = fixture_state();
+
+        // Persist a favorite whose lines already use named ids.
+        let fav_modern = vec![Favorite {
+            station_id: "940GZZLUBZP".to_string(),
+            common_name: "Belsize Park".to_string(),
+            lines: vec![
+                LineRef {
+                    id: "northern".to_string(),
+                    name: "Northern".to_string(),
+                },
+                LineRef {
+                    id: "mildmay".to_string(),
+                    name: "Mildmay".to_string(),
+                },
+            ],
+        }];
+        state
+            .favorites_store
+            .save_favorites(&fav_modern)
+            .await
+            .expect("save");
+
+        let first = load_favorites_inner(&state).await.expect("first load");
+        let second = load_favorites_inner(&state).await.expect("second load");
+
+        assert_eq!(first, second, "re-loading a migrated config must be a no-op");
     }
 }

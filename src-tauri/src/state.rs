@@ -19,7 +19,7 @@ use async_trait::async_trait;
 use serde_json::Value;
 use tfl_board::{BoardConfig, BoardError, BoardService, LifecyclePhase};
 use tfl_client::{clock::Clock, http::TflHttp};
-use tfl_domain::{Board, LineStatus, Station};
+use tfl_domain::{Board, Favorite, LineStatus, Station};
 use tokio::{
     sync::{watch, RwLock},
     task::AbortHandle,
@@ -69,6 +69,68 @@ pub trait ConfigStore: Send + Sync + 'static {
 /// Mirrors the user's request that Tubbie launch as a normal floating
 /// window unless they have explicitly opted into the menubar UI.
 pub const DEFAULT_DISPLAY_MODE: &str = "window";
+
+// ---------------------------------------------------------------------------
+// FavoritesStore trait
+// ---------------------------------------------------------------------------
+
+/// Persistence abstraction for the favorites list.
+///
+/// Stored under a separate `"favorites"` key (sibling of `"board_config"`).
+/// Mutations bypass the `cfg_tx` watch channel — selecting a favorite goes
+/// through the existing `save_config` path which triggers invariant #2.
+///
+/// Tests substitute `MemoryFavoritesStore` for headless operation.
+#[async_trait]
+pub trait FavoritesStore: Send + Sync + 'static {
+    /// Load the favorites list. Returns an empty list if nothing has been saved.
+    async fn load_favorites(&self) -> Result<Vec<Favorite>, String>;
+
+    /// Persist the full favorites list (overwrites what was there).
+    async fn save_favorites(&self, favorites: &[Favorite]) -> Result<(), String>;
+}
+
+// ---------------------------------------------------------------------------
+// In-memory FavoritesStore (used in tests)
+// ---------------------------------------------------------------------------
+
+/// A `FavoritesStore` backed by a `Vec` in memory.
+pub struct MemoryFavoritesStore {
+    data: std::sync::Mutex<Vec<Favorite>>,
+}
+
+impl MemoryFavoritesStore {
+    pub fn new() -> Self {
+        Self {
+            data: std::sync::Mutex::new(Vec::new()),
+        }
+    }
+}
+
+impl Default for MemoryFavoritesStore {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[async_trait]
+impl FavoritesStore for MemoryFavoritesStore {
+    async fn load_favorites(&self) -> Result<Vec<Favorite>, String> {
+        Ok(self
+            .data
+            .lock()
+            .expect("MemoryFavoritesStore lock poisoned")
+            .clone())
+    }
+
+    async fn save_favorites(&self, favorites: &[Favorite]) -> Result<(), String> {
+        *self
+            .data
+            .lock()
+            .expect("MemoryFavoritesStore lock poisoned") = favorites.to_vec();
+        Ok(())
+    }
+}
 
 // ---------------------------------------------------------------------------
 // In-memory ConfigStore (used in tests)
@@ -216,6 +278,11 @@ pub struct AppState {
 
     /// Config persistence layer. Swapped for `MemoryConfigStore` in tests.
     pub config_store: Arc<dyn ConfigStore>,
+
+    /// Favorites persistence layer. Uses a separate store key `"favorites"`.
+    /// Mutations bypass `cfg_tx` — only station selection goes through
+    /// `save_config` (invariant #2).
+    pub favorites_store: Arc<dyn FavoritesStore>,
 
     /// Handle to the running stream task.
     ///
