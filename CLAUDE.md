@@ -302,6 +302,29 @@ bottom of this doc, not just the unit tests.**
     `src-tauri/src/commands.rs::save_config_then_get_board_applies_station_but_does_not_filter_lines`,
     and `web/src/lib/__tests__/dom/board-line-id-display-filter.dom.test.ts`.
 
+23. **Elizabeth and the six named Overground lines MUST surface as
+    compass directions, not `Inbound` / `Outbound`.** TfL labels the
+    Elizabeth-line and OG platforms as bare `"Platform 3"` (no compass
+    prefix) and the raw `direction` field only carries `inbound` /
+    `outbound`. With nothing else in `infer_direction`, an Elizabeth
+    train at Liverpool Street ends up bucketed as `Inbound` even
+    though the line is unambiguously east-west, and the user sees
+    `INBOUND` / `OUTBOUND` columns where they expect `EASTBOUND` /
+    `WESTBOUND`. The fix lives in
+    `crates/tfl-domain/src/direction.rs::infer_compass_from_towards`:
+    a per-line `match` that maps `towards` (the destination terminus)
+    onto a compass direction. Order in `infer_direction` is:
+    (1) platform_name prefix, (2) per-line `towards` mapping (this),
+    (3) raw `direction` field, (4) `Unknown`. DLR is intentionally
+    not in the table — its multi-branch topology (Bank / Tower
+    Gateway west, Stratford north, Lewisham south, Beckton / Woolwich
+    Arsenal east) doesn't fit a single per-terminus compass mapping
+    and the user hasn't reported it as a problem. Adding a line to
+    the table requires recording its termini in the docstring and
+    extending the test file
+    `crates/tfl-domain/tests/compass_from_towards.rs` with at least
+    one assertion per direction.
+
 ## Test harness — the rules
 
 **Tests are not optional for this pipeline.** Visual smoke testing is
@@ -391,6 +414,7 @@ These tests must stay green or you're shipping a regression:
 | `crates/tfl-board/src/filter.rs`                              | `apply_filters_does_not_filter_by_line_id` | line_ids is a frontend display mask, not a backend filter |
 | `src-tauri/src/commands.rs`                                   | `save_config_then_get_board_applies_station_but_does_not_filter_lines` | end-to-end: backend hands full set through; chip filter is display-only |
 | `web/src/lib/__tests__/dom/board-line-id-display-filter.dom.test.ts` | lineIds prop masks line groups in `linesGrouped`; empty = show all | frontend chip filter contract |
+| `crates/tfl-domain/tests/compass_from_towards.rs`             | per-line `towards` → compass mapping for Elizabeth + the 6 named OG lines; tube prefix path unchanged; DLR falls back to inbound/outbound | direction inference for non-tube lines (invariant #23) |
 
 If you add a new failure mode, add a test row here.
 
