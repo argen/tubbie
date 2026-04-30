@@ -181,7 +181,15 @@ pub(crate) fn infer_compass_from_towards(line_id: &str, towards: &str) -> Option
         // East: Stratford / Shenfield / Abbey Wood / Gidea Park / Romford
         // West: Paddington / Heathrow / Reading / Maidenhead /
         //       Hayes & Harlington / West Drayton / Ealing
-        "elizabeth" => {
+        //
+        // The TfL API surfaces Elizabeth-line arrivals with `line_id`
+        // `"elizabeth-line"` (the canonical mode form), but
+        // `is_supported_line_id` also accepts the bare `"elizabeth"` form
+        // — match both so a config or upstream variant doesn't silently
+        // bypass the compass mapping. Verified live: in production, real
+        // arrivals at Liverpool Street / Farringdon / Tottenham Court
+        // Road carry `line_id == "elizabeth-line"`.
+        "elizabeth" | "elizabeth-line" => {
             if any(&[
                 "abbey wood",
                 "shenfield",
