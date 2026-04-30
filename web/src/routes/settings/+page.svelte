@@ -62,16 +62,19 @@
   // the six named Overground lines (Mildmay/Lioness/Suffragette/Windrush/
   // Weaver/Liberty — TfL split the Overground in November 2024). The
   // visible/disabled subset for any station is intersected with that
-  // station's `Station.lines` field in `handleStationSelect`. Note: the
-  // backend accepts both `elizabeth` and `elizabeth-line` as aliases for
-  // the Elizabeth line; we keep the historical mode-name id here since
-  // it's what the existing config store has serialised for years.
+  // station's `Station.lines` field in `handleStationSelect`.
+  //
+  // Elizabeth uses the line-form id `'elizabeth'` (matches
+  // `Station.lines[].id` and the wire format after
+  // `tfl_domain::canonicalize_line_id` runs at deserialization). The
+  // mode-form `'elizabeth-line'` is migrated on config load so any
+  // historical config keeps working.
   const KNOWN_LINES: { id: string; label: string }[] = [
     { id: 'bakerloo', label: 'Bakerloo' },
     { id: 'central', label: 'Central' },
     { id: 'circle', label: 'Circle' },
     { id: 'district', label: 'District' },
-    { id: 'elizabeth-line', label: 'Elizabeth' },
+    { id: 'elizabeth', label: 'Elizabeth' },
     { id: 'hammersmith-city', label: 'Hammersmith & City' },
     { id: 'jubilee', label: 'Jubilee' },
     { id: 'metropolitan', label: 'Metropolitan' },

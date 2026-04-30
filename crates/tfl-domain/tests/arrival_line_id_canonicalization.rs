@@ -52,6 +52,25 @@ fn arrival_passes_already_canonical_elizabeth_through_unchanged() {
 }
 
 #[test]
+fn tfl_line_canonicalises_elizabeth_line_to_elizabeth() {
+    // The line-status ticker looks up `TflLine.id` against the same
+    // canonical id that arrivals carry. `/Line/Mode/elizabeth-line/Status`
+    // hands the line back as `"elizabeth-line"`; after the deserializer
+    // it MUST be `"elizabeth"` so the lookup
+    // `cached_lines.find(|l| l.id == arrival.line_id)` matches —
+    // otherwise the iOS marquee silently drops the Elizabeth disruption.
+    let json = r#"[{
+        "$type": "Tfl.Api.Presentation.Entities.Line, Tfl.Api.Presentation.Entities",
+        "id": "elizabeth-line",
+        "name": "Elizabeth line",
+        "lineStatuses": []
+    }]"#;
+    let lines: Vec<tfl_domain::TflLine> = serde_json::from_str(json).expect("deserialize");
+    assert_eq!(lines.len(), 1);
+    assert_eq!(lines[0].id, "elizabeth");
+}
+
+#[test]
 fn arrival_does_not_touch_unrelated_line_ids() {
     // Tube and Overground line ids are already canonical at the source.
     for raw in [

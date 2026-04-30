@@ -133,12 +133,20 @@ impl<'de> Deserialize<'de> for Arrival {
 /// Map a TfL `lineId` to the canonical line form used by station metadata
 /// and the user's chip filter.
 ///
-/// TfL is inconsistent across endpoints — `/StopPoint/{id}/Arrivals`
-/// returns Elizabeth as `"elizabeth-line"` (the mode), while
-/// `/StopPoint/Mode/elizabeth-line` returns lines with
-/// `lineIdentifier: "elizabeth"`. Make all downstream code see the
-/// `lineIdentifier` form.
-fn canonicalize_line_id(raw: &str) -> String {
+/// TfL is inconsistent across endpoints:
+/// - `/StopPoint/{id}/Arrivals` returns Elizabeth predictions with
+///   `lineId: "elizabeth-line"` (the *mode* form).
+/// - `/Line/Mode/elizabeth-line/Status` returns lines with
+///   `id: "elizabeth-line"` (also the mode form).
+/// - `/StopPoint/Mode/elizabeth-line` returns each station's lines with
+///   `lineIdentifier: "elizabeth"` (the *line* form).
+///
+/// Station metadata + the user's chip filter use the line form. To make
+/// every downstream consumer (display filter, compass mapping, defensive
+/// line-allow filter, line-status ticker lookup) see one stable id, this
+/// canonicaliser is applied at every TfL → domain seam: `Arrival` and
+/// `TflLine` deserialization.
+pub fn canonicalize_line_id(raw: &str) -> String {
     match raw {
         "elizabeth-line" => "elizabeth".to_string(),
         other => other.to_string(),
@@ -388,15 +396,40 @@ pub struct StatusEntry {
 
 /// TfL wire format for a single line from `/Line/Mode/{mode}/Status`.
 /// This is separate from the domain `LineStatus` — the client layer converts.
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone)]
 pub struct TflLine {
     pub id: String,
     pub name: String,
-    #[serde(rename = "$type", default)]
     pub _type: String,
-    #[serde(default)]
     pub line_statuses: Vec<TflLineStatus>,
+}
+
+impl<'de> Deserialize<'de> for TflLine {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        #[derive(Deserialize)]
+        #[serde(rename_all = "camelCase")]
+        struct RawTflLine {
+            id: String,
+            name: String,
+            #[serde(rename = "$type", default)]
+            _type: String,
+            #[serde(default)]
+            line_statuses: Vec<TflLineStatus>,
+        }
+        let raw = RawTflLine::deserialize(deserializer)?;
+        // Canonicalise the line id at the wire-format seam so the
+        // line-status ticker lookup matches what arrivals carry. Without
+        // this, post-Arrival-canonicalisation the iOS marquee would
+        // silently drop the Elizabeth disruption line because the lookup
+        // key (`"elizabeth"`) wouldn't match the cached TflLine id
+        // (`"elizabeth-line"`).
+        Ok(TflLine {
+            id: canonicalize_line_id(&raw.id),
+            name: raw.name,
+            _type: raw._type,
+            line_statuses: raw.line_statuses,
+        })
+    }
 }
 
 /// TfL wire format for one entry inside `lineStatuses`.
