@@ -100,17 +100,23 @@ struct RawArrival {
 impl<'de> Deserialize<'de> for Arrival {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let raw = RawArrival::deserialize(deserializer)?;
-        let (direction, northern_branch) = infer_direction(
-            &raw.platform_name,
-            &raw.direction,
-            &raw.line_id,
-            &raw.towards,
-        );
+        // TfL ships Elizabeth-line arrivals with `lineId: "elizabeth-line"`
+        // (the *mode* form, used by the routing API), but station metadata
+        // and the user's chip filter use `"elizabeth"` (the *line*
+        // identifier — what TfL puts in `lineIdentifier` on stop-points).
+        // Without normalisation here, filtering by the Elizabeth chip
+        // hides every arrival because `"elizabeth" != "elizabeth-line"`.
+        // Canonicalise the mode form to the line form on ingest so every
+        // downstream consumer (display filter, compass mapping, defensive
+        // line-allow filter) sees one stable id.
+        let line_id = canonicalize_line_id(&raw.line_id);
+        let (direction, northern_branch) =
+            infer_direction(&raw.platform_name, &raw.direction, &line_id, &raw.towards);
         Ok(Arrival {
             id: raw.id,
             station_name: raw.station_name,
             platform_name: raw.platform_name,
-            line_id: raw.line_id,
+            line_id,
             line_name: raw.line_name,
             direction,
             northern_branch,
@@ -121,6 +127,21 @@ impl<'de> Deserialize<'de> for Arrival {
             expected_arrival: raw.expected_arrival,
             naptan_id: raw.naptan_id,
         })
+    }
+}
+
+/// Map a TfL `lineId` to the canonical line form used by station metadata
+/// and the user's chip filter.
+///
+/// TfL is inconsistent across endpoints — `/StopPoint/{id}/Arrivals`
+/// returns Elizabeth as `"elizabeth-line"` (the mode), while
+/// `/StopPoint/Mode/elizabeth-line` returns lines with
+/// `lineIdentifier: "elizabeth"`. Make all downstream code see the
+/// `lineIdentifier` form.
+fn canonicalize_line_id(raw: &str) -> String {
+    match raw {
+        "elizabeth-line" => "elizabeth".to_string(),
+        other => other.to_string(),
     }
 }
 
