@@ -1,31 +1,47 @@
 //! Pure filtering functions for arrivals.
 //!
 //! All functions are free functions — no IO, no async.
+//!
+//! ## Why `line_ids` is not filtered here
+//!
+//! The user-facing **line-id chip filter** is applied on the frontend
+//! display layer (`web/src/lib/components/Board.svelte`'s
+//! `displayPlatforms` derived), NOT in this crate. Filtering at the
+//! display layer means a chip toggle in Settings updates the visible
+//! board instantly — without waiting for the next periodic stream tick
+//! (~30 s) for the backend to re-apply and re-emit. See CLAUDE.md
+//! invariants #3 (filter changes don't refetch) and #22 (line-id
+//! filter is display-layer only) for the architectural rationale.
+//!
+//! Two related filters that DO stay in the backend:
+//!
+//! - **`directions`** (here): a per-tick filter that drops arrivals
+//!   whose compass direction the user has hidden. Direction toggles
+//!   are infrequent compared to line toggles, and the cost of the
+//!   tick-delay is minor; keeping this in Rust keeps the backend's
+//!   `Board` payload close to what the user wants to see, reducing
+//!   unnecessary chrome in tests and snapshots.
+//! - **`drop_arrivals_for_lines_not_serving`** (in `service.rs`):
+//!   a defensive integrity filter that drops arrivals whose `line_id`
+//!   is not in the station's allowed-lines set (per
+//!   `TflClient::allowed_line_ids_for`). This guards against TfL
+//!   surfacing predictions for lines that don't physically serve the
+//!   queried station — independent of user preference, so it stays
+//!   server-side regardless of the chip filter location.
 
 use crate::config::BoardConfig;
 use tfl_domain::{Arrival, Direction};
 
-/// Apply line and direction filters from `cfg` to a list of arrivals.
+/// Apply the direction filter from `cfg` to a list of arrivals.
 ///
-/// - If `cfg.line_ids` is empty, no line filter is applied.
+/// `line_ids` is intentionally NOT applied here — see the module docs.
+///
 /// - If `cfg.directions` is empty, no direction filter is applied.
-/// - Both filters are AND-ed together.
 pub fn apply_filters(arrivals: Vec<Arrival>, cfg: &BoardConfig) -> Vec<Arrival> {
     arrivals
         .into_iter()
-        .filter(|a| line_matches(&a.line_id, &cfg.line_ids))
         .filter(|a| direction_matches(a.direction, &cfg.directions))
         .collect()
-}
-
-/// Returns `true` if `line_id` matches the filter list (case-insensitive).
-/// Returns `true` unconditionally when `filter` is empty.
-fn line_matches(line_id: &str, filter: &[String]) -> bool {
-    if filter.is_empty() {
-        return true;
-    }
-    let id_lower = line_id.to_ascii_lowercase();
-    filter.iter().any(|f| f.to_ascii_lowercase() == id_lower)
 }
 
 /// Returns `true` if `direction` matches any entry in `filter`.
@@ -65,24 +81,6 @@ mod tests {
     }
 
     #[test]
-    fn filter_by_line_ids_empty_matches_all() {
-        let arrivals = vec![
-            make_arrival("northern", Direction::Northbound),
-            make_arrival("victoria", Direction::Northbound),
-            make_arrival("piccadilly", Direction::Westbound),
-        ];
-        let cfg = BoardConfig {
-            station_id: "TEST".to_string(),
-            line_ids: vec![], // empty = no filter
-            directions: vec![],
-            poll_seconds: 20,
-            theme: "classic-amber".to_string(),
-        };
-        let result = apply_filters(arrivals.clone(), &cfg);
-        assert_eq!(result.len(), 3, "empty line_ids should pass all arrivals");
-    }
-
-    #[test]
     fn filter_by_directions_empty_matches_all() {
         let arrivals = vec![
             make_arrival("northern", Direction::Northbound),
@@ -99,41 +97,37 @@ mod tests {
         assert_eq!(result.len(), 2, "empty directions should pass all arrivals");
     }
 
+    /// `line_ids` is the user's chip-filter preference and is now applied
+    /// at the frontend display layer (`Board.svelte`'s `displayPlatforms`),
+    /// NOT in this function. Setting `cfg.line_ids` here MUST be a
+    /// no-op — every arrival passes regardless of which lines the user
+    /// has selected. Guards against accidentally re-introducing
+    /// backend-side line filtering (which would re-introduce the
+    /// 30-second tick delay between chip toggle and visible effect).
     #[test]
-    fn filter_single_line_id() {
+    fn apply_filters_does_not_filter_by_line_id() {
         let arrivals = vec![
             make_arrival("northern", Direction::Northbound),
             make_arrival("victoria", Direction::Northbound),
-            make_arrival("northern", Direction::Southbound),
+            make_arrival("piccadilly", Direction::Westbound),
         ];
         let cfg = BoardConfig {
             station_id: "TEST".to_string(),
+            // The user has narrowed to "northern" only on the frontend.
+            // The backend MUST still hand the full set through.
             line_ids: vec!["northern".to_string()],
             directions: vec![],
             poll_seconds: 20,
             theme: "classic-amber".to_string(),
         };
         let result = apply_filters(arrivals, &cfg);
-        assert_eq!(result.len(), 2);
-        assert!(result.iter().all(|a| a.line_id == "northern"));
-    }
-
-    #[test]
-    fn filter_line_id_case_insensitive() {
-        let arrivals = vec![
-            make_arrival("northern", Direction::Northbound),
-            make_arrival("victoria", Direction::Northbound),
-        ];
-        let cfg = BoardConfig {
-            station_id: "TEST".to_string(),
-            line_ids: vec!["Northern".to_string()],
-            directions: vec![],
-            poll_seconds: 20,
-            theme: "classic-amber".to_string(),
-        };
-        let result = apply_filters(arrivals, &cfg);
-        assert_eq!(result.len(), 1);
-        assert_eq!(result[0].line_id, "northern");
+        assert_eq!(
+            result.len(),
+            3,
+            "line_ids is a frontend-only display mask; backend must pass all arrivals"
+        );
+        assert!(result.iter().any(|a| a.line_id == "victoria"));
+        assert!(result.iter().any(|a| a.line_id == "piccadilly"));
     }
 
     #[test]
@@ -156,8 +150,11 @@ mod tests {
         assert!(result.iter().all(|a| a.direction == Direction::Northbound));
     }
 
+    /// `line_ids` is ignored; only `directions` survives at the
+    /// backend. With both set, the result reflects only the direction
+    /// filter — the line filter applies later, at the frontend.
     #[test]
-    fn filter_combined_line_and_direction() {
+    fn line_ids_ignored_directions_still_filter() {
         let arrivals = vec![
             make_arrival("northern", Direction::Northbound),
             make_arrival("northern", Direction::Southbound),
@@ -165,31 +162,19 @@ mod tests {
         ];
         let cfg = BoardConfig {
             station_id: "TEST".to_string(),
+            // line_ids set, but ignored.
             line_ids: vec!["northern".to_string()],
+            // directions still applies.
             directions: vec![Direction::Northbound],
             poll_seconds: 20,
             theme: "classic-amber".to_string(),
         };
         let result = apply_filters(arrivals, &cfg);
-        assert_eq!(result.len(), 1);
-        assert_eq!(result[0].line_id, "northern");
-        assert!(result[0].direction == Direction::Northbound);
-    }
-
-    #[test]
-    fn filter_no_matches_returns_empty() {
-        let arrivals = vec![
-            make_arrival("central", Direction::Eastbound),
-            make_arrival("central", Direction::Westbound),
-        ];
-        let cfg = BoardConfig {
-            station_id: "TEST".to_string(),
-            line_ids: vec!["northern".to_string()],
-            directions: vec![],
-            poll_seconds: 20,
-            theme: "classic-amber".to_string(),
-        };
-        let result = apply_filters(arrivals, &cfg);
-        assert!(result.is_empty());
+        assert_eq!(
+            result.len(),
+            2,
+            "both Northbound arrivals (northern + victoria) survive; line_ids is no-op"
+        );
+        assert!(result.iter().all(|a| a.direction == Direction::Northbound));
     }
 }
