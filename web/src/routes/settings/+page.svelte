@@ -12,9 +12,15 @@
   import { hasAppKey, saveAppKey, saveDisplayMode, type DisplayMode } from '$lib/ipc/commands.js';
   import { displayMode } from '$lib/stores/displayMode.js';
   import { board } from '$lib/stores/board.js';
+  import {
+    favorites,
+    initFavorites,
+    addFavorite,
+    removeFavorite,
+  } from '$lib/stores/favorites.js';
   import { debounce } from '$lib/utils/debounce.js';
   import { shortStationName } from '$lib/utils/format.js';
-  import type { Direction, LineRef, Station } from '$lib/ipc/types.js';
+  import type { Direction, Favorite, LineRef, Station } from '$lib/ipc/types.js';
   import { onDestroy, onMount } from 'svelte';
 
   // ---------------------------------------------------------------------------
@@ -103,6 +109,8 @@
     } catch {
       appKeyStatus = 'Could not load API key status';
     }
+    // Load favorites once on mount. Errors surface via $favoritesError.
+    void initFavorites();
   });
 
   /**
@@ -155,6 +163,52 @@
       lineIds = lineIds.filter((id) => allowed.has(id));
     }
     void persist();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Favorites
+  // ---------------------------------------------------------------------------
+
+  /** True iff the currently-selected station is in the favorites list. */
+  const isCurrentStationFavorited = $derived(
+    $favorites.some((f) => f.station_id === stationId),
+  );
+
+  async function handleToggleFavorite(): Promise<void> {
+    if (isCurrentStationFavorited) {
+      await removeFavorite(stationId);
+    } else {
+      // Use whatever name + lines we know about right now. `currentStationName`
+      // already falls back to the latest board's station_name when local
+      // state is empty (e.g. user opens Settings on a fresh launch).
+      const name =
+        stationName.length > 0
+          ? stationName
+          : ($board?.platforms[0]?.arrivals[0]?.station_name ?? stationId);
+      await addFavorite(stationId, name, stationLines);
+    }
+  }
+
+  /**
+   * Selecting a favorite re-uses the existing station-select path so the
+   * watch-channel publishes the new station_id and the stream refreshes
+   * immediately (invariant #2). We construct a synthetic `Station` from the
+   * favorite snapshot — the lines field gives us cold-cache-safe chips.
+   */
+  function handleSelectFavorite(fav: Favorite): void {
+    const synthetic: Station = {
+      id: fav.station_id,
+      common_name: fav.common_name,
+      modes: [],
+      lat: 0,
+      lon: 0,
+      lines: fav.lines,
+    };
+    handleStationSelect(synthetic);
+  }
+
+  async function handleRemoveFavorite(stationIdToRemove: string): Promise<void> {
+    await removeFavorite(stationIdToRemove);
   }
 
   /**
@@ -381,9 +435,66 @@
         >
           <span class="settings__current-station-label">Current:</span>
           <span class="settings__current-station-name">{currentStationName}</span>
+          <button
+            type="button"
+            class="settings__star"
+            class:settings__star--active={isCurrentStationFavorited}
+            onclick={() => void handleToggleFavorite()}
+            aria-pressed={isCurrentStationFavorited}
+            aria-label={isCurrentStationFavorited
+              ? `Remove ${currentStationName} from favorites`
+              : `Save ${currentStationName} as favorite`}
+            data-testid="settings-star"
+          >
+            {isCurrentStationFavorited ? '★' : '☆'}
+          </button>
         </p>
       {/if}
       <StationSearch selectedId={stationId} onSelect={handleStationSelect} />
+    </section>
+
+    <!-- Favorites -->
+    <section class="settings__section" aria-labelledby="section-favorites">
+      <h2 id="section-favorites" class="settings__section-title">Favorites</h2>
+      {#if $favorites.length === 0}
+        <p class="settings__api-hint" data-testid="favorites-empty">
+          Star a station to save it here.
+        </p>
+      {:else}
+        <ul class="favorites__list" data-testid="favorites-list">
+          {#each $favorites as fav (fav.station_id)}
+            <li class="favorites__row">
+              <button
+                type="button"
+                class="favorites__row-body"
+                onclick={() => handleSelectFavorite(fav)}
+                aria-label={`Select ${fav.common_name}`}
+                data-testid="favorite-row"
+                data-station-id={fav.station_id}
+              >
+                <span class="favorites__row-name"
+                  >{shortStationName(fav.common_name)}</span
+                >
+                <span class="favorites__row-chips" aria-hidden="true">
+                  {#each fav.lines as line (line.id)}
+                    <span class="settings__chip favorites__row-chip">{line.name}</span>
+                  {/each}
+                </span>
+              </button>
+              <button
+                type="button"
+                class="favorites__trash"
+                onclick={() => void handleRemoveFavorite(fav.station_id)}
+                aria-label={`Remove ${fav.common_name} from favorites`}
+                data-testid="favorite-trash"
+                data-station-id={fav.station_id}
+              >
+                ✕
+              </button>
+            </li>
+          {/each}
+        </ul>
+      {/if}
     </section>
 
     <!-- Line filter -->
@@ -724,6 +835,105 @@
     text-shadow:
       0 0 4px var(--accent),
       0 0 8px color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+
+  /* Star toggle inline with the current-station label. */
+  .settings__star {
+    background: transparent;
+    border: 1px solid var(--input-border);
+    color: var(--platform-label);
+    font-size: 1rem;
+    line-height: 1;
+    padding: 0.15rem 0.4rem;
+    border-radius: 2px;
+    cursor: pointer;
+    margin-left: 0.4rem;
+    letter-spacing: 0;
+  }
+
+  .settings__star:hover,
+  .settings__star:focus {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .settings__star--active {
+    color: var(--accent);
+    border-color: var(--accent);
+    text-shadow: 0 0 4px var(--accent);
+  }
+
+  /* Favorites list */
+  .favorites__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .favorites__row {
+    display: flex;
+    align-items: stretch;
+    gap: 0.4rem;
+    border: 1px solid var(--input-border);
+    border-radius: 2px;
+    background: var(--chip-bg);
+  }
+
+  .favorites__row:hover,
+  .favorites__row:focus-within {
+    border-color: var(--platform-label);
+  }
+
+  .favorites__row-body {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--fg);
+    text-align: left;
+    cursor: pointer;
+    padding: 0.5rem 0.6rem;
+    font-family: var(--font-ui);
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    letter-spacing: 0.04em;
+  }
+
+  .favorites__row-name {
+    font-size: 0.95rem;
+    color: var(--fg);
+  }
+
+  .favorites__row-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+  }
+
+  .favorites__row-chip {
+    font-size: 0.75rem;
+    padding: 0.1rem 0.4rem;
+    opacity: 0.7;
+    cursor: default;
+  }
+
+  .favorites__trash {
+    background: transparent;
+    border: none;
+    border-left: 1px solid var(--input-border);
+    color: var(--platform-label);
+    font-size: 0.9rem;
+    padding: 0 0.65rem;
+    cursor: pointer;
+    border-radius: 0 2px 2px 0;
+  }
+
+  .favorites__trash:hover,
+  .favorites__trash:focus {
+    color: var(--stale-accent);
   }
 
   /* Chips */

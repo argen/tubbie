@@ -91,6 +91,21 @@ export interface Station {
 }
 
 // ---------------------------------------------------------------------------
+// Favorite — saved station (separate `"favorites"` store key)
+// ---------------------------------------------------------------------------
+
+/**
+ * A station saved as a favorite by the user. Mirrors `tfl_domain::Favorite`.
+ * `lines` is snapshotted at save time so the Favorites list can render line
+ * chips without requiring a hot station-cache lookup.
+ */
+export interface Favorite {
+  station_id: string;
+  common_name: string;
+  lines: LineRef[];
+}
+
+// ---------------------------------------------------------------------------
 // LineStatus / StatusEntry
 // ---------------------------------------------------------------------------
 
@@ -157,6 +172,15 @@ export function isLineStatus(v: unknown): v is LineStatus {
     typeof v.line_id === 'string' &&
     Array.isArray(v.status) &&
     (v.disruption_text === null || typeof v.disruption_text === 'string')
+  );
+}
+
+export function isFavorite(v: unknown): v is Favorite {
+  if (!isRecord(v)) return false;
+  return (
+    typeof v.station_id === 'string' &&
+    typeof v.common_name === 'string' &&
+    Array.isArray(v.lines)
   );
 }
 

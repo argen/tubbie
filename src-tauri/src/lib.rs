@@ -54,11 +54,12 @@ use tokio::sync::RwLock;
 use tokio::task::AbortHandle;
 
 use commands::{
-    apply_board_size, get_board, get_line_status, has_app_key, load_app_key, load_config,
-    load_display_mode, save_app_key, save_config, save_display_mode, search_stations,
+    add_favorite, apply_board_size, get_board, get_line_status, has_app_key, list_favorites,
+    load_app_key, load_config, load_display_mode, remove_favorite, save_app_key, save_config,
+    save_display_mode, search_stations,
 };
 use state::{AnyBoardService, AppState};
-use store_impl::StorePluginConfigStore;
+use store_impl::{StorePluginConfigStore, StorePluginFavoritesStore};
 
 /// RAII handle for a Tauri event listener. Calling `unlisten` in `Drop`
 /// guarantees cleanup even if the awaiting task is aborted mid-flight (window
@@ -671,6 +672,15 @@ pub fn run() {
             let board_service = Arc::new(BoardService::new(Arc::clone(&client), SystemClock))
                 as Arc<dyn AnyBoardService>;
             let config_store = Arc::new(store) as Arc<dyn state::ConfigStore>;
+
+            // Favorites store: separate `"favorites"` key, same config.json file.
+            // Opened lazily-idempotent by the plugin — re-opening the same
+            // path just returns an existing Arc<Store> handle.
+            let favorites_store =
+                Arc::new(StorePluginFavoritesStore::open(app.handle()).expect(
+                    "failed to open favorites store",
+                )) as Arc<dyn state::FavoritesStore>;
+
             let stream_abort: Arc<RwLock<Option<AbortHandle>>> = Arc::new(RwLock::new(None));
 
             // Desktop always stays Active; iOS swaps this for a real signal.
@@ -815,6 +825,7 @@ pub fn run() {
             app.manage(AppState {
                 board_service,
                 config_store,
+                favorites_store,
                 stream_abort,
                 cfg_tx,
                 display_mode: Arc::clone(&display_mode_lock),
@@ -884,6 +895,9 @@ pub fn run() {
             save_display_mode,
             load_display_mode,
             apply_board_size,
+            list_favorites,
+            add_favorite,
+            remove_favorite,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tubbie");

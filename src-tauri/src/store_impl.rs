@@ -31,8 +31,9 @@ use serde_json::Value;
 use tauri::AppHandle;
 use tauri_plugin_store::{Store, StoreExt};
 
-use crate::state::{default_board_config, ConfigStore, DEFAULT_DISPLAY_MODE};
+use crate::state::{default_board_config, ConfigStore, FavoritesStore, DEFAULT_DISPLAY_MODE};
 use tfl_board::BoardConfig;
+use tfl_domain::Favorite;
 
 /// `ConfigStore` backed by `tauri-plugin-store`.
 ///
@@ -42,6 +43,52 @@ use tfl_board::BoardConfig;
 /// in another `Arc`.
 pub struct StorePluginConfigStore {
     store: Arc<Store<tauri::Wry>>,
+}
+
+/// `FavoritesStore` backed by `tauri-plugin-store`.
+///
+/// Uses the `"favorites"` key inside the same `config.json` store file —
+/// a sibling to `"board_config"`. Persistence mirrors the `ConfigStore`
+/// pattern: set + save inside `spawn_blocking` for async-safe disk I/O.
+pub struct StorePluginFavoritesStore {
+    store: Arc<Store<tauri::Wry>>,
+}
+
+impl StorePluginFavoritesStore {
+    /// Open (or create) the `config.json` store for the given app handle.
+    pub fn open(app: &AppHandle) -> Result<Self, String> {
+        let store = app
+            .store("config.json")
+            .map_err(|e| format!("failed to open config store for favorites: {e}"))?;
+        Ok(Self { store })
+    }
+}
+
+#[async_trait]
+impl FavoritesStore for StorePluginFavoritesStore {
+    async fn load_favorites(&self) -> Result<Vec<Favorite>, String> {
+        let favorites = self
+            .store
+            .get("favorites")
+            .and_then(|v| serde_json::from_value(v).ok())
+            .unwrap_or_default();
+        Ok(favorites)
+    }
+
+    async fn save_favorites(&self, favorites: &[Favorite]) -> Result<(), String> {
+        let value =
+            serde_json::to_value(favorites).map_err(|e| format!("serialise error: {e}"))?;
+        let store = Arc::clone(&self.store);
+        tokio::task::spawn_blocking(move || {
+            store.set("favorites", value);
+            store
+                .save()
+                .map_err(|e| format!("failed to save favorites: {e}"))
+        })
+        .await
+        .map_err(|e| format!("spawn_blocking panicked: {e}"))??;
+        Ok(())
+    }
 }
 
 impl StorePluginConfigStore {

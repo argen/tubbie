@@ -93,6 +93,9 @@ const defaultHandlers: Record<string, MockInvokeHandler> = {
   load_display_mode: () => 'window',
   save_display_mode: () => 'saved',
   apply_board_size: () => null,
+  list_favorites: () => [],
+  add_favorite: () => [],
+  remove_favorite: () => [],
 };
 
 let handlers: Record<string, MockInvokeHandler> = { ...defaultHandlers };
