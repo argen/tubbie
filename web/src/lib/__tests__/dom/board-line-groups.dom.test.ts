@@ -210,32 +210,38 @@ describe('Board — per-arrival line grouping', () => {
     expect(rows.length).toBe(2);
   });
 
-  // Overground arrivals carry `direction: "Inbound"` / `"Outbound"` (not
-  // compass headings) and have their own line ids — Mildmay, Windrush, etc.
-  // The frontend grouping must treat them identically to tube lines: one
-  // LineGroup per line id, with directions sorted into the canonical compass
-  // order that places Inbound/Outbound after the four headings.
+  // Overground arrivals are now compass-direction enriched on the wire
+  // (the Rust `infer_compass_from_towards` step in `tfl-domain` maps
+  // `towards` → Direction for Mildmay/Windrush/Lioness/Suffragette/
+  // Weaver/Liberty + Elizabeth). Mildmay→Stratford = Eastbound,
+  // Mildmay→Richmond = Westbound; Windrush→Highbury = Northbound,
+  // Windrush→New Cross Gate = Southbound. Each line groups
+  // independently with its own per-line direction set.
   it('renders Mildmay + Windrush at a multi-line Overground hub', () => {
     const board = buildBoard([
-      platform('Inbound', [
-        arrival('mildmay', 'Mildmay', 'Inbound', 'Stratford', 'Inbound - Platform 2'),
-        arrival('windrush', 'Windrush', 'Inbound', 'Highbury & Islington', 'Inbound - Platform 1'),
+      platform('Eastbound', [
+        arrival('mildmay', 'Mildmay', 'Eastbound', 'Stratford', 'Platform 2'),
       ]),
-      platform('Outbound', [
+      platform('Westbound', [
         arrival(
           'mildmay',
           'Mildmay',
-          'Outbound',
+          'Westbound',
           'Richmond',
-          'Outbound - Platform 3',
+          'Platform 3',
           '2026-04-27T19:04:00Z',
         ),
+      ]),
+      platform('Northbound', [
+        arrival('windrush', 'Windrush', 'Northbound', 'Highbury & Islington', 'Platform 1'),
+      ]),
+      platform('Southbound', [
         arrival(
           'windrush',
           'Windrush',
-          'Outbound',
+          'Southbound',
           'New Cross Gate',
-          'Outbound - Platform 4',
+          'Platform 4',
           '2026-04-27T19:06:00Z',
         ),
       ]),
@@ -244,8 +250,8 @@ describe('Board — per-arrival line grouping', () => {
     render(Board, { props: { board } });
 
     expect(lineGroupIds()).toEqual(['mildmay', 'windrush']);
-    expect(directionLabelsFor('mildmay')).toEqual(['Inbound', 'Outbound']);
-    expect(directionLabelsFor('windrush')).toEqual(['Inbound', 'Outbound']);
+    expect(directionLabelsFor('mildmay')).toEqual(['Eastbound', 'Westbound']);
+    expect(directionLabelsFor('windrush')).toEqual(['Northbound', 'Southbound']);
 
     // Stripe colour MUST resolve to the Mildmay CSS variable, not a
     // generic Overground orange — the per-line stripe is what tells the

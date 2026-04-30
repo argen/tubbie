@@ -76,9 +76,17 @@ pub enum NorthernBranch {
 /// `platform_name`, `direction` field, and `line_id` / `towards` values.
 ///
 /// Priority for the direction:
-/// 1. `platform_name` prefix (most reliable — TfL sets it explicitly).
-/// 2. Raw `direction` field (`"inbound"` / `"outbound"`) as a fallback.
-/// 3. `Direction::Unknown` if nothing matches.
+/// 1. `platform_name` prefix (most reliable — TfL sets it explicitly on
+///    every tube line: `"Northbound - Platform 4"`).
+/// 2. Per-line `towards`-terminus compass mapping (Elizabeth and the six
+///    named Overground lines): TfL labels their platforms as bare
+///    `"Platform 3"` so the prefix branch never fires, and the raw
+///    `direction` field only carries `inbound|outbound`. Mapping the
+///    terminus name to a compass direction recovers the user-natural
+///    label (Eastbound/Westbound on Elizabeth at Farringdon, Northbound/
+///    Southbound on Lioness, …).
+/// 3. Raw `direction` field (`"inbound"` / `"outbound"`) as a fallback.
+/// 4. `Direction::Unknown` if nothing matches.
 ///
 /// The branch is always derived from the `towards` suffix (Northern line only)
 /// — returned alongside so callers can persist it on `Arrival.northern_branch`.
@@ -107,6 +115,8 @@ pub fn infer_direction(
         Direction::Eastbound
     } else if platform_lower.starts_with("westbound") {
         Direction::Westbound
+    } else if let Some(compass) = infer_compass_from_towards(line_id, towards) {
+        compass
     } else {
         match direction {
             "inbound" => Direction::Inbound,
@@ -135,5 +145,140 @@ fn infer_northern_branch(towards: &str) -> Option<NorthernBranch> {
         Some(NorthernBranch::CharingCross)
     } else {
         None
+    }
+}
+
+/// Infer a compass `Direction` from the `(line_id, towards)` pair when the
+/// `platform_name` prefix didn't supply one.
+///
+/// TfL labels Elizabeth and Overground platforms as bare `"Platform 3"`,
+/// so the prefix path in `infer_direction` falls through and the only
+/// remaining signal is the raw `direction` field — which TfL hands back
+/// as `"inbound"` / `"outbound"`. That's correct on the wire but visually
+/// jarring at a station where the line clearly runs east-west (Liverpool
+/// Street, Farringdon, Tottenham Court Road on Elizabeth). Mapping the
+/// terminus name to a compass direction recovers the label users expect.
+///
+/// Per-line, the mapping covers TfL's published termini and common
+/// short-working / branch terminations. Ambiguous cases (e.g. mid-route
+/// terminations like `"Liverpool Street"` on the Elizabeth line, where
+/// the same string could be either heading) intentionally return `None`
+/// and fall back to inbound/outbound — better to keep TfL's raw label
+/// than guess wrong.
+///
+/// DLR is intentionally not mapped: its multi-branch topology
+/// (Bank/Tower Gateway westwards, Stratford north, Lewisham south,
+/// Beckton/Woolwich Arsenal east) does not fit a single per-terminus
+/// compass mapping and the user hasn't reported it as a problem.
+pub(crate) fn infer_compass_from_towards(line_id: &str, towards: &str) -> Option<Direction> {
+    let lower = towards.to_ascii_lowercase();
+    if lower.trim().is_empty() {
+        return None;
+    }
+    let any = |needles: &[&str]| -> bool { needles.iter().any(|n| lower.contains(n)) };
+
+    match line_id {
+        // East: Stratford / Shenfield / Abbey Wood / Gidea Park / Romford
+        // West: Paddington / Heathrow / Reading / Maidenhead /
+        //       Hayes & Harlington / West Drayton / Ealing
+        "elizabeth" => {
+            if any(&[
+                "abbey wood",
+                "shenfield",
+                "stratford",
+                "gidea park",
+                "romford",
+            ]) {
+                Some(Direction::Eastbound)
+            } else if any(&[
+                "paddington",
+                "heathrow",
+                "reading",
+                "maidenhead",
+                "hayes",
+                "west drayton",
+                "west ealing",
+                "ealing broadway",
+            ]) {
+                Some(Direction::Westbound)
+            } else {
+                None
+            }
+        }
+
+        // Mildmay (NLL): Stratford ↔ Richmond / Clapham Junction. E-W.
+        "mildmay" => {
+            if lower.contains("stratford") {
+                Some(Direction::Eastbound)
+            } else if any(&["richmond", "clapham junction"]) {
+                Some(Direction::Westbound)
+            } else {
+                None
+            }
+        }
+
+        // Lioness (Watford DC): Watford Junction ↔ Euston. N-S.
+        "lioness" => {
+            if lower.contains("watford") {
+                Some(Direction::Northbound)
+            } else if lower.contains("euston") {
+                Some(Direction::Southbound)
+            } else {
+                None
+            }
+        }
+
+        // Suffragette (GOBLIN): Gospel Oak ↔ Barking / Barking Riverside. E-W.
+        "suffragette" => {
+            if lower.contains("barking") {
+                Some(Direction::Eastbound)
+            } else if lower.contains("gospel oak") {
+                Some(Direction::Westbound)
+            } else {
+                None
+            }
+        }
+
+        // Weaver: Liverpool Street ↔ Cheshunt / Enfield Town / Chingford. N-S.
+        "weaver" => {
+            if any(&["cheshunt", "enfield town", "chingford"]) {
+                Some(Direction::Northbound)
+            } else if lower.contains("liverpool street") {
+                Some(Direction::Southbound)
+            } else {
+                None
+            }
+        }
+
+        // Windrush (East London Line): Highbury & Islington / Dalston Junction
+        // ↔ New Cross / New Cross Gate / Crystal Palace / West Croydon /
+        // Clapham Junction. N-S.
+        "windrush" => {
+            if any(&["highbury", "dalston"]) {
+                Some(Direction::Northbound)
+            } else if any(&[
+                "new cross",
+                "crystal palace",
+                "west croydon",
+                "clapham junction",
+            ]) {
+                Some(Direction::Southbound)
+            } else {
+                None
+            }
+        }
+
+        // Liberty: Romford ↔ Upminster shuttle. E-W.
+        "liberty" => {
+            if lower.contains("upminster") {
+                Some(Direction::Eastbound)
+            } else if lower.contains("romford") {
+                Some(Direction::Westbound)
+            } else {
+                None
+            }
+        }
+
+        _ => None,
     }
 }
