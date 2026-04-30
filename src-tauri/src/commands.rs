@@ -235,20 +235,27 @@ pub(crate) const NAMED_OVERGROUND_LINES: &[&str] = &[
     "windrush",
 ];
 
-/// One-shot migration: rewrite a stored `BoardConfig.line_ids` containing
-/// the legacy `"london-overground"` id into the union of the six successor
-/// line ids ([`NAMED_OVERGROUND_LINES`]). Idempotent — re-running on an
-/// already-migrated `Vec` is a no-op. Stable order: existing entries
-/// preserved in their original positions; new entries appended where the
-/// legacy id used to be, with cross-list dedupe.
+/// One-shot migration: rewrite a stored `BoardConfig.line_ids` so it stays
+/// in sync with the canonical line forms used by station metadata,
+/// arrivals (post `tfl_domain::canonicalize_line_id`), and the chip UI:
 ///
-/// Why: the live API stopped emitting predictions under `"london-overground"`
-/// when the new lines launched. A user upgrading from a pre-2024 install
-/// would silently lose their Overground board because the chip filter
-/// excludes everything; this migration preserves their intent ("I had
-/// Overground enabled").
+/// 1. `"london-overground"` (legacy) → six successor named OG ids
+///    (`NAMED_OVERGROUND_LINES`). The live API stopped emitting predictions
+///    under the legacy id when the named lines launched; without this
+///    rewrite an upgrading user silently loses their Overground board.
+///
+/// 2. `"elizabeth-line"` (mode-form) → `"elizabeth"` (line-form).
+///    Historical configs saved the chip as the mode-form because the
+///    settings UI's `KNOWN_LINES` used to too. Arrival deserialization
+///    canonicalises to `"elizabeth"`, so a stale `"elizabeth-line"` chip
+///    silently masks every Elizabeth arrival.
+///
+/// Idempotent. Stable order: existing entries preserved in place; new
+/// entries appended where the legacy id used to be; cross-list dedupe.
 pub(crate) fn migrate_legacy_line_ids(line_ids: Vec<String>) -> Vec<String> {
-    if !line_ids.iter().any(|id| id == "london-overground") {
+    let needs_overground = line_ids.iter().any(|id| id == "london-overground");
+    let needs_elizabeth = line_ids.iter().any(|id| id == "elizabeth-line");
+    if !needs_overground && !needs_elizabeth {
         return line_ids;
     }
 
@@ -267,8 +274,13 @@ pub(crate) fn migrate_legacy_line_ids(line_ids: Vec<String>) -> Vec<String> {
             }
             continue;
         }
-        if seen.insert(id.clone()) {
-            out.push(id);
+        let canonical = if id == "elizabeth-line" {
+            "elizabeth".to_string()
+        } else {
+            id
+        };
+        if seen.insert(canonical.clone()) {
+            out.push(canonical);
         }
     }
     out
@@ -924,6 +936,65 @@ mod tests {
         assert_eq!(
             out, input,
             "configs without the legacy id must be returned unchanged"
+        );
+    }
+
+    #[test]
+    fn migrate_legacy_line_ids_rewrites_elizabeth_line_to_elizabeth() {
+        // Historical iOS / desktop builds saved the Elizabeth chip as
+        // `"elizabeth-line"` (the mode form) because `KNOWN_LINES` used
+        // that id. After `tfl_domain::canonicalize_line_id` runs at
+        // arrival ingest, the wire-side id is `"elizabeth"` — so the
+        // stale chip silently masks every Elizabeth arrival. The
+        // migration rewrites in place and preserves position.
+        let input = vec![
+            "northern".to_string(),
+            "elizabeth-line".to_string(),
+            "victoria".to_string(),
+        ];
+        let out = migrate_legacy_line_ids(input);
+        assert_eq!(
+            out,
+            vec![
+                "northern".to_string(),
+                "elizabeth".to_string(),
+                "victoria".to_string(),
+            ],
+        );
+    }
+
+    #[test]
+    fn migrate_legacy_line_ids_dedupes_elizabeth_against_existing_canonical_id() {
+        // If the user has both forms saved (one from the chip click pre-
+        // migration, one introduced post-canonicalisation), keep the
+        // first occurrence and drop the duplicate.
+        let input = vec![
+            "elizabeth".to_string(),
+            "northern".to_string(),
+            "elizabeth-line".to_string(),
+        ];
+        let out = migrate_legacy_line_ids(input);
+        assert_eq!(out, vec!["elizabeth".to_string(), "northern".to_string()],);
+    }
+
+    #[test]
+    fn migrate_legacy_line_ids_handles_overground_and_elizabeth_together() {
+        let input = vec![
+            "elizabeth-line".to_string(),
+            "london-overground".to_string(),
+        ];
+        let out = migrate_legacy_line_ids(input);
+        assert_eq!(
+            out,
+            vec![
+                "elizabeth".to_string(),
+                "liberty".to_string(),
+                "lioness".to_string(),
+                "mildmay".to_string(),
+                "suffragette".to_string(),
+                "weaver".to_string(),
+                "windrush".to_string(),
+            ],
         );
     }
 
