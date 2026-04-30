@@ -31,6 +31,33 @@ fn elizabeth_eastbound_to_abbey_wood() {
 }
 
 #[test]
+fn elizabeth_line_canonical_id_eastbound_to_abbey_wood() {
+    // Production: TfL hands the Elizabeth line back as
+    // `line_id: "elizabeth-line"` (the canonical mode-form), NOT as the
+    // bare `"elizabeth"`. Both must hit the compass mapping or real
+    // arrivals leak through to the inbound/outbound fallback. This
+    // assertion is what unblocks the user's iOS report (Elizabeth at
+    // Liverpool Street / Farringdon / TCR was showing INBOUND/OUTBOUND).
+    assert_eq!(
+        dir("Platform 5", "outbound", "elizabeth-line", "Abbey Wood"),
+        Direction::Eastbound
+    );
+}
+
+#[test]
+fn elizabeth_line_canonical_id_westbound_to_heathrow() {
+    assert_eq!(
+        dir(
+            "Platform 4",
+            "inbound",
+            "elizabeth-line",
+            "Heathrow Terminal 4"
+        ),
+        Direction::Westbound
+    );
+}
+
+#[test]
 fn elizabeth_eastbound_to_shenfield() {
     assert_eq!(
         dir("Platform 5", "outbound", "elizabeth", "Shenfield"),
