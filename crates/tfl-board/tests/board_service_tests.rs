@@ -504,6 +504,176 @@ async fn refresh_drops_phantom_overground_arrival_at_tube_only_station() {
     );
 }
 
+/// Off-axis filter: a Hammersmith & City prediction whose `platform_name`
+/// is "Northbound - Platform 4" (a Met-line platform) is a TfL data quirk
+/// — H&C is east-west everywhere on the network. The platform-prefix
+/// rejection in `infer_direction` already prevents the bucket from
+/// resolving to Northbound, but the prediction then falls through to
+/// the raw `direction` field and surfaces as Inbound or Outbound — a
+/// third bucket on a strict E/W line.
+///
+/// `refresh` must drop these off-axis predictions so the user sees only
+/// Eastbound + Westbound for H&C, never a phantom Inbound bucket. User-
+/// reported regression at Baker Street, 2026-05-01.
+#[tokio::test]
+async fn refresh_drops_off_axis_predictions_on_strict_axis_line() {
+    use tfl_client::fixture::FixtureTflHttp;
+
+    let phantom_payload: serde_json::Value = serde_json::from_str(include_str!(
+        "data/phantom_off_axis_hammersmith_city_at_baker_street.json"
+    ))
+    .expect("phantom fixture must parse");
+
+    struct InjectingHttp {
+        inner: FixtureTflHttp,
+        bst_payload: serde_json::Value,
+    }
+
+    impl tfl_client::http::TflHttp for InjectingHttp {
+        async fn fetch(&self, kind: &str, id: &str) -> Result<serde_json::Value, TflError> {
+            if kind == "arrivals" && id == "940GZZLUBST" {
+                return Ok(self.bst_payload.clone());
+            }
+            self.inner.fetch(kind, id).await
+        }
+    }
+
+    let injecting = InjectingHttp {
+        inner: FixtureTflHttp::new(fixtures_dir()),
+        bst_payload: phantom_payload,
+    };
+    let client = std::sync::Arc::new(TflClient::new(injecting));
+    client
+        .warm_stop_points_cache()
+        .await
+        .expect("warm stop-points");
+
+    let svc = BoardService::new(
+        std::sync::Arc::clone(&client),
+        FakeClock::from_rfc3339("2026-04-29T09:00:00Z").unwrap(),
+    );
+
+    let cfg = BoardConfig::new("940GZZLUBST");
+    let board = svc.refresh(&cfg).await.expect("refresh BST");
+
+    let hc_directions: std::collections::HashSet<Direction> = board
+        .platforms
+        .iter()
+        .flat_map(|p| p.arrivals.iter())
+        .filter(|a| a.line_id == "hammersmith-city")
+        .map(|a| a.direction)
+        .collect();
+
+    assert!(
+        hc_directions.contains(&Direction::Westbound),
+        "legitimate H&C Westbound to Hammersmith must reach the board; got {hc_directions:?}"
+    );
+    assert!(
+        !hc_directions.contains(&Direction::Inbound)
+            && !hc_directions.contains(&Direction::Outbound),
+        "off-axis Inbound/Outbound H&C predictions must be dropped on a strict E/W line; got {hc_directions:?}"
+    );
+    assert!(
+        !hc_directions.contains(&Direction::Northbound)
+            && !hc_directions.contains(&Direction::Southbound),
+        "phantom N/S H&C predictions must never bucket on an E/W-only line; got {hc_directions:?}"
+    );
+    // The frontend's `directionKeyAndLabel` defensive fallback in
+    // `Board.svelte` re-derives a bucket label from `platform_name` when
+    // a prediction's direction is `Unknown` — for an H&C prediction with
+    // `platformName: "Northbound - Platform 2"`, that reverts the bucket
+    // back to "Northbound". Drop Unknown on strict-axis lines so the
+    // fallback never sees it.
+    assert!(
+        !hc_directions.contains(&Direction::Unknown),
+        "Unknown-direction H&C predictions must be dropped on a strict E/W line so the frontend platform_name fallback can't re-introduce a phantom bucket; got {hc_directions:?}"
+    );
+    assert_eq!(
+        hc_directions.len(),
+        1,
+        "H&C at Baker Street should collapse to a single Westbound bucket once phantoms are dropped; got {hc_directions:?}"
+    );
+}
+
+/// Per-(line, station) axis filter for **multi-axis lines** (Met,
+/// Jubilee, Piccadilly, District, DLR — `line_compass_axis` returns
+/// `None` for these). The axis is inferred from the dominant
+/// platform-prefix pattern in the actual arrivals, so Met at Baker
+/// Street resolves as N/S (5 NB+SB) and a single phantom Westbound
+/// prediction (TfL mistagged H&C platform-6 starter) is dropped.
+///
+/// User-reported regression at Baker Street, 2026-05-01 (after the
+/// initial network-wide axis whitelist landed): the Metropolitan line
+/// surfaced N + S + W direction buckets — the Westbound one being a
+/// phantom that the network-wide whitelist couldn't catch (Met IS
+/// E/W out at Watford, so we can't blanket-pin it).
+#[tokio::test]
+async fn refresh_drops_phantom_westbound_metropolitan_at_baker_street() {
+    use tfl_client::fixture::FixtureTflHttp;
+
+    let phantom_payload: serde_json::Value = serde_json::from_str(include_str!(
+        "data/phantom_off_axis_metropolitan_at_baker_street.json"
+    ))
+    .expect("phantom fixture must parse");
+
+    struct InjectingHttp {
+        inner: FixtureTflHttp,
+        bst_payload: serde_json::Value,
+    }
+
+    impl tfl_client::http::TflHttp for InjectingHttp {
+        async fn fetch(&self, kind: &str, id: &str) -> Result<serde_json::Value, TflError> {
+            if kind == "arrivals" && id == "940GZZLUBST" {
+                return Ok(self.bst_payload.clone());
+            }
+            self.inner.fetch(kind, id).await
+        }
+    }
+
+    let injecting = InjectingHttp {
+        inner: FixtureTflHttp::new(fixtures_dir()),
+        bst_payload: phantom_payload,
+    };
+    let client = std::sync::Arc::new(TflClient::new(injecting));
+    client
+        .warm_stop_points_cache()
+        .await
+        .expect("warm stop-points");
+
+    let svc = BoardService::new(
+        std::sync::Arc::clone(&client),
+        FakeClock::from_rfc3339("2026-04-29T09:00:00Z").unwrap(),
+    );
+    let cfg = BoardConfig::new("940GZZLUBST");
+    let board = svc.refresh(&cfg).await.expect("refresh BST");
+
+    let met_directions: std::collections::HashSet<Direction> = board
+        .platforms
+        .iter()
+        .flat_map(|p| p.arrivals.iter())
+        .filter(|a| a.line_id == "metropolitan")
+        .map(|a| a.direction)
+        .collect();
+
+    // Met at Baker Street is N/S (Aldgate S, Watford/Uxbridge/Chesham N).
+    // The Westbound phantom must not bucket the line.
+    assert!(
+        met_directions.contains(&Direction::Northbound)
+            && met_directions.contains(&Direction::Southbound),
+        "real Met N/S arrivals must reach the board; got {met_directions:?}"
+    );
+    assert!(
+        !met_directions.contains(&Direction::Westbound)
+            && !met_directions.contains(&Direction::Eastbound),
+        "phantom Met E/W predictions must be dropped at a station where Met serves N/S; got {met_directions:?}"
+    );
+    assert_eq!(
+        met_directions.len(),
+        2,
+        "Met at Baker Street should collapse to NB + SB; got {met_directions:?}"
+    );
+}
+
 // ---------------------------------------------------------------------------
 // Test 2: refresh_groups_by_direction (KSX — 4+ lines merged per compass direction)
 // ---------------------------------------------------------------------------

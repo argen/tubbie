@@ -1,0 +1,62 @@
+[
+  {
+    "$type": "Tfl.Api.Presentation.Entities.Prediction, Tfl.Api.Presentation.Entities",
+    "bearing": "",
+    "currentLocation": "At Platform",
+    "destinationName": "",
+    "expectedArrival": "2026-04-29T09:18:00Z",
+    "id": "-9999999991",
+    "lineId": "hammersmith-city",
+    "lineName": "Hammersmith & City",
+    "modeName": "tube",
+    "naptanId": "940GZZLUBST",
+    "operationType": 1,
+    "platformName": "Northbound - Platform 2",
+    "stationName": "Baker Street Underground Station",
+    "timeToLive": "2026-04-29T09:18:00Z",
+    "timeToStation": 1140,
+    "timestamp": "2026-04-29T08:59:00Z",
+    "timing": {
+      "$type": "Tfl.Api.Presentation.Entities.PredictionTiming, Tfl.Api.Presentation.Entities",
+      "countdownServerAdjustment": "00:00:00",
+      "insert": "0001-01-01T00:00:00",
+      "read": "2026-04-29T08:59:00Z",
+      "received": "0001-01-01T00:00:00",
+      "sent": "2026-04-29T08:59:00Z",
+      "source": "0001-01-01T00:00:00"
+    },
+    "towards": "Check Front of Train",
+    "vehicleId": "999"
+  },
+  {
+    "$type": "Tfl.Api.Presentation.Entities.Prediction, Tfl.Api.Presentation.Entities",
+    "bearing": "",
+    "currentLocation": "Between stations",
+    "destinationName": "Hammersmith (H&C) Underground Station",
+    "destinationNaptanId": "940GZZLUHSC",
+    "direction": "inbound",
+    "expectedArrival": "2026-04-29T09:01:00Z",
+    "id": "-8888888881",
+    "lineId": "hammersmith-city",
+    "lineName": "Hammersmith & City",
+    "modeName": "tube",
+    "naptanId": "940GZZLUBST",
+    "operationType": 1,
+    "platformName": "Westbound - Platform 6",
+    "stationName": "Baker Street Underground Station",
+    "timeToLive": "2026-04-29T09:01:00Z",
+    "timeToStation": 60,
+    "timestamp": "2026-04-29T08:59:00Z",
+    "timing": {
+      "$type": "Tfl.Api.Presentation.Entities.PredictionTiming, Tfl.Api.Presentation.Entities",
+      "countdownServerAdjustment": "00:00:00",
+      "insert": "0001-01-01T00:00:00",
+      "read": "2026-04-29T08:59:00Z",
+      "received": "0001-01-01T00:00:00",
+      "sent": "2026-04-29T08:59:00Z",
+      "source": "0001-01-01T00:00:00"
+    },
+    "towards": "Hammersmith",
+    "vehicleId": "888"
+  }
+]

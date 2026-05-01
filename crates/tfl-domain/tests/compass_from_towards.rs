@@ -320,6 +320,174 @@ fn empty_towards_falls_back_to_raw_direction_field() {
     );
 }
 
+// ---------------------------------------------------------------------------
+// Per-line compass-axis whitelist
+//
+// User-reported regression at Baker Street (2026-05-01): the Hammersmith &
+// City line surfaced four direction buckets — Northbound, Eastbound,
+// Westbound, AND a phantom set of trains under "Northbound" with
+// `towards: "Check Front of Train"`. Those are starter / unsigned trains
+// physically sitting on the Met line's NB platform; TfL tags them with
+// `line_id: "hammersmith-city"` and `platform_name: "Northbound -
+// Platform 4"`, but H&C is an east-west line everywhere on the network
+// and should never bucket as N/S.
+//
+// The fix gates the platform_name-prefix branch on a per-line compass-
+// axis whitelist:
+//   - East-west only (NB/SB rejected): hammersmith-city, circle,
+//     waterloo-city, central
+//   - North-south only (EB/WB rejected): bakerloo, victoria
+// Lines with mixed topology (jubilee, metropolitan, district, piccadilly,
+// dlr) keep accepting all four prefixes because TfL legitimately labels
+// them differently at different stations.
+//
+// When the prefix is rejected, inference falls through to the existing
+// per-line `towards`-compass mapping, then the raw `direction` field —
+// so a signed H&C "Hammersmith" train still resolves to Westbound.
+// ---------------------------------------------------------------------------
+
+#[test]
+fn hammersmith_city_rejects_northbound_platform_prefix() {
+    // Phantom Baker Street starter: TfL tags an unsigned train sitting on
+    // the Met NB platform as H&C. The platform prefix is wrong for this
+    // line; we fall through to the raw direction field.
+    assert_eq!(
+        dir(
+            "Northbound - Platform 4",
+            "outbound",
+            "hammersmith-city",
+            "Check Front of Train"
+        ),
+        Direction::Outbound,
+        "H&C is east-west only; the NB prefix must not bucket the train as Northbound"
+    );
+}
+
+#[test]
+fn hammersmith_city_keeps_westbound_platform_prefix() {
+    // Real H&C platform at Baker Street: westbound to Hammersmith.
+    assert_eq!(
+        dir(
+            "Westbound - Platform 6",
+            "inbound",
+            "hammersmith-city",
+            "Hammersmith"
+        ),
+        Direction::Westbound
+    );
+}
+
+#[test]
+fn hammersmith_city_towards_hammersmith_resolves_westbound() {
+    // Even when platform_name has no prefix, a signed Hammersmith
+    // destination should map to Westbound via the per-line towards table.
+    assert_eq!(
+        dir("Platform 6", "inbound", "hammersmith-city", "Hammersmith"),
+        Direction::Westbound
+    );
+}
+
+#[test]
+fn hammersmith_city_towards_barking_resolves_eastbound() {
+    assert_eq!(
+        dir("Platform 5", "outbound", "hammersmith-city", "Barking"),
+        Direction::Eastbound
+    );
+}
+
+#[test]
+fn circle_rejects_southbound_platform_prefix() {
+    // Circle line is east-west everywhere TfL labels it; an SB tag on a
+    // Circle prediction is a TfL data quirk we don't trust.
+    assert_eq!(
+        dir(
+            "Southbound - Platform 1",
+            "inbound",
+            "circle",
+            "Check Front of Train"
+        ),
+        Direction::Inbound
+    );
+}
+
+#[test]
+fn waterloo_city_rejects_northbound_platform_prefix() {
+    // W&C is east-west (Waterloo ↔ Bank). The wrong-axis prefix is
+    // ignored; the towards-based mapping recovers the correct compass
+    // (Bank → Eastbound), which is better than falling all the way
+    // through to the raw `outbound` field.
+    assert_eq!(
+        dir(
+            "Northbound - Platform 1",
+            "outbound",
+            "waterloo-city",
+            "Bank"
+        ),
+        Direction::Eastbound
+    );
+}
+
+#[test]
+fn bakerloo_rejects_eastbound_platform_prefix() {
+    // Bakerloo is north-south only (Harrow & Wealdstone N to Elephant &
+    // Castle S). An EB prefix is misclassified data; with a valid
+    // `towards` we still land on the correct compass direction.
+    assert_eq!(
+        dir(
+            "Eastbound - Platform 1",
+            "inbound",
+            "bakerloo",
+            "Harrow & Wealdstone"
+        ),
+        Direction::Northbound
+    );
+}
+
+#[test]
+fn bakerloo_keeps_northbound_platform_prefix() {
+    // The legitimate case still works.
+    assert_eq!(
+        dir(
+            "Northbound - Platform 4",
+            "inbound",
+            "bakerloo",
+            "Harrow & Wealdstone"
+        ),
+        Direction::Northbound
+    );
+}
+
+#[test]
+fn metropolitan_keeps_northbound_platform_prefix_at_baker_street() {
+    // Met IS north-south at Baker Street (Aldgate S, Amersham/Watford N),
+    // and TfL legitimately labels it that way. The whitelist should NOT
+    // touch Met — it has multi-axis topology elsewhere on the network.
+    assert_eq!(
+        dir(
+            "Northbound - Platform 4",
+            "inbound",
+            "metropolitan",
+            "Amersham"
+        ),
+        Direction::Northbound
+    );
+}
+
+#[test]
+fn jubilee_keeps_eastbound_platform_prefix() {
+    // Jubilee at Stratford runs east-west; Jubilee at Baker Street is
+    // labeled N/S. We allow both.
+    assert_eq!(
+        dir(
+            "Eastbound - Platform 14",
+            "inbound",
+            "jubilee",
+            "Stratford"
+        ),
+        Direction::Eastbound
+    );
+}
+
 #[test]
 fn case_insensitive_match() {
     // TfL has been observed to lowercase or title-case the same value

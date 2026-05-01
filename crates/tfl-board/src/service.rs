@@ -31,7 +31,9 @@ use futures::stream::{self, Stream};
 use tokio::time::{interval, MissedTickBehavior};
 
 use tfl_client::{clock::Clock, http::TflHttp, TflClient};
-use tfl_domain::{Arrival, Board, Direction, LineStatus, Platform, Station};
+use tfl_domain::{
+    line_compass_axis, Arrival, Board, Direction, LineStatus, Platform, Station,
+};
 
 use crate::config::BoardConfig;
 use crate::error::BoardError;
@@ -112,6 +114,7 @@ impl<H: TflHttp + 'static, C: Clock + 'static> BoardService<H, C> {
         let filtered = apply_filters(raw_arrivals, cfg);
         let filtered =
             drop_arrivals_for_lines_not_serving(&cfg.station_id, filtered, &self.client).await;
+        let filtered = drop_off_axis_predictions(filtered);
         let board = build_board(&cfg.station_id, filtered, self.clock.now(), None);
         Ok(board)
     }
@@ -428,6 +431,140 @@ enum TickOutcome {
 /// far worse than letting through a phantom one — and the cache is
 /// guaranteed warm in production by the time the second tick runs
 /// (the first stream tick + warm task in `lib.rs::setup`).
+/// Drop predictions whose compass axis doesn't match the line's axis at
+/// this station.
+///
+/// **The invariant.** At a given station, every train on a given TfL line
+/// runs along a single compass axis: N/S or E/W. Met is N/S at Baker
+/// Street and E/W at Watford, but at any one station it's pinned. So
+/// when an H&C platform-2 prediction shows up at Baker Street tagged
+/// "Northbound", or a Metropolitan prediction shows up tagged
+/// "Westbound" (sitting on the H&C platform), it's a TfL data quirk —
+/// typically an unsigned starter train physically parked on a sibling
+/// line's platform. Those phantoms create a third direction bucket on
+/// what should be a two-bucket line, and the user can't act on them.
+///
+/// **How we determine each line's axis at this station, per refresh:**
+///
+/// 1. **Network-wide override.** If [`tfl_domain::line_compass_axis`]
+///    pins the line (H&C, Circle, W&C, Central, Elizabeth = E/W;
+///    Bakerloo, Victoria = N/S), use that. These lines have a single
+///    axis everywhere on the network, so we can be authoritative even
+///    on a feed where every prediction is a phantom.
+/// 2. **Otherwise, infer from the data.** Count platform-prefix axes
+///    across the line's arrivals at this station; the dominant axis
+///    wins. So Met at Baker Street picks N/S from 13 NB+SB vs 1
+///    phantom WB, while Met at a station where every train says
+///    Westbound would pick E/W. No hardcoded per-station table.
+/// 3. **Tie / single arrival.** Skip the filter for the line — we
+///    don't have enough signal to call a phantom.
+///
+/// Once axes are pinned, we drop arrivals whose `direction` falls
+/// outside the line's axis. `Inbound`, `Outbound`, and `Unknown` are
+/// rejected on pinned lines — the frontend's `directionKeyAndLabel`
+/// fallback in `Board.svelte` would otherwise re-derive an off-axis
+/// bucket label from `platform_name` and re-introduce the phantom we
+/// just identified. One stderr warning is emitted per
+/// `(line_id, direction)` pair per refresh so upstream data drift
+/// stays observable.
+///
+/// Lines with no whitelist and no inference signal (rare — would
+/// require zero compass-prefix arrivals at the station) are passed
+/// through unchanged. Failing open beats hiding real trains.
+fn drop_off_axis_predictions(arrivals: Vec<Arrival>) -> Vec<Arrival> {
+    use std::collections::HashMap;
+
+    // Step 1: pin a CompassAxis per line for this refresh, preferring
+    // the network-wide override and falling back to dominant prefix.
+    let mut prefix_counts: HashMap<String, (usize, usize)> = HashMap::new();
+    for arrival in &arrivals {
+        let pl = arrival.platform_name.to_ascii_lowercase();
+        let entry = prefix_counts
+            .entry(arrival.line_id.clone())
+            .or_insert((0, 0));
+        if pl.starts_with("northbound") || pl.starts_with("southbound") {
+            entry.0 += 1;
+        } else if pl.starts_with("eastbound") || pl.starts_with("westbound") {
+            entry.1 += 1;
+        }
+    }
+
+    let mut axis_for_line: HashMap<String, tfl_domain::CompassAxis> = HashMap::new();
+    for line_id in prefix_counts.keys() {
+        if let Some(ax) = line_compass_axis(line_id) {
+            axis_for_line.insert(line_id.clone(), ax);
+            continue;
+        }
+        let (ns, ew) = prefix_counts.get(line_id).copied().unwrap_or((0, 0));
+        // Order matters here. The first guard is `ns + ew == 0` —
+        // without it the line falls through to `ns >= ew * 3`, which
+        // is `0 >= 0` (true), and we'd falsely pin NorthSouth on a
+        // line that gave us zero compass-prefix signal (e.g. Overground
+        // / Elizabeth where TfL emits bare `"Platform N"`). After that
+        // guard, a strict majority is required: a single off-axis
+        // prediction with no peers (1-vs-0) drops the phantom; a
+        // 1-vs-1 tie passes through; a 3-to-1 supermajority pins.
+        let inferred = if ns + ew == 0 {
+            None
+        } else if ew == 0 {
+            Some(tfl_domain::CompassAxis::NorthSouth)
+        } else if ns == 0 {
+            Some(tfl_domain::CompassAxis::EastWest)
+        } else if ns >= ew * 3 {
+            Some(tfl_domain::CompassAxis::NorthSouth)
+        } else if ew >= ns * 3 {
+            Some(tfl_domain::CompassAxis::EastWest)
+        } else {
+            None
+        };
+        if let Some(ax) = inferred {
+            axis_for_line.insert(line_id.clone(), ax);
+        }
+    }
+
+    // Step 2: drop arrivals whose direction is off-axis for the line.
+    let mut warned: std::collections::HashSet<(String, Direction)> =
+        std::collections::HashSet::new();
+    let mut kept: Vec<Arrival> = Vec::with_capacity(arrivals.len());
+    for arrival in arrivals {
+        let Some(axis) = axis_for_line.get(&arrival.line_id).copied() else {
+            // No axis pinned for this line at this station — pass through.
+            kept.push(arrival);
+            continue;
+        };
+        if direction_matches_line_axis_value(axis, arrival.direction) {
+            kept.push(arrival);
+            continue;
+        }
+        let key = (arrival.line_id.clone(), arrival.direction);
+        if warned.insert(key) {
+            eprintln!(
+                "[tfl-board] dropping off-axis prediction line={:?} direction={:?} (line axis: {axis:?}); typically an unsigned starter train on a sibling line's platform",
+                arrival.line_id, arrival.direction,
+            );
+        }
+    }
+    kept
+}
+
+/// Helper: does `direction` lie on `axis`? Pure compass-axis predicate;
+/// the per-(line, station) caller has already pinned the axis.
+fn direction_matches_line_axis_value(
+    axis: tfl_domain::CompassAxis,
+    direction: Direction,
+) -> bool {
+    matches!(
+        (axis, direction),
+        (
+            tfl_domain::CompassAxis::EastWest,
+            Direction::Eastbound | Direction::Westbound
+        ) | (
+            tfl_domain::CompassAxis::NorthSouth,
+            Direction::Northbound | Direction::Southbound
+        )
+    )
+}
+
 async fn drop_arrivals_for_lines_not_serving<H: TflHttp>(
     station_id: &str,
     arrivals: Vec<Arrival>,

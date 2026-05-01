@@ -107,13 +107,16 @@ pub fn infer_direction(
         None
     };
 
-    let dir = if platform_lower.starts_with("northbound") {
+    let allow_ns = line_allows_north_south(line_id);
+    let allow_ew = line_allows_east_west(line_id);
+
+    let dir = if platform_lower.starts_with("northbound") && allow_ns {
         Direction::Northbound
-    } else if platform_lower.starts_with("southbound") {
+    } else if platform_lower.starts_with("southbound") && allow_ns {
         Direction::Southbound
-    } else if platform_lower.starts_with("eastbound") {
+    } else if platform_lower.starts_with("eastbound") && allow_ew {
         Direction::Eastbound
-    } else if platform_lower.starts_with("westbound") {
+    } else if platform_lower.starts_with("westbound") && allow_ew {
         Direction::Westbound
     } else if let Some(compass) = infer_compass_from_towards(line_id, towards) {
         compass
@@ -126,6 +129,69 @@ pub fn infer_direction(
     };
 
     (dir, northern_branch)
+}
+
+/// Compass axis a TfL line is constrained to, when the topology is
+/// uniform across the network. `None` means the line legitimately
+/// labels its platforms differently at different stations (Met line
+/// at Baker Street is N/S but at Watford is E/W; Jubilee at Stratford
+/// is E, Stanmore is NW; Piccadilly, District, DLR — all multi-axis).
+///
+/// Used at refresh time to drop predictions that resolved to an
+/// off-axis bucket (Inbound/Outbound on an E/W-only line, etc.).
+/// Those are typically unsigned "Check Front of Train" starter trains
+/// physically sitting on a different line's platform; without this
+/// filter they pollute the line group with a third direction bucket
+/// that the user can't act on. See user-reported regression at Baker
+/// Street, 2026-05-01: H&C surfaced EB + WB + a phantom Inbound /
+/// Outbound bucket from such trains.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CompassAxis {
+    EastWest,
+    NorthSouth,
+}
+
+/// Strict compass axis for a line, or `None` when the line spans
+/// multiple axes on the network. Source of truth shared by the
+/// platform-prefix gate in [`infer_direction`] and the off-axis
+/// arrival filter in `tfl-board::service`.
+pub fn line_compass_axis(line_id: &str) -> Option<CompassAxis> {
+    match line_id {
+        "hammersmith-city" | "circle" | "waterloo-city" | "central" | "elizabeth"
+        | "elizabeth-line" => Some(CompassAxis::EastWest),
+        "bakerloo" | "victoria" => Some(CompassAxis::NorthSouth),
+        _ => None,
+    }
+}
+
+/// Whether a TfL line legitimately runs along the north-south axis
+/// somewhere on the network (and therefore TfL may emit a `"Northbound"` /
+/// `"Southbound"` platform_name prefix that we should trust).
+///
+/// Lines listed here as `false` are east-west everywhere TfL labels them;
+/// an N/S platform_name on a prediction for one of these lines is a TfL
+/// data quirk (typically a starter / unsigned train physically sitting
+/// on a different line's platform), so we ignore the prefix and let
+/// `infer_direction` fall through to the towards-based or raw-direction
+/// branches. See user-reported regression at Baker Street, 2026-05-01:
+/// H&C surfaced a phantom Northbound bucket alongside its real EB/WB.
+fn line_allows_north_south(line_id: &str) -> bool {
+    !matches!(
+        line_id,
+        "hammersmith-city"
+            | "circle"
+            | "waterloo-city"
+            | "central"
+            | "elizabeth"
+            | "elizabeth-line"
+    )
+}
+
+/// Mirror of [`line_allows_north_south`] for the east-west axis. Lines
+/// listed as `false` are north-south only, and an E/W platform prefix on
+/// such a prediction would be a misclassification.
+fn line_allows_east_west(line_id: &str) -> bool {
+    !matches!(line_id, "bakerloo" | "victoria")
 }
 
 /// Infer the Northern line branch from the `towards` label.
@@ -282,6 +348,65 @@ pub(crate) fn infer_compass_from_towards(line_id: &str, towards: &str) -> Option
                 Some(Direction::Eastbound)
             } else if lower.contains("romford") {
                 Some(Direction::Westbound)
+            } else {
+                None
+            }
+        }
+
+        // Hammersmith & City: Hammersmith ↔ Barking. East-west everywhere.
+        // Common short workings: Whitechapel, Plaistow, East Ham,
+        // Edgware Road (as a westbound terminus).
+        "hammersmith-city" => {
+            if any(&["barking", "plaistow", "east ham", "whitechapel"]) {
+                Some(Direction::Eastbound)
+            } else if any(&["hammersmith", "edgware road"]) {
+                Some(Direction::Westbound)
+            } else {
+                None
+            }
+        }
+
+        // Circle: looped E-W line via Edgware Road. Termini in TfL's API
+        // are mostly Edgware Road and Hammersmith (when running clockwise
+        // / anticlockwise via Aldgate). We map the common short-working
+        // termini, leaving ambiguous cases (e.g. unsigned trains) to fall
+        // through to inbound/outbound.
+        "circle" => {
+            if any(&["aldgate", "tower hill", "liverpool street"]) {
+                Some(Direction::Eastbound)
+            } else if any(&["hammersmith", "edgware road", "paddington"]) {
+                Some(Direction::Westbound)
+            } else {
+                None
+            }
+        }
+
+        // Waterloo & City: Waterloo (S/W) ↔ Bank (E). Only two stops.
+        "waterloo-city" => {
+            if lower.contains("bank") {
+                Some(Direction::Eastbound)
+            } else if lower.contains("waterloo") {
+                Some(Direction::Westbound)
+            } else {
+                None
+            }
+        }
+
+        // Bakerloo: Harrow & Wealdstone (N) ↔ Elephant & Castle (S).
+        // Common short workings: Stonebridge Park, Queen's Park, Willesden
+        // Junction (all northbound termini).
+        "bakerloo" => {
+            if any(&[
+                "harrow & wealdstone",
+                "harrow and wealdstone",
+                "stonebridge park",
+                "queen's park",
+                "queens park",
+                "willesden junction",
+            ]) {
+                Some(Direction::Northbound)
+            } else if lower.contains("elephant") {
+                Some(Direction::Southbound)
             } else {
                 None
             }
