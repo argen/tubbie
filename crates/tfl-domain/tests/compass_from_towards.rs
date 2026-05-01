@@ -478,12 +478,7 @@ fn jubilee_keeps_eastbound_platform_prefix() {
     // Jubilee at Stratford runs east-west; Jubilee at Baker Street is
     // labeled N/S. We allow both.
     assert_eq!(
-        dir(
-            "Eastbound - Platform 14",
-            "inbound",
-            "jubilee",
-            "Stratford"
-        ),
+        dir("Eastbound - Platform 14", "inbound", "jubilee", "Stratford"),
         Direction::Eastbound
     );
 }

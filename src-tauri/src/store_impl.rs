@@ -78,8 +78,7 @@ impl FavoritesStore for StorePluginFavoritesStore {
     }
 
     async fn save_favorites(&self, favorites: &[Favorite]) -> Result<(), String> {
-        let value =
-            serde_json::to_value(favorites).map_err(|e| format!("serialise error: {e}"))?;
+        let value = serde_json::to_value(favorites).map_err(|e| format!("serialise error: {e}"))?;
         let store = Arc::clone(&self.store);
         tokio::task::spawn_blocking(move || {
             store.set("favorites", value);

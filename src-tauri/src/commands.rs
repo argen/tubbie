@@ -356,10 +356,7 @@ pub(crate) async fn add_favorite_inner(
         common_name,
         lines,
     });
-    state
-        .favorites_store
-        .save_favorites(&favorites)
-        .await?;
+    state.favorites_store.save_favorites(&favorites).await?;
     Ok(favorites)
 }
 
@@ -370,10 +367,7 @@ pub(crate) async fn remove_favorite_inner(
     validate_station_id(&station_id)?;
     let mut favorites = load_favorites_inner(state).await?;
     favorites.retain(|f| f.station_id != station_id);
-    state
-        .favorites_store
-        .save_favorites(&favorites)
-        .await?;
+    state.favorites_store.save_favorites(&favorites).await?;
     Ok(favorites)
 }
 
@@ -2000,7 +1994,9 @@ mod tests {
         assert_eq!(result[0].station_id, sid);
         assert_eq!(result[0].common_name, name);
 
-        let loaded = load_favorites_inner(&state).await.expect("load should succeed");
+        let loaded = load_favorites_inner(&state)
+            .await
+            .expect("load should succeed");
         assert_eq!(loaded.len(), 1);
         assert_eq!(loaded[0].station_id, sid);
     }
@@ -2068,9 +2064,14 @@ mod tests {
         let result = remove_favorite_inner(sid.clone(), &state)
             .await
             .expect("remove should succeed");
-        assert!(result.is_empty(), "list must be empty after removing sole entry");
+        assert!(
+            result.is_empty(),
+            "list must be empty after removing sole entry"
+        );
 
-        let loaded = load_favorites_inner(&state).await.expect("load should succeed");
+        let loaded = load_favorites_inner(&state)
+            .await
+            .expect("load should succeed");
         assert!(loaded.is_empty(), "stored list must be empty too");
     }
 
@@ -2278,7 +2279,10 @@ mod tests {
         let first = load_favorites_inner(&state).await.expect("first load");
         let second = load_favorites_inner(&state).await.expect("second load");
 
-        assert_eq!(first, second, "re-loading a migrated config must be a no-op");
+        assert_eq!(
+            first, second,
+            "re-loading a migrated config must be a no-op"
+        );
     }
 
     // -----------------------------------------------------------------------

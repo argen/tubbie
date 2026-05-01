@@ -676,10 +676,10 @@ pub fn run() {
             // Favorites store: separate `"favorites"` key, same config.json file.
             // Opened lazily-idempotent by the plugin — re-opening the same
             // path just returns an existing Arc<Store> handle.
-            let favorites_store =
-                Arc::new(StorePluginFavoritesStore::open(app.handle()).expect(
-                    "failed to open favorites store",
-                )) as Arc<dyn state::FavoritesStore>;
+            let favorites_store = Arc::new(
+                StorePluginFavoritesStore::open(app.handle())
+                    .expect("failed to open favorites store"),
+            ) as Arc<dyn state::FavoritesStore>;
 
             let stream_abort: Arc<RwLock<Option<AbortHandle>>> = Arc::new(RwLock::new(None));
 
