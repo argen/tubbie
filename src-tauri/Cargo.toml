@@ -29,6 +29,18 @@ tauri-build = { version = "2", features = [] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.6"
+objc2-foundation = { version = "0.3", features = [
+    "NSArray",
+    "NSError",
+    "NSObject",
+    "NSString",
+] }
+objc2-core-location = { version = "0.3", features = [
+    "CLError",
+    "CLLocation",
+    "CLLocationManager",
+    "CLLocationManagerDelegate",
+] }
 
 [dev-dependencies]
 # `test-util` is required by tests that use `#[tokio::test(start_paused = true)]`

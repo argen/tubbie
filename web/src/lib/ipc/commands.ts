@@ -14,6 +14,9 @@ import {
   type Favorite,
   type LineRef,
   type LineStatus,
+  type LocationError,
+  type LocationFix,
+  type NearbyStation,
   type Station,
   isBoard,
   isBoardConfig,
@@ -21,6 +24,8 @@ import {
   isDisplayPrefs,
   isFavorite,
   isLineStatus,
+  isLocationFix,
+  isNearbyStation,
   isStation,
 } from './types.js';
 
@@ -35,6 +40,80 @@ export async function searchStations(query: string): Promise<Station[]> {
     throw new TypeError(`search_stations: expected array, got ${typeof raw}`);
   }
   return raw.filter((item): item is Station => isStation(item));
+}
+
+/**
+ * Find the closest stations to a `(lat, lon)` query point.
+ *
+ * The Rust side validates lat/lon ranges, NaN/infinity, and clamps
+ * `limit` to `[1, 20]`. Results are sorted ascending by haversine
+ * distance and dropped past the 25 km radius defined in
+ * `crates/tfl-client/src/nearest.rs`.
+ */
+export async function findNearestStations(
+  lat: number,
+  lon: number,
+  limit: number,
+): Promise<NearbyStation[]> {
+  const raw = await invoke<unknown>('find_nearest_stations', { lat, lon, limit });
+  if (!Array.isArray(raw)) {
+    throw new TypeError(`find_nearest_stations: expected array, got ${typeof raw}`);
+  }
+  return raw.filter((item): item is NearbyStation => isNearbyStation(item));
+}
+
+/**
+ * Acquire a single CoreLocation fix via the macOS native bridge.
+ * Single-flight, single-shot, 8 s timeout.
+ *
+ * On error, resolves to a `LocationError` discriminated union — never
+ * a thrown string. Each variant maps 1:1 to a listbox row in
+ * `StationSearch.svelte`.
+ */
+export async function requestCurrentLocation(): Promise<
+  { ok: true; fix: LocationFix } | { ok: false; error: LocationError }
+> {
+  try {
+    const raw = await invoke<unknown>('request_current_location');
+    if (isLocationFix(raw)) {
+      return { ok: true, fix: raw };
+    }
+    return {
+      ok: false,
+      error: { kind: 'Internal', message: 'unexpected response shape' },
+    };
+  } catch (e: unknown) {
+    // Tauri serialises `Result::Err(LocationError)` as a JSON object
+    // matching the discriminated union. If something else came back
+    // (string error from a panic, network failure, etc.) we collapse
+    // it onto `Timeout` so the UI shows the retry-prone row.
+    if (typeof e === 'object' && e !== null && 'kind' in e) {
+      const kind = (e as { kind: unknown }).kind;
+      switch (kind) {
+        case 'PermissionDenied':
+        case 'PermissionRestricted':
+        case 'ServicesDisabled':
+        case 'Timeout':
+        case 'LowAccuracy':
+        case 'AppBackground':
+          return { ok: false, error: { kind } };
+        case 'Internal': {
+          const msg = (e as { message?: unknown }).message;
+          return {
+            ok: false,
+            error: { kind: 'Internal', message: typeof msg === 'string' ? msg : '' },
+          };
+        }
+      }
+    }
+    return {
+      ok: false,
+      error: {
+        kind: 'Internal',
+        message: e instanceof Error ? e.message : String(e),
+      },
+    };
+  }
 }
 
 /** Fetch the arrivals board for the currently saved config (one-shot). */

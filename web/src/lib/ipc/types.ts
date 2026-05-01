@@ -91,6 +91,54 @@ export interface Station {
 }
 
 // ---------------------------------------------------------------------------
+// NearbyStation / LocationFix / LocationError — "find nearest station" feature
+// ---------------------------------------------------------------------------
+
+/** A station ranked by distance from a query coordinate. Mirrors
+ * `tfl_domain::NearbyStation`. `distance_m` is the great-circle
+ * distance — apply `formatDistance()` at render time to get the
+ * walking-distance approximation displayed in the listbox. */
+export interface NearbyStation {
+  station: Station;
+  distance_m: number;
+}
+
+/** One CoreLocation fix, mirrors `LocationFix` in
+ * `src-tauri/src/location.rs`. */
+export interface LocationFix {
+  lat: number;
+  lon: number;
+  accuracy_m: number;
+}
+
+/** Reasons the location request failed. Each variant maps 1:1 to a
+ * listbox row in `StationSearch.svelte` — the renderer never invents
+ * copy. Mirrors the discriminated `LocationError` enum on the Rust
+ * side (serde tagged with `kind`). */
+export type LocationError =
+  | { kind: 'PermissionDenied' }
+  | { kind: 'PermissionRestricted' }
+  | { kind: 'ServicesDisabled' }
+  | { kind: 'Timeout' }
+  | { kind: 'LowAccuracy' }
+  | { kind: 'AppBackground' }
+  | { kind: 'Internal'; message: string };
+
+export function isNearbyStation(v: unknown): v is NearbyStation {
+  if (!isRecord(v)) return false;
+  return typeof v.distance_m === 'number' && isStation(v.station);
+}
+
+export function isLocationFix(v: unknown): v is LocationFix {
+  if (!isRecord(v)) return false;
+  return (
+    typeof v.lat === 'number' &&
+    typeof v.lon === 'number' &&
+    typeof v.accuracy_m === 'number'
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Favorite — saved station (separate `"favorites"` store key)
 // ---------------------------------------------------------------------------
 

@@ -189,3 +189,47 @@ export function lineColorVar(lineId: string): string {
 export function revealDuration(text: string): number {
   return Math.min(text.length * 60, 1500);
 }
+
+/**
+ * Format a great-circle distance (metres) as a TfL dot-matrix-style
+ * label. The chosen unit follows the locale: `en-GB` and `en-US` get
+ * miles ("0.3MI"); every other locale gets metric ("220M" / "1.4KM").
+ *
+ * Why a 1.3× walking-distance fudge: haversine measures the chord
+ * across London's grid. Real walking paths are longer (rivers,
+ * stations on opposite sides of a hub, no zebra crossings). 1.3× is
+ * the rule-of-thumb scaling pedestrian routing engines apply across
+ * dense urban centres — close enough for a "nearest 3 stations"
+ * picker, and free.
+ *
+ * Output is always uppercase, no internal space, two significant
+ * figures so the listbox column stays consistent regardless of
+ * whether the value is "0.3MI" (4 chars) or "1.4KM" (5 chars).
+ */
+export function formatDistance(meters: number, locale: string): string {
+  // Defensive: NaN / negative would surface as "NANMI" — cleaner to
+  // collapse to an empty label so the row simply lacks a distance
+  // chip rather than render garbage.
+  if (!Number.isFinite(meters) || meters < 0) return '';
+
+  const adjusted = meters * 1.3;
+  const lc = locale.toLowerCase();
+  const useMiles = lc === 'en-gb' || lc === 'en-us' || lc.startsWith('en-gb-') || lc.startsWith('en-us-');
+
+  if (useMiles) {
+    const miles = adjusted / 1609.344;
+    if (miles < 0.1) {
+      return `${miles.toFixed(2)}MI`;
+    }
+    return `${miles.toFixed(1)}MI`;
+  }
+
+  if (adjusted < 1000) {
+    // Round to nearest 10 m so a 213 m haversine becomes "210M"
+    // — sub-10 m precision is meaningless to a pedestrian.
+    const rounded = Math.round(adjusted / 10) * 10;
+    return `${String(rounded)}M`;
+  }
+  const km = adjusted / 1000;
+  return `${km.toFixed(1)}KM`;
+}

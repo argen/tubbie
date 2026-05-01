@@ -8,7 +8,14 @@
  *   vi.mock('@tauri-apps/api/core', () => ({ invoke: mockInvoke }));
  *   vi.mock('@tauri-apps/api/event', () => ({ listen: mockListen }));
  */
-import type { Board, BoardConfig, LineStatus, Station } from './types.js';
+import type {
+  Board,
+  BoardConfig,
+  LineStatus,
+  LocationFix,
+  NearbyStation,
+  Station,
+} from './types.js';
 
 // ---------------------------------------------------------------------------
 // Sample fixture data (valid instances of every IPC type)
@@ -69,6 +76,50 @@ export const sampleLineStatus: LineStatus = {
   disruption_text: null,
 };
 
+export const sampleLocationFix: LocationFix = {
+  // Bank station coordinates — useful for fixture tests that want a real
+  // central-London point.
+  lat: 51.5133,
+  lon: -0.0886,
+  accuracy_m: 12,
+};
+
+export const sampleNearbyStations: NearbyStation[] = [
+  {
+    station: {
+      id: '940GZZLUBNK',
+      common_name: 'Bank Underground Station',
+      modes: ['tube'],
+      lat: 51.5133,
+      lon: -0.0886,
+      lines: [{ id: 'central', name: 'Central' }],
+    },
+    distance_m: 0,
+  },
+  {
+    station: {
+      id: '940GZZLUMTC',
+      common_name: 'Monument Underground Station',
+      modes: ['tube'],
+      lat: 51.5108,
+      lon: -0.0863,
+      lines: [{ id: 'district', name: 'District' }],
+    },
+    distance_m: 320,
+  },
+  {
+    station: {
+      id: '940GZZLUSPL',
+      common_name: "St Paul's Underground Station",
+      modes: ['tube'],
+      lat: 51.5146,
+      lon: -0.0973,
+      lines: [{ id: 'central', name: 'Central' }],
+    },
+    distance_m: 620,
+  },
+];
+
 export const sampleDisruptedLineStatus: LineStatus = {
   line_id: 'northern',
   status: [{ severity: 5, description: 'Minor Delays' }],
@@ -98,6 +149,8 @@ const defaultHandlers: Record<string, MockInvokeHandler> = {
   list_favorites: () => [],
   add_favorite: () => [],
   remove_favorite: () => [],
+  find_nearest_stations: () => sampleNearbyStations,
+  request_current_location: () => sampleLocationFix,
 };
 
 let handlers: Record<string, MockInvokeHandler> = { ...defaultHandlers };

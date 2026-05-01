@@ -35,7 +35,9 @@
 use tauri::State;
 
 use tfl_board::{BoardConfig, VALID_THEME_IDS};
-use tfl_domain::{is_supported_line_id, Board, Favorite, LineRef, LineStatus, Station};
+use tfl_domain::{
+    is_supported_line_id, Board, Favorite, LineRef, LineStatus, NearbyStation, Station,
+};
 
 use crate::state::{AppState, DisplayPrefs};
 
@@ -78,6 +80,33 @@ pub(crate) fn validate_line_id(id: &str) -> Result<(), String> {
     {
         return Err(format!(
             "validation: line_id must be lowercase alphanumeric + '-': {id:?}"
+        ));
+    }
+    Ok(())
+}
+
+/// Validate latitude / longitude / limit arguments for the
+/// `find_nearest_stations` command. Rejects NaN, infinity, out-of-range
+/// coordinates, and limits outside `[1, 20]` so a buggy or hostile
+/// renderer cannot ask us to rank thousands of stations or dispatch
+/// CoreLocation at coordinates that overflow our haversine.
+pub(crate) fn validate_nearest_args(lat: f64, lon: f64, limit: u32) -> Result<(), String> {
+    if !lat.is_finite() || !lon.is_finite() {
+        return Err("validation: lat/lon must be finite".to_string());
+    }
+    if !(-90.0..=90.0).contains(&lat) {
+        return Err(format!(
+            "validation: lat must be in [-90, 90], got {lat}"
+        ));
+    }
+    if !(-180.0..=180.0).contains(&lon) {
+        return Err(format!(
+            "validation: lon must be in [-180, 180], got {lon}"
+        ));
+    }
+    if !(1..=20).contains(&limit) {
+        return Err(format!(
+            "validation: limit must be in [1, 20], got {limit}"
         ));
     }
     Ok(())
@@ -189,6 +218,44 @@ pub(crate) async fn search_stations_inner(
         );
     }
     Ok(stations)
+}
+
+pub(crate) async fn find_nearest_stations_inner(
+    lat: f64,
+    lon: f64,
+    limit: u32,
+    state: &AppState,
+) -> Result<Vec<NearbyStation>, String> {
+    validate_nearest_args(lat, lon, limit)?;
+    #[cfg(debug_assertions)]
+    let started = std::time::Instant::now();
+    let nearby = crate::state::AnyBoardService::find_nearest_stations(
+        &*state.board_service,
+        lat,
+        lon,
+        limit as usize,
+    )
+    .await
+    .map_err(|e| e.to_string())?;
+    #[cfg(debug_assertions)]
+    {
+        // Diagnostic line — never logs lat/lon, only the result count
+        // and the closest station's name + distance so we can sanity-
+        // check ranking from a dev console.
+        let first = nearby.first().map(|n| {
+            (
+                n.station.common_name.as_str(),
+                n.distance_m.round() as i64,
+            )
+        });
+        eprintln!(
+            "[find_nearest_stations] elapsed={}ms results={} first={:?}",
+            started.elapsed().as_millis(),
+            nearby.len(),
+            first,
+        );
+    }
+    Ok(nearby)
 }
 
 pub(crate) async fn get_board_inner(state: &AppState) -> Result<Board, String> {
@@ -508,6 +575,41 @@ pub async fn search_stations(
     state: State<'_, AppState>,
 ) -> Result<Vec<Station>, String> {
     search_stations_inner(&query, &state).await
+}
+
+/// Find the closest stations to a `(lat, lon)` query point.
+///
+/// `limit` is clamped at the validation layer to `[1, 20]`. NaN and
+/// infinity are rejected. Results are sorted ascending by haversine
+/// distance and capped at the 25 km radius defined in
+/// `crates/tfl-client/src/nearest.rs` — out-of-network coords (Paris,
+/// Manchester) yield an empty vector.
+#[tauri::command]
+pub async fn find_nearest_stations(
+    lat: f64,
+    lon: f64,
+    limit: u32,
+    state: State<'_, AppState>,
+) -> Result<Vec<NearbyStation>, String> {
+    find_nearest_stations_inner(lat, lon, limit, &state).await
+}
+
+/// Request a single CoreLocation fix from the macOS bridge.
+///
+/// Single-flight: a double-tap on the crosshair button serialises into
+/// two sequential requests. Single-shot: each request creates a fresh
+/// `CLLocationManager` and tears it down on completion. 8 s timeout.
+///
+/// On non-macOS targets this command returns an error — the iOS shell
+/// substitutes its own platform bridge by including a sibling
+/// `location.rs` and registering the same command from its own
+/// `lib.rs` invoke handler.
+#[cfg(target_os = "macos")]
+#[tauri::command]
+pub async fn request_current_location(
+    app: tauri::AppHandle,
+) -> Result<crate::location::LocationFix, crate::location::LocationError> {
+    crate::location::request_current_location(app).await
 }
 
 /// Fetch the arrivals board for the currently saved station config.

@@ -4,5 +4,7 @@
 <dict>
     <key>LSUIElement</key>
     <true/>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>Tubbie uses your location once to find the nearest station. Location is not stored or sent anywhere.</string>
 </dict>
 </plist>

@@ -569,74 +569,19 @@ impl<H: TflHttp> TflClient<H> {
         let stations = self.stop_points_cached().await?;
         let q = trimmed.to_lowercase();
 
-        // Prefix-aware whitelist for canonical station group ids:
-        //   - `940GZZLU*` — London Underground canonical
-        //   - `940GZZDL*` — DLR canonical
-        //   - `910G*` — National Rail group; admit only those whose modes
-        //     include `overground` or `elizabeth-line` (the 910G NaPTAN
-        //     range overlaps with NR-only operators like Gatwick Express
-        //     and Thameslink, which we don't surface).
-        //
-        // Excluded by absence:
-        //   - `9400ZZLU*`, `4900*`, `2100*` — platform-level children that
-        //     would duplicate rows in the dropdown
-        //   - `HUB*` — multi-mode aggregators with no stable arrivals id
+        // Whitelist canonical NaPTAN-prefix entries, then narrow to
+        // common-name substring matches. Substring filtering happens
+        // before hub dedupe so that a hub child whose
+        // `commonName` happens to differ from its sibling (rare, but
+        // observed historically with Bank/Monument before TfL aligned
+        // them) is given a fair chance to appear before being collapsed.
         let prefiltered: Vec<Station> = stations
             .into_iter()
-            .filter(|s| {
-                if s.id.starts_with("940GZZLU") || s.id.starts_with("940GZZDL") {
-                    true
-                } else if s.id.starts_with("910G") {
-                    s.modes
-                        .iter()
-                        .any(|m| matches!(m.as_str(), "overground" | "elizabeth-line"))
-                } else {
-                    false
-                }
-            })
+            .filter(is_canonical_station_id)
             .filter(|s| s.common_name.to_lowercase().contains(&q))
             .collect();
 
-        // Dedupe by `hub_naptan_code`: at multi-mode interchanges (Bank,
-        // Farringdon, …) the per-mode `/StopPoint/Mode/{mode}` feeds each
-        // return their own canonical entry — `940GZZLUBNK` and `940GZZDLBNK`
-        // both have `hubNaptanCode: HUBBAN` because they're the same
-        // physical station. After the hub-merge step in `stop_points_cached`
-        // both entries also carry the same union of lines, so the dropdown
-        // shows two near-identical rows that route to the same arrivals via
-        // the hub-merge fan-out in `get_arrivals`. Keep one canonical entry
-        // per hub code, preferring 940GZZLU (tube) > 940GZZDL (DLR) > 910G
-        // (Overground / Elizabeth) — the user's mental model maps a hub to
-        // its tube parent at every interchange we surface today.
-        //
-        // Stations whose `hub_naptan_code` is `None` (Hampstead Heath,
-        // Belsize Park, most single-mode stops) are passed through
-        // unchanged — they have no hub partner to dedupe against.
-        let prefix_priority = |id: &str| -> u8 {
-            if id.starts_with("940GZZLU") {
-                0
-            } else if id.starts_with("940GZZDL") {
-                1
-            } else {
-                2
-            }
-        };
-        let mut by_hub: HashMap<String, Station> = HashMap::new();
-        let mut without_hub: Vec<Station> = Vec::new();
-        for s in prefiltered {
-            match s.hub_naptan_code.clone() {
-                Some(hub_id) => match by_hub.get(&hub_id) {
-                    Some(existing) if prefix_priority(&existing.id) <= prefix_priority(&s.id) => {
-                        // Existing entry is higher- or equal-priority; drop the new one.
-                    }
-                    _ => {
-                        by_hub.insert(hub_id, s);
-                    }
-                },
-                None => without_hub.push(s),
-            }
-        }
-        let mut matches: Vec<Station> = by_hub.into_values().chain(without_hub).collect();
+        let mut matches = dedupe_by_hub_naptan(prefiltered);
 
         // Sort by relevance tier, then alphabetically within each tier.
         matches.sort_by(|a, b| {
@@ -651,6 +596,36 @@ impl<H: TflHttp> TflClient<H> {
 
         matches.truncate(20);
         Ok(matches)
+    }
+
+    /// Find stations sorted by haversine distance from `(lat, lon)`,
+    /// dropping any farther than [`crate::nearest::MAX_RADIUS_M`] and
+    /// returning at most `limit` results.
+    ///
+    /// Reuses the same NaPTAN canonical-prefix whitelist + hub dedupe
+    /// as `search_stations` (see [`is_canonical_station_id`] and
+    /// [`dedupe_by_hub_naptan`]) so hub interchanges show one row per
+    /// physical station — the user never sees `Bank` and `Bank`
+    /// stacked at distances 0 m and 4 m apart.
+    ///
+    /// Reads from `stop_points_cached`, so the same stale-OK contract
+    /// applies (invariant #20): if the cache has data (fresh or stale)
+    /// we use it; only a fully cold cache blocks on the network. The
+    /// periodic refresh task in `lib.rs::run` keeps the cache warm
+    /// out-of-band.
+    pub async fn find_nearest_stations(
+        &self,
+        lat: f64,
+        lon: f64,
+        limit: usize,
+    ) -> Result<Vec<tfl_domain::NearbyStation>, TflError> {
+        let stations = self.stop_points_cached().await?;
+        let candidates: Vec<Station> = stations
+            .into_iter()
+            .filter(is_canonical_station_id)
+            .collect();
+        let candidates = dedupe_by_hub_naptan(candidates);
+        Ok(crate::nearest::rank_nearest(candidates, lat, lon, limit))
     }
 
     /// Pre-fetch and cache the stop-points list. Fire-and-forget from app
@@ -1069,6 +1044,80 @@ impl<H: TflHttp> TflClient<H> {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+/// `true` iff `s` carries one of the canonical NaPTAN stop-point id
+/// prefixes that we surface to the user.
+///
+/// - `940GZZLU*` — London Underground canonical
+/// - `940GZZDL*` — DLR canonical
+/// - `910G*` — National Rail group; admit only those whose modes
+///   include `overground` or `elizabeth-line` (the 910G NaPTAN range
+///   overlaps with NR-only operators like Gatwick Express and
+///   Thameslink, which we don't surface).
+///
+/// Excluded by absence (callers see `false`):
+/// - `9400ZZLU*`, `4900*`, `2100*` — platform-level children that
+///   would duplicate rows in any results list
+/// - `HUB*` — multi-mode aggregators with no stable arrivals id
+///
+/// Used by both `search_stations` and `find_nearest_stations`. See
+/// invariant #13 in `tubbie/CLAUDE.md`.
+pub(crate) fn is_canonical_station_id(s: &Station) -> bool {
+    if s.id.starts_with("940GZZLU") || s.id.starts_with("940GZZDL") {
+        true
+    } else if s.id.starts_with("910G") {
+        s.modes
+            .iter()
+            .any(|m| matches!(m.as_str(), "overground" | "elizabeth-line"))
+    } else {
+        false
+    }
+}
+
+/// Collapse stations that share a `hub_naptan_code` down to one canonical
+/// entry per hub, preferring `940GZZLU` (Tube) over `940GZZDL` (DLR) over
+/// `910G` (Overground / Elizabeth).
+///
+/// At multi-mode interchanges (Bank, Farringdon, Stratford, …) the
+/// per-mode `/StopPoint/Mode/{mode}` feeds each return their own
+/// canonical entry — `940GZZLUBNK` and `940GZZDLBNK` both have
+/// `hubNaptanCode: HUBBAN`. After hub-merge in `stop_points_cached`,
+/// both entries also carry the same union of lines, so consumers
+/// (search dropdown, "near me" listbox) would otherwise see two
+/// near-identical rows that route to the same arrivals via the
+/// hub-merge fan-out in `get_arrivals`.
+///
+/// Stations whose `hub_naptan_code` is `None` (Hampstead Heath,
+/// Belsize Park, single-mode stops) are passed through unchanged —
+/// no hub partner to dedupe against. See invariant #18 in
+/// `tubbie/CLAUDE.md`.
+pub(crate) fn dedupe_by_hub_naptan(stations: Vec<Station>) -> Vec<Station> {
+    let prefix_priority = |id: &str| -> u8 {
+        if id.starts_with("940GZZLU") {
+            0
+        } else if id.starts_with("940GZZDL") {
+            1
+        } else {
+            2
+        }
+    };
+    let mut by_hub: HashMap<String, Station> = HashMap::new();
+    let mut without_hub: Vec<Station> = Vec::new();
+    for s in stations {
+        match s.hub_naptan_code.clone() {
+            Some(hub_id) => match by_hub.get(&hub_id) {
+                Some(existing) if prefix_priority(&existing.id) <= prefix_priority(&s.id) => {
+                    // Existing entry is higher- or equal-priority; drop the new one.
+                }
+                _ => {
+                    by_hub.insert(hub_id, s);
+                }
+            },
+            None => without_hub.push(s),
+        }
+    }
+    by_hub.into_values().chain(without_hub).collect()
+}
 
 /// Assign a sort key (lower = more relevant) to a lowercased station name.
 ///
