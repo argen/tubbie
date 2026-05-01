@@ -31,9 +31,7 @@ use futures::stream::{self, Stream};
 use tokio::time::{interval, MissedTickBehavior};
 
 use tfl_client::{clock::Clock, http::TflHttp, TflClient};
-use tfl_domain::{
-    line_compass_axis, Arrival, Board, Direction, LineStatus, Platform, Station,
-};
+use tfl_domain::{line_compass_axis, Arrival, Board, Direction, LineStatus, Platform, Station};
 
 use crate::config::BoardConfig;
 use crate::error::BoardError;
@@ -115,6 +113,7 @@ impl<H: TflHttp + 'static, C: Clock + 'static> BoardService<H, C> {
         let filtered =
             drop_arrivals_for_lines_not_serving(&cfg.station_id, filtered, &self.client).await;
         let filtered = drop_off_axis_predictions(filtered);
+        let filtered = drop_arrivals_terminating_at_queried_station(filtered);
         let board = build_board(&cfg.station_id, filtered, self.clock.now(), None);
         Ok(board)
     }
@@ -549,10 +548,7 @@ fn drop_off_axis_predictions(arrivals: Vec<Arrival>) -> Vec<Arrival> {
 
 /// Helper: does `direction` lie on `axis`? Pure compass-axis predicate;
 /// the per-(line, station) caller has already pinned the axis.
-fn direction_matches_line_axis_value(
-    axis: tfl_domain::CompassAxis,
-    direction: Direction,
-) -> bool {
+fn direction_matches_line_axis_value(axis: tfl_domain::CompassAxis, direction: Direction) -> bool {
     matches!(
         (axis, direction),
         (
@@ -563,6 +559,45 @@ fn direction_matches_line_axis_value(
             Direction::Northbound | Direction::Southbound
         )
     )
+}
+
+/// Drop predictions whose destination is the queried station itself.
+///
+/// At a terminus (Edgware, Mill Hill East, Stanmore, …) every TfL
+/// prediction for the inbound direction has `destination_name` equal to
+/// `station_name`. The user is standing on the platform watching trains
+/// arrive *into the terminus* and then continue back as the only
+/// outbound service the line offers from that point — but the inbound
+/// arrival is by definition not "going" anywhere from here. Showing it
+/// in a "Northbound: Edgware" column at Edgware reads as a tautology
+/// and confuses the user (the destination column is the same as the
+/// station header).
+///
+/// This is fully data-driven: no per-station list, no per-line list. We
+/// compare `arrival.station_name` (TfL's name for the station that this
+/// prediction is for) to `arrival.destination_name`. Both come from the
+/// same TfL response shape so the strings already match in casing /
+/// suffix; we normalise (lowercase + trim whitespace) defensively in
+/// case TfL ever drifts. Arrivals where the two match are dropped.
+///
+/// The legitimate "first stop is also the destination" case (a one-stop
+/// short-working) is vanishingly rare on TfL and would still display as
+/// a normal arrival when consumed at any station upstream of the
+/// terminus, so erring on the side of dropping at the terminus itself
+/// is the right trade-off.
+fn drop_arrivals_terminating_at_queried_station(arrivals: Vec<Arrival>) -> Vec<Arrival> {
+    arrivals
+        .into_iter()
+        .filter(|a| {
+            let lhs = a.station_name.trim().to_ascii_lowercase();
+            let rhs = a.destination_name.trim().to_ascii_lowercase();
+            // Both empty: TfL gave us nothing to compare; pass through.
+            if lhs.is_empty() || rhs.is_empty() {
+                return true;
+            }
+            lhs != rhs
+        })
+        .collect()
 }
 
 async fn drop_arrivals_for_lines_not_serving<H: TflHttp>(
@@ -1335,6 +1370,127 @@ mod tests {
             southbound.arrivals.len(),
             2,
             "both Southbound trains must be preserved despite shared id"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // Test: terminus filter — drop arrivals whose destination IS the queried
+    // station. At Edgware (Northern terminus), every inbound prediction has
+    // destination_name = "Edgware Underground Station" = station_name. We
+    // drop these so the user doesn't see "Northbound: Edgware" while standing
+    // AT Edgware.
+    // -----------------------------------------------------------------------
+
+    fn make_terminus_test_arrival(
+        station_name: &str,
+        destination_name: &str,
+        direction: Direction,
+    ) -> tfl_domain::Arrival {
+        tfl_domain::Arrival {
+            id: format!("test-{station_name}-{destination_name}-{direction:?}"),
+            station_name: station_name.to_string(),
+            platform_name: match direction {
+                Direction::Northbound => "Northbound - Platform 1".to_string(),
+                Direction::Southbound => "Southbound - Platform 2".to_string(),
+                Direction::Eastbound => "Eastbound - Platform 1".to_string(),
+                Direction::Westbound => "Westbound - Platform 2".to_string(),
+                _ => "Platform 1".to_string(),
+            },
+            line_id: "northern".to_string(),
+            line_name: "Northern".to_string(),
+            direction,
+            northern_branch: None,
+            destination_name: destination_name.to_string(),
+            towards: destination_name.to_string(),
+            current_location: String::new(),
+            time_to_station: 60,
+            expected_arrival: chrono::Utc::now(),
+            naptan_id: "940TEST".to_string(),
+        }
+    }
+
+    #[test]
+    fn terminus_filter_drops_arrival_whose_destination_is_the_queried_station() {
+        let arrivals = vec![make_terminus_test_arrival(
+            "Edgware Underground Station",
+            "Edgware Underground Station",
+            Direction::Northbound,
+        )];
+        let kept = drop_arrivals_terminating_at_queried_station(arrivals);
+        assert!(
+            kept.is_empty(),
+            "arrival terminating at the queried station must be dropped"
+        );
+    }
+
+    #[test]
+    fn terminus_filter_keeps_arrival_with_a_different_destination() {
+        let arrivals = vec![make_terminus_test_arrival(
+            "Belsize Park Underground Station",
+            "Edgware Underground Station",
+            Direction::Northbound,
+        )];
+        let kept = drop_arrivals_terminating_at_queried_station(arrivals);
+        assert_eq!(
+            kept.len(),
+            1,
+            "non-terminating arrival must pass through unchanged"
+        );
+    }
+
+    #[test]
+    fn terminus_filter_normalises_case_and_whitespace() {
+        // Defensive: TfL is consistent within a single response, but if it
+        // ever drifts (extra trailing space, different casing), we still
+        // catch the terminus case.
+        let arrivals = vec![make_terminus_test_arrival(
+            "  Edgware Underground Station ",
+            "edgware underground station",
+            Direction::Northbound,
+        )];
+        let kept = drop_arrivals_terminating_at_queried_station(arrivals);
+        assert!(
+            kept.is_empty(),
+            "case/whitespace differences must not let a terminus arrival through"
+        );
+    }
+
+    #[test]
+    fn terminus_filter_passes_through_when_either_field_is_empty() {
+        // Empty station_name or destination_name = no signal; never drop
+        // (failing open is safer than hiding real trains).
+        let mut a1 =
+            make_terminus_test_arrival("", "Edgware Underground Station", Direction::Northbound);
+        a1.id = "a1".to_string();
+        let mut a2 =
+            make_terminus_test_arrival("Edgware Underground Station", "", Direction::Northbound);
+        a2.id = "a2".to_string();
+
+        let kept = drop_arrivals_terminating_at_queried_station(vec![a1, a2]);
+        assert_eq!(kept.len(), 2, "empty-field arrivals must pass through");
+    }
+
+    #[test]
+    fn terminus_filter_only_drops_the_terminating_arrival_in_a_mixed_set() {
+        // Edgware: inbound NB train terminates here ("Edgware → Edgware",
+        // dropped); outbound SB train heads to Morden ("Edgware → Morden",
+        // kept). This is the realistic Edgware payload shape.
+        let drop_me = make_terminus_test_arrival(
+            "Edgware Underground Station",
+            "Edgware Underground Station",
+            Direction::Northbound,
+        );
+        let keep_me = make_terminus_test_arrival(
+            "Edgware Underground Station",
+            "Morden Underground Station",
+            Direction::Southbound,
+        );
+
+        let kept = drop_arrivals_terminating_at_queried_station(vec![drop_me, keep_me.clone()]);
+        assert_eq!(kept.len(), 1, "exactly one arrival should remain");
+        assert_eq!(
+            kept[0].destination_name, keep_me.destination_name,
+            "the surviving arrival is the outbound (non-terminus) one"
         );
     }
 }

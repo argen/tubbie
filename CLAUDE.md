@@ -325,6 +325,23 @@ bottom of this doc, not just the unit tests.**
     `crates/tfl-domain/tests/compass_from_towards.rs` with at least
     one assertion per direction.
 
+24. **`BoardService::refresh` MUST drop arrivals whose destination is
+    the queried station itself.** At a terminus (Edgware, Mill Hill
+    East, Stanmore, …) every TfL prediction for the inbound
+    direction has `destination_name == station_name`, because the
+    train physically terminates here. Showing those rows in a
+    "Northbound: Edgware" column at Edgware itself reads as a
+    tautology and the user reported it as broken. The filter
+    `drop_arrivals_terminating_at_queried_station` runs after
+    `drop_off_axis_predictions` and compares the two strings
+    case-insensitively after trimming. Fully data-driven — no
+    per-station list, no per-line list — so any future terminus
+    (re-extension of W&C, pop-up Crossrail terminus, branch closure
+    short-working) gets the same treatment without code changes.
+    Fail-open when either field is empty: TfL has given us no
+    signal, hiding real trains is worse than showing a tautology.
+    Guarded by `terminus_filter_*` tests in `service.rs`.
+
 ## Test harness — the rules
 
 **Tests are not optional for this pipeline.** Visual smoke testing is
@@ -415,6 +432,11 @@ These tests must stay green or you're shipping a regression:
 | `src-tauri/src/commands.rs`                                   | `save_config_then_get_board_applies_station_but_does_not_filter_lines` | end-to-end: backend hands full set through; chip filter is display-only |
 | `web/src/lib/__tests__/dom/board-line-id-display-filter.dom.test.ts` | lineIds prop masks line groups in `linesGrouped`; empty = show all | frontend chip filter contract |
 | `crates/tfl-domain/tests/compass_from_towards.rs`             | per-line `towards` → compass mapping for Elizabeth + the 6 named OG lines; tube prefix path unchanged; DLR falls back to inbound/outbound | direction inference for non-tube lines (invariant #23) |
+| `crates/tfl-board/src/service.rs`                             | `terminus_filter_drops_arrival_whose_destination_is_the_queried_station` | invariant #24 — terminating arrivals dropped |
+| `crates/tfl-board/src/service.rs`                             | `terminus_filter_keeps_arrival_with_a_different_destination` | non-terminus passes through |
+| `crates/tfl-board/src/service.rs`                             | `terminus_filter_normalises_case_and_whitespace` | TfL string drift tolerance |
+| `crates/tfl-board/src/service.rs`                             | `terminus_filter_passes_through_when_either_field_is_empty` | fail-open contract |
+| `crates/tfl-board/src/service.rs`                             | `terminus_filter_only_drops_the_terminating_arrival_in_a_mixed_set` | end-to-end Edgware-shaped payload |
 | `src-tauri/src/commands.rs`                                   | `add_favorite_does_not_publish_to_cfg_tx` | favorites mutation bypasses the stream pipeline |
 | `src-tauri/src/commands.rs`                                   | `remove_favorite_does_not_publish_to_cfg_tx` | remove path same |
 | `src-tauri/src/commands.rs`                                   | `add_favorite_persists_and_list_returns_it` | round-trip through new `"favorites"` store key |
