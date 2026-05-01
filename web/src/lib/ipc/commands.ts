@@ -10,6 +10,7 @@ import {
   type Board,
   type BoardConfig,
   type BoardErrorPayload,
+  type DisplayPrefs,
   type Favorite,
   type LineRef,
   type LineStatus,
@@ -17,6 +18,7 @@ import {
   isBoard,
   isBoardConfig,
   isBoardErrorPayload,
+  isDisplayPrefs,
   isFavorite,
   isLineStatus,
   isStation,
@@ -125,6 +127,27 @@ export async function saveDisplayMode(mode: DisplayMode): Promise<string> {
     throw new TypeError('save_display_mode: expected string response');
   }
   return raw;
+}
+
+/**
+ * Load the persisted desktop display preferences. Defaults to
+ * `{ group_destinations: false }` when the key is missing (upgrade path).
+ */
+export async function loadDisplayPrefs(): Promise<DisplayPrefs> {
+  const raw = await invoke<unknown>('load_display_prefs');
+  if (!isDisplayPrefs(raw)) {
+    throw new TypeError('load_display_prefs: unexpected response shape');
+  }
+  return raw;
+}
+
+/**
+ * Persist the desktop display preferences. Does NOT publish through the
+ * config watch channel — the renderer applies the change locally as soon
+ * as the IPC returns.
+ */
+export async function saveDisplayPrefs(prefs: DisplayPrefs): Promise<void> {
+  await invoke<undefined>('save_display_prefs', { prefs });
 }
 
 /**

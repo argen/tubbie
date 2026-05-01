@@ -1,15 +1,30 @@
 <script lang="ts">
-  import type { Platform } from '$lib/ipc/types.js';
-  import { shortPlatformName } from '$lib/utils/format.js';
+  import type { Arrival, Platform } from '$lib/ipc/types.js';
+  import {
+    formatTimeToStation,
+    isDue,
+    lineColorVar,
+    shortPlatformName,
+    shortStationName,
+  } from '$lib/utils/format.js';
+  import { now } from '$lib/stores/clock.js';
   import ArrivalRow from './ArrivalRow.svelte';
 
   interface Props {
     platform: Platform;
     /** Max arrivals to show. Default 6. */
     maxRows?: number;
+    /**
+     * Opt-in destination grouping (Phase 3 of arrival-feedback plan).
+     * When true, arrivals sharing a `(destination_name, towards)` key
+     * collapse into a single row with a comma-separated minutes
+     * sequence ("Edgware · 2, 5, 9 min"). Frontend-only: backend
+     * keeps shipping the full per-train set.
+     */
+    groupDestinations?: boolean;
   }
 
-  const { platform, maxRows = 6 }: Props = $props();
+  const { platform, maxRows = 6, groupDestinations = false }: Props = $props();
 
   const displayName = $derived(shortPlatformName(platform.name));
 
@@ -43,6 +58,99 @@
     }
     return out;
   });
+
+  // ---------------------------------------------------------------------------
+  // Destination-grouped view (opt-in, Phase 3)
+  //
+  // Each group keys on `(destination_name, towards)` so distinct via-paths
+  // (e.g. "Edgware via CX" vs "Edgware via Bank") stay split. Within a
+  // group the times are derived live from `expected_arrival` against the
+  // shared 1 Hz clock — same anchor as `ArrivalRow.svelte`, so a group
+  // counts down second-by-second between polls without any extra work.
+  // ---------------------------------------------------------------------------
+
+  interface DestGroup {
+    key: string;
+    destination: string;
+    towards: string;
+    line_id: string;
+    seconds: number[]; // ascending; the first entry drives the due-pulse
+  }
+
+  // Keep group cardinality bounded — a 4-line interchange with eight
+  // destinations would otherwise stack a tall column.
+  const MAX_GROUPS = 6;
+  // Cap visible times per group so the marquee-free row stays compact.
+  const MAX_TIMES_PER_GROUP = 4;
+
+  function groupKey(a: Arrival): string {
+    return `${a.destination_name}|${a.towards}`;
+  }
+
+  function liveSecondsFor(a: Arrival, currentMs: number): number {
+    const expectedMs = Date.parse(a.expected_arrival);
+    if (!Number.isFinite(expectedMs)) return a.time_to_station;
+    return Math.round((expectedMs - currentMs) / 1000);
+  }
+
+  const grouped = $derived.by<DestGroup[]>(() => {
+    const currentMs = $now;
+    // `Map` lookup is O(1) and we never expose this collection past the
+    // $derived run — it's a transient grouping aid, not reactive state.
+    // The `svelte/prefer-svelte-reactivity` lint can't see that, so we
+    // ESLint-disable rather than reach for `SvelteMap` (which would add
+    // a Svelte fine-grained subscription to a thing we throw away each
+    // tick anyway).
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity
+    const byKey = new Map<string, DestGroup>();
+    for (const a of platform.arrivals) {
+      const key = groupKey(a);
+      const secs = liveSecondsFor(a, currentMs);
+      const existing = byKey.get(key);
+      if (existing) {
+        existing.seconds.push(secs);
+      } else {
+        byKey.set(key, {
+          key,
+          destination: shortStationName(a.destination_name),
+          towards: a.towards,
+          line_id: a.line_id,
+          seconds: [secs],
+        });
+      }
+      if (byKey.size >= MAX_GROUPS) break;
+    }
+    for (const g of byKey.values()) g.seconds.sort((x, y) => x - y);
+    return Array.from(byKey.values());
+  });
+
+  /**
+   * Render a sorted seconds list as a single condensed string, mirroring
+   * `formatTimeToStation`: "Due, 2, 5 min" / "2, 5, 9 mins". A trailing
+   * "+N more" suffix appears when the group exceeds `MAX_TIMES_PER_GROUP`
+   * so the row stays one line wide.
+   */
+  function formatGroupTimes(seconds: number[]): string {
+    const visible = seconds.slice(0, MAX_TIMES_PER_GROUP);
+    const more = Math.max(0, seconds.length - visible.length);
+    const parts = visible.map((s) => {
+      // Strip the "min"/"mins" suffix from individual entries; we append
+      // one suffix at the end so "2, 5, 9 min" reads naturally.
+      const t = formatTimeToStation(s);
+      if (t === 'Due') return 'Due';
+      return t.replace(/\s*mins?$/, '');
+    });
+    // Pick the suffix from the LAST visible entry so a "1 min" in the list
+    // still reads as "min" not "mins" — matches platform-board grammar.
+    const last = visible[visible.length - 1] ?? 0;
+    const lastFormatted = formatTimeToStation(last);
+    const suffix = lastFormatted === 'Due' ? '' : / mins?$/.test(lastFormatted)
+      ? lastFormatted.replace(/^\d+\s*/, '')
+      : 'min';
+    const head = parts.join(', ');
+    const body = suffix.length > 0 ? `${head} ${suffix}`.trim() : head;
+    return more > 0 ? `${body} · +${String(more)} more` : body;
+  }
 </script>
 
 <section class="platform-col" aria-label="Platform: {displayName}">
@@ -55,12 +163,39 @@
       <span></span>
       <span class="platform-col__dest-header">Destination</span>
       <span></span>
+      <span class="platform-col__plat-header">Plat</span>
       <span class="platform-col__time-header">Time</span>
     </div>
   </header>
 
   {#if arrivals.length === 0}
     <div class="platform-col__empty" role="status" aria-live="polite">No arrivals</div>
+  {:else if groupDestinations}
+    <ol class="platform-col__list" aria-label="Arrivals for {displayName}">
+      {#each grouped as group, idx (group.key)}
+        {@const summary = formatGroupTimes(group.seconds)}
+        {@const groupDue = isDue(group.seconds[0] ?? 999)}
+        <li
+          class="arrival-row arrival-row--grouped"
+          data-line-id={group.line_id}
+          style:--line-color={lineColorVar(group.line_id)}
+          aria-label="Group {idx + 1}: {group.destination} {group.towards}, {summary}"
+        >
+          <span class="arrival-row__rank" aria-hidden="true">{idx + 1}</span>
+          <span class="arrival-row__dest led-text">{group.destination}</span>
+          <span class="arrival-row__via">{group.towards}</span>
+          <!-- Grouped rows span platforms by definition; leave the PLAT
+               cell empty rather than guess. The grid alignment with
+               non-grouped rows still works because the column slot exists. -->
+          <span class="arrival-row__platform"></span>
+          <span
+            class="arrival-row__time"
+            class:due-pulse={groupDue}
+            class:led-accent={groupDue}>{summary}</span
+          >
+        </li>
+      {/each}
+    </ol>
   {:else}
     <ol class="platform-col__list" aria-label="Arrivals for {displayName}">
       <!--
@@ -103,10 +238,11 @@
   }
 
   /* Both header rows share ArrivalRow's grid so NORTHBOUND, "Destination",
-     and the destination text below all line up at the same x-position. */
+     "Plat", and "Time" below all line up at the same x-positions as the
+     row content. Five columns now: rank | dest | towards | plat | time. */
   .platform-col__row {
     display: grid;
-    grid-template-columns: 1.2rem 1fr auto auto;
+    grid-template-columns: 1.2rem 1fr auto auto auto;
     column-gap: 0.5rem;
     align-items: center;
   }
@@ -124,6 +260,7 @@
   }
 
   .platform-col__dest-header,
+  .platform-col__plat-header,
   .platform-col__time-header {
     font-family: var(--font-board);
     font-size: 0.75rem;
@@ -137,8 +274,14 @@
     grid-column: 2;
   }
 
-  .platform-col__time-header {
+  .platform-col__plat-header {
     grid-column: 4;
+    text-align: right;
+    min-width: 0.9rem;
+  }
+
+  .platform-col__time-header {
+    grid-column: 5;
     text-align: right;
     min-width: 4.5rem;
   }

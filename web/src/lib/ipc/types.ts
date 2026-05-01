@@ -106,6 +106,29 @@ export interface Favorite {
 }
 
 // ---------------------------------------------------------------------------
+// DisplayPrefs — desktop-only render preferences (separate `"display_prefs"`
+// store key, NOT part of `BoardConfig`). Mirrors `crate::state::DisplayPrefs`
+// in `src-tauri/`. See `feedback_ios_consumer.md` and the `display_mode`
+// precedent for why this lives outside the shared `tfl-*` crates.
+// ---------------------------------------------------------------------------
+
+export interface DisplayPrefs {
+  /**
+   * When `true`, `PlatformColumn.svelte` collapses arrivals sharing a
+   * `(destination_name, towards)` key into a single row with a comma-
+   * separated minutes sequence (e.g. "Edgware · 2, 5, 9 min").
+   *
+   * Frontend-only display flag. Backend `apply_filters` MUST NOT see this.
+   */
+  group_destinations: boolean;
+}
+
+export function isDisplayPrefs(v: unknown): v is DisplayPrefs {
+  if (!isRecord(v)) return false;
+  return typeof v.group_destinations === 'boolean';
+}
+
+// ---------------------------------------------------------------------------
 // LineStatus / StatusEntry
 // ---------------------------------------------------------------------------
 

@@ -31,7 +31,9 @@ use serde_json::Value;
 use tauri::AppHandle;
 use tauri_plugin_store::{Store, StoreExt};
 
-use crate::state::{default_board_config, ConfigStore, FavoritesStore, DEFAULT_DISPLAY_MODE};
+use crate::state::{
+    default_board_config, ConfigStore, DisplayPrefs, FavoritesStore, DEFAULT_DISPLAY_MODE,
+};
 use tfl_board::BoardConfig;
 use tfl_domain::Favorite;
 
@@ -76,8 +78,7 @@ impl FavoritesStore for StorePluginFavoritesStore {
     }
 
     async fn save_favorites(&self, favorites: &[Favorite]) -> Result<(), String> {
-        let value =
-            serde_json::to_value(favorites).map_err(|e| format!("serialise error: {e}"))?;
+        let value = serde_json::to_value(favorites).map_err(|e| format!("serialise error: {e}"))?;
         let store = Arc::clone(&self.store);
         tokio::task::spawn_blocking(move || {
             store.set("favorites", value);
@@ -180,6 +181,29 @@ impl ConfigStore for StorePluginConfigStore {
         let store = Arc::clone(&self.store);
         tokio::task::spawn_blocking(move || {
             store.set("display_mode", value);
+            store
+                .save()
+                .map_err(|e| format!("failed to save config store: {e}"))
+        })
+        .await
+        .map_err(|e| format!("spawn_blocking panicked: {e}"))??;
+        Ok(())
+    }
+
+    async fn load_display_prefs(&self) -> Result<DisplayPrefs, String> {
+        let prefs = self
+            .store
+            .get("display_prefs")
+            .and_then(|v| serde_json::from_value::<DisplayPrefs>(v).ok())
+            .unwrap_or_default();
+        Ok(prefs)
+    }
+
+    async fn save_display_prefs(&self, prefs: &DisplayPrefs) -> Result<(), String> {
+        let value = serde_json::to_value(prefs).map_err(|e| format!("serialise error: {e}"))?;
+        let store = Arc::clone(&self.store);
+        tokio::task::spawn_blocking(move || {
+            store.set("display_prefs", value);
             store
                 .save()
                 .map_err(|e| format!("failed to save config store: {e}"))

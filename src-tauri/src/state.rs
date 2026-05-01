@@ -16,6 +16,7 @@
 use std::sync::{Arc, RwLock as StdRwLock};
 
 use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tfl_board::{BoardConfig, BoardError, BoardService, LifecyclePhase};
 use tfl_client::{clock::Clock, http::TflHttp};
@@ -63,6 +64,37 @@ pub trait ConfigStore: Send + Sync + 'static {
     /// Atomically set and persist the display mode. The caller is
     /// responsible for validating the value before invoking this.
     async fn save_display_mode(&self, mode: &str) -> Result<(), String>;
+
+    /// Load the persisted desktop display preferences. Returns the default
+    /// (`group_destinations: false`) when nothing has been saved — that is
+    /// the upgrade path for users on a build that didn't write the key.
+    async fn load_display_prefs(&self) -> Result<DisplayPrefs, String>;
+
+    /// Atomically set and persist the desktop display preferences.
+    async fn save_display_prefs(&self, prefs: &DisplayPrefs) -> Result<(), String>;
+}
+
+// ---------------------------------------------------------------------------
+// DisplayPrefs — desktop-only UI preferences
+// ---------------------------------------------------------------------------
+
+/// Desktop display preferences. Persisted under the `"display_prefs"` store
+/// key, separate from `BoardConfig`.
+///
+/// Lives in `src-tauri` (NOT in `crates/tfl-*`) because it is a desktop-only
+/// UI preference that the iOS shell has no use for. Adding it to the shared
+/// `BoardConfig` type would force a paired iOS submodule bump for a flag iOS
+/// will never read — see `feedback_ios_consumer.md` and the `display_mode`
+/// precedent which made the same call.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct DisplayPrefs {
+    /// When `true`, `PlatformColumn.svelte` collapses arrivals sharing a
+    /// `(destination_name, towards)` key into one row with a comma-separated
+    /// minutes sequence. Frontend-only display flag — backend filtering
+    /// (`apply_filters`) MUST NOT see this; toggling it must update the
+    /// rendered board within a frame, not on the next stream tick.
+    pub group_destinations: bool,
 }
 
 /// Default display mode used when no value has been persisted.
@@ -221,6 +253,20 @@ impl ConfigStore for MemoryConfigStore {
 
     async fn save_display_mode(&self, mode: &str) -> Result<(), String> {
         self.set_raw("display_mode", serde_json::json!(mode));
+        Ok(())
+    }
+
+    async fn load_display_prefs(&self) -> Result<DisplayPrefs, String> {
+        let prefs = self
+            .get_raw("display_prefs")
+            .and_then(|v| serde_json::from_value::<DisplayPrefs>(v).ok())
+            .unwrap_or_default();
+        Ok(prefs)
+    }
+
+    async fn save_display_prefs(&self, prefs: &DisplayPrefs) -> Result<(), String> {
+        let value = serde_json::to_value(prefs).map_err(|e| format!("serialise error: {e}"))?;
+        self.set_raw("display_prefs", value);
         Ok(())
     }
 }

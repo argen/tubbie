@@ -55,8 +55,8 @@ use tokio::task::AbortHandle;
 
 use commands::{
     add_favorite, apply_board_size, get_board, get_line_status, has_app_key, list_favorites,
-    load_app_key, load_config, load_display_mode, remove_favorite, save_app_key, save_config,
-    save_display_mode, search_stations,
+    load_app_key, load_config, load_display_mode, load_display_prefs, remove_favorite,
+    save_app_key, save_config, save_display_mode, save_display_prefs, search_stations,
 };
 use state::{AnyBoardService, AppState};
 use store_impl::{StorePluginConfigStore, StorePluginFavoritesStore};
@@ -676,10 +676,10 @@ pub fn run() {
             // Favorites store: separate `"favorites"` key, same config.json file.
             // Opened lazily-idempotent by the plugin — re-opening the same
             // path just returns an existing Arc<Store> handle.
-            let favorites_store =
-                Arc::new(StorePluginFavoritesStore::open(app.handle()).expect(
-                    "failed to open favorites store",
-                )) as Arc<dyn state::FavoritesStore>;
+            let favorites_store = Arc::new(
+                StorePluginFavoritesStore::open(app.handle())
+                    .expect("failed to open favorites store"),
+            ) as Arc<dyn state::FavoritesStore>;
 
             let stream_abort: Arc<RwLock<Option<AbortHandle>>> = Arc::new(RwLock::new(None));
 
@@ -894,6 +894,8 @@ pub fn run() {
             get_line_status,
             save_display_mode,
             load_display_mode,
+            save_display_prefs,
+            load_display_prefs,
             apply_board_size,
             list_favorites,
             add_favorite,

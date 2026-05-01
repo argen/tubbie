@@ -10,6 +10,7 @@
   import { lastUpdateTs } from '$lib/stores/board.js';
   import { reducedMotion } from '$lib/stores/reducedMotion.js';
   import { displayMode } from '$lib/stores/displayMode.js';
+  import { displayPrefs } from '$lib/stores/displayPrefs.js';
   import { applyBoardSize } from '$lib/ipc/commands.js';
   import LineGroup from './LineGroup.svelte';
   import LineStatusTicker from './LineStatusTicker.svelte';
@@ -440,6 +441,7 @@
         lineName={group.lineName}
         directions={group.directions}
         maxRows={rowsPerPlatform}
+        groupDestinations={$displayPrefs.group_destinations}
       />
     {/each}
 

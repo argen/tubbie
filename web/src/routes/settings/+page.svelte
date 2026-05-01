@@ -11,6 +11,11 @@
   import ThemePicker from '$lib/components/ThemePicker.svelte';
   import { hasAppKey, saveAppKey, saveDisplayMode, type DisplayMode } from '$lib/ipc/commands.js';
   import { displayMode } from '$lib/stores/displayMode.js';
+  import {
+    displayPrefs,
+    initDisplayPrefs,
+    updateDisplayPrefs,
+  } from '$lib/stores/displayPrefs.js';
   import { board } from '$lib/stores/board.js';
   import {
     favorites,
@@ -111,7 +116,16 @@
     }
     // Load favorites once on mount. Errors surface via $favoritesError.
     void initFavorites();
+    // Hydrate display prefs from disk (defaults to all-false on first run).
+    void initDisplayPrefs();
   });
+
+  function handleToggleGroupDestinations(): void {
+    void updateDisplayPrefs({
+      ...$displayPrefs,
+      group_destinations: !$displayPrefs.group_destinations,
+    });
+  }
 
   /**
    * Persist the current form state. `updateConfig` catches its own errors
@@ -467,7 +481,9 @@
               <button
                 type="button"
                 class="favorites__row-body"
-                onclick={() => handleSelectFavorite(fav)}
+                onclick={() => {
+                  handleSelectFavorite(fav);
+                }}
                 aria-label={`Select ${fav.common_name}`}
                 data-testid="favorite-row"
                 data-station-id={fav.station_id}
@@ -623,6 +639,23 @@
       {#if displayModeStatus}
         <p class="settings__api-status" aria-live="polite">{displayModeStatus}</p>
       {/if}
+    </section>
+
+    <!-- Display preferences (frontend-only render flags) -->
+    <section class="settings__section" aria-labelledby="section-display-prefs">
+      <h2 id="section-display-prefs" class="settings__section-title">Display preferences</h2>
+      <label class="settings__toggle">
+        <input
+          type="checkbox"
+          checked={$displayPrefs.group_destinations}
+          onchange={handleToggleGroupDestinations}
+          data-testid="settings-group-destinations"
+        />
+        <span class="settings__toggle-label">Group same destination</span>
+        <span class="settings__toggle-hint">
+          Combine repeat trains to the same place into one row (e.g. "Edgware · 2, 5, 9 min").
+        </span>
+      </label>
     </section>
 
     <!-- API key -->
@@ -1029,6 +1062,44 @@
   .settings__api-hint--small {
     font-size: 0.75rem;
     opacity: 0.5;
+  }
+
+  /* Generic toggle row used by display-prefs (and any future renderer-only flags). */
+  .settings__toggle {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 0.6rem;
+    row-gap: 0.15rem;
+    align-items: baseline;
+    padding: 0.5rem 0.75rem;
+    background: var(--chip-bg);
+    border: 1px solid var(--input-border);
+    border-radius: 2px;
+    cursor: pointer;
+  }
+
+  .settings__toggle:hover,
+  .settings__toggle:focus-within {
+    border-color: var(--platform-label);
+  }
+
+  .settings__toggle input[type='checkbox'] {
+    grid-row: 1 / span 2;
+    accent-color: var(--fg);
+    margin: 0;
+  }
+
+  .settings__toggle-label {
+    font-family: var(--font-ui);
+    font-size: 1rem;
+    color: var(--fg);
+  }
+
+  .settings__toggle-hint {
+    font-family: var(--font-ui);
+    font-size: 0.8rem;
+    color: var(--platform-label);
+    opacity: 0.75;
   }
 
   .settings__display-mode {

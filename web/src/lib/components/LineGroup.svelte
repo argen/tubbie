@@ -24,9 +24,23 @@
     directions: DirectionBucket[];
     /** Max arrival rows to show per direction. Tied to (mode, lineCount) by Board. */
     maxRows: number;
+    /**
+     * When true, each `PlatformColumn` collapses arrivals sharing a
+     * `(destination_name, towards)` key into one row with a comma-
+     * separated minutes sequence. Sourced from the desktop-only
+     * `displayPrefs.group_destinations` flag — Board.svelte threads it
+     * through.
+     */
+    groupDestinations?: boolean;
   }
 
-  const { lineId, lineName, directions, maxRows }: Props = $props();
+  const {
+    lineId,
+    lineName,
+    directions,
+    maxRows,
+    groupDestinations = false,
+  }: Props = $props();
 
   const headerLabel = $derived(
     lineName !== undefined && lineName.length > 0 ? lineName : prettyLineName(lineId),
@@ -47,7 +61,11 @@
   </header>
   <div class="line-group__platforms">
     {#each directions as dir (dir.key)}
-      <PlatformColumn platform={{ name: dir.label, arrivals: dir.arrivals }} {maxRows} />
+      <PlatformColumn
+        platform={{ name: dir.label, arrivals: dir.arrivals }}
+        {maxRows}
+        {groupDestinations}
+      />
     {/each}
   </div>
 </section>
