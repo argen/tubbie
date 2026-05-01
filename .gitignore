@@ -58,4 +58,9 @@ src-tauri/gen/
 *.tsbuildinfo
 
 # Claude Code session state (should never be committed)
-.claude/
+# Excluding direct children of .claude/ rather than .claude/ itself so
+# git still descends into the directory and can pick up the negated
+# skills subtree below — `.claude/` as a blanket exclusion would
+# silently swallow the !.claude/skills/ negation.
+.claude/*
+!.claude/skills/
