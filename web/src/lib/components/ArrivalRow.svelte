@@ -6,10 +6,12 @@
     formatTimeToStation,
     isDue,
     lineColorVar,
+    platformBadge,
     revealDuration,
     shortStationName,
   } from '$lib/utils/format.js';
   import { reducedMotion } from '$lib/stores/reducedMotion.js';
+  import { now } from '$lib/stores/clock.js';
 
   interface Props {
     arrival: Arrival;
@@ -132,8 +134,25 @@
   // Time formatting + due state
   // ---------------------------------------------------------------------------
 
-  const formattedTime = $derived(formatTimeToStation(arrival.time_to_station));
-  const due = $derived(isDue(arrival.time_to_station));
+  // Live seconds-to-station derived from `expected_arrival` (a wall-clock
+  // anchor) and the shared 1 Hz `$now` store. `time_to_station` from the
+  // wire is frozen between polls — trusting it would make a "5 min" train
+  // still read "5 min" 60 s later. The Rust serde layer always emits a
+  // valid ISO-8601 string for `DateTime<Utc>`; the `Number.isFinite`
+  // guard is purely defensive so a malformed value degrades to the wire
+  // count instead of crashing the render.
+  const liveSeconds = $derived.by(() => {
+    const expectedMs = Date.parse(arrival.expected_arrival);
+    if (!Number.isFinite(expectedMs)) return arrival.time_to_station;
+    return Math.round((expectedMs - $now) / 1000);
+  });
+
+  const formattedTime = $derived(formatTimeToStation(liveSeconds));
+  const due = $derived(isDue(liveSeconds));
+
+  // Per-row platform badge (e.g. "Platform 4") — null when redundant
+  // with the column header so single-platform stops stay clean.
+  const platformLabel = $derived(platformBadge(arrival.platform_name, arrival.direction));
 </script>
 
 <li
@@ -170,6 +189,13 @@
   </span>
 
   <span
+    class="arrival-row__platform"
+    aria-label={platformLabel ? `Platform: ${platformLabel}` : undefined}
+  >
+    {platformLabel ?? ''}
+  </span>
+
+  <span
     class="arrival-row__time"
     class:due-pulse={due}
     class:led-accent={due}
@@ -182,7 +208,13 @@
 <style>
   .arrival-row {
     display: grid;
-    grid-template-columns: 1.2rem 1fr auto auto;
+    /* rank | destination | towards | plat | time
+       The platform column carries just an identifier ("4", "P3", "A");
+       the column header in PlatformColumn shows "PLAT" once so the
+       digit's meaning is clear. Saves significant horizontal real
+       estate compared to repeating "Platform N" on every row in the
+       380 px menubar popover. */
+    grid-template-columns: 1.2rem 1fr auto auto auto;
     column-gap: 0.5rem;
     align-items: center;
     /* 4px left stripe carries the line colour; padding-left compensates so
@@ -265,6 +297,19 @@
     text-overflow: ellipsis;
     padding: 0 0.4rem;
     opacity: 0.8;
+  }
+
+  .arrival-row__platform {
+    /* Just the identifier ("4", "P3", "A"). The column header in
+       PlatformColumn says "PLAT" once so the meaning is clear without
+       repeating the word on every row. Lower opacity so the eye still
+       locks on the destination first; platform is supporting context. */
+    color: var(--platform-label);
+    font-size: 0.85rem;
+    opacity: 0.8;
+    min-width: 0.9rem;
+    text-align: right;
+    letter-spacing: 0.05em;
   }
 
   .arrival-row__time {

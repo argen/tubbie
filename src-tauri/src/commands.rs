@@ -37,7 +37,7 @@ use tauri::State;
 use tfl_board::{BoardConfig, VALID_THEME_IDS};
 use tfl_domain::{is_supported_line_id, Board, Favorite, LineRef, LineStatus, Station};
 
-use crate::state::AppState;
+use crate::state::{AppState, DisplayPrefs};
 
 // ---------------------------------------------------------------------------
 // Validation functions (pub within crate for tests)
@@ -473,6 +473,22 @@ pub(crate) async fn load_display_mode_inner(state: &AppState) -> Result<String, 
     state.config_store.load_display_mode().await
 }
 
+/// Persist the desktop display preferences. Does **not** publish to
+/// `cfg_tx` — `DisplayPrefs` is a frontend-only render flag (mirrors the
+/// favorites precedent: invariant test
+/// `add_favorite_does_not_publish_to_cfg_tx`). Backend filtering must
+/// keep handing the full set through; the renderer collapses on display.
+pub(crate) async fn save_display_prefs_inner(
+    prefs: &DisplayPrefs,
+    state: &AppState,
+) -> Result<(), String> {
+    state.config_store.save_display_prefs(prefs).await
+}
+
+pub(crate) async fn load_display_prefs_inner(state: &AppState) -> Result<DisplayPrefs, String> {
+    state.config_store.load_display_prefs().await
+}
+
 pub(crate) async fn get_line_status_inner(
     line_id: &str,
     state: &AppState,
@@ -602,6 +618,26 @@ pub async fn save_display_mode(
 #[tauri::command]
 pub async fn load_display_mode(state: State<'_, AppState>) -> Result<String, String> {
     load_display_mode_inner(&state).await
+}
+
+/// Persist the desktop display preferences (`group_destinations`, …).
+///
+/// Does **not** publish through `cfg_tx` — these are renderer-only flags;
+/// the backend keeps shipping the full per-train set and the renderer
+/// collapses on display. Mirrors the favorites precedent.
+#[tauri::command]
+pub async fn save_display_prefs(
+    prefs: DisplayPrefs,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    save_display_prefs_inner(&prefs, &state).await
+}
+
+/// Load the persisted desktop display preferences. Returns the default
+/// (`group_destinations: false`) when nothing has been saved.
+#[tauri::command]
+pub async fn load_display_prefs(state: State<'_, AppState>) -> Result<DisplayPrefs, String> {
+    load_display_prefs_inner(&state).await
 }
 
 /// Return the current favorites list, applying legacy-id migration on load.
@@ -2243,5 +2279,84 @@ mod tests {
         let second = load_favorites_inner(&state).await.expect("second load");
 
         assert_eq!(first, second, "re-loading a migrated config must be a no-op");
+    }
+
+    // -----------------------------------------------------------------------
+    // Display prefs — desktop-only render flags (Phase 3 of arrival-feedback plan)
+    // -----------------------------------------------------------------------
+
+    /// Round-trip through the new `"display_prefs"` store key.
+    #[tokio::test]
+    async fn save_display_prefs_persists_and_get_returns_it() {
+        let state = fixture_state();
+
+        save_display_prefs_inner(
+            &DisplayPrefs {
+                group_destinations: true,
+            },
+            &state,
+        )
+        .await
+        .expect("save should succeed");
+
+        let loaded = load_display_prefs_inner(&state).await.expect("load");
+        assert!(
+            loaded.group_destinations,
+            "saved prefs must round-trip through the store"
+        );
+    }
+
+    /// Upgrade path: a build that didn't write the key returns the default
+    /// (group_destinations=false). The user MUST NOT silently inherit a
+    /// grouped board on first launch after upgrade.
+    #[tokio::test]
+    async fn load_display_prefs_returns_default_when_missing() {
+        let state = fixture_state();
+
+        let loaded = load_display_prefs_inner(&state).await.expect("load");
+        assert_eq!(
+            loaded,
+            DisplayPrefs::default(),
+            "missing display_prefs key must default to DisplayPrefs::default()"
+        );
+        assert!(
+            !loaded.group_destinations,
+            "default must be group_destinations=false (opt-in only)"
+        );
+    }
+
+    /// `save_display_prefs` MUST NOT publish to `cfg_tx` — it is a renderer-
+    /// only flag, not part of the cfg pipeline. Mirrors the favorites
+    /// invariant (`add_favorite_does_not_publish_to_cfg_tx`).
+    #[tokio::test(start_paused = true)]
+    async fn save_display_prefs_does_not_publish_to_cfg_tx() {
+        use futures::StreamExt;
+        use std::time::Duration;
+
+        let initial_cfg = BoardConfig {
+            station_id: "940GZZLUBZP".to_string(),
+            line_ids: vec![],
+            directions: vec![],
+            poll_seconds: 60,
+            theme: "classic-amber".to_string(),
+        };
+        let (state, mut stream) = fixture_state_with_stream(initial_cfg);
+        // Consume the initial board emit so the stream is in steady state.
+        let _ = stream.next().await.unwrap().unwrap();
+
+        save_display_prefs_inner(
+            &DisplayPrefs {
+                group_destinations: true,
+            },
+            &state,
+        )
+        .await
+        .expect("save should succeed");
+
+        let immediate = tokio::time::timeout(Duration::from_millis(50), stream.next()).await;
+        assert!(
+            immediate.is_err(),
+            "save_display_prefs must NOT publish to cfg_tx (no emit expected)"
+        );
     }
 }

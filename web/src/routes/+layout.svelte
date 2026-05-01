@@ -5,6 +5,7 @@
   import { startBoardSubscription } from '$lib/stores/board.js';
   import { initConfig, config, applyTheme } from '$lib/stores/config.js';
   import { initDisplayMode, displayMode } from '$lib/stores/displayMode.js';
+  import { initDisplayPrefs } from '$lib/stores/displayPrefs.js';
   import Attribution from '$lib/components/Attribution.svelte';
   import { goto } from '$app/navigation';
 
@@ -22,6 +23,11 @@
     // correct chrome class on first paint. This avoids a flash of
     // popover styling inside a regular floating window.
     await initDisplayMode();
+
+    // Hydrate desktop display preferences (group_destinations, …) so the
+    // first board render sees the user's saved render flags rather than
+    // the default and then jolting after the IPC settles.
+    await initDisplayPrefs();
 
     // Load config (provides theme + station settings)
     await initConfig();

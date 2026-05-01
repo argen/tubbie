@@ -14,6 +14,10 @@ vi.mock('$lib/stores/reducedMotion.js', () => ({
   },
 }));
 
+// `expected_arrival` is now the source of truth for the displayed time
+// (frozen `time_to_station` from the wire would otherwise read stale 60 s
+// after a poll). Anchor it to `Date.now()` so these tests assert against
+// the live derivation, not a 2025 wall clock.
 const sampleArrival: Arrival = {
   id: '1',
   station_name: 'Belsize Park Underground Station',
@@ -24,8 +28,8 @@ const sampleArrival: Arrival = {
   destination_name: 'Edgware',
   towards: 'Edgware via CX',
   current_location: 'Approaching Belsize Park',
-  time_to_station: 60, // 60s → "1 min"
-  expected_arrival: '2025-01-15T10:01:30Z',
+  time_to_station: 60, // legacy field, no longer drives the display
+  expected_arrival: new Date(Date.now() + 60_000).toISOString(),
   naptan_id: '940GZZLUBZP',
 };
 
@@ -33,6 +37,7 @@ const dueArrival: Arrival = {
   ...sampleArrival,
   id: '2',
   time_to_station: 10,
+  expected_arrival: new Date(Date.now() + 10_000).toISOString(),
 };
 
 describe('ArrivalRow', () => {

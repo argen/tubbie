@@ -46,6 +46,34 @@ export function shortPlatformName(fullName: string): string {
 }
 
 /**
+ * Compact platform identifier for the per-row "PLAT" column.
+ *
+ * TfL returns either `"Northbound - Platform 1"` (tube prefix-style) or a
+ * bare `"Platform 4"` (Elizabeth, Overground, …) or, for a few single-
+ * platform stops, just the direction string itself (`"Northbound"`).
+ *
+ * Rules:
+ *   - strip the `"<direction> - "` prefix when present;
+ *   - strip the literal word `"Platform "` so the column shows just the
+ *     identifier (e.g. `"1"`, `"7"`, `"A"`) — saves significant horizontal
+ *     real estate in the 380 px menubar popover. The column header
+ *     "PLAT" tells the user what the number means once;
+ *   - return `null` when nothing meaningful remains, when the result
+ *     equals the direction label, or when it's just the bare word
+ *     `"Platform"` with no identifier.
+ */
+export function platformBadge(platformName: string, direction: string): string | null {
+  const dashIdx = platformName.indexOf(' - ');
+  const tail = dashIdx === -1 ? platformName : platformName.slice(dashIdx + 3);
+  const stripped = tail.replace(/^\s*platform\s*/i, '').trim();
+  if (stripped.length === 0) return null;
+  if (stripped.toLowerCase() === direction.trim().toLowerCase()) return null;
+  // Defensive: if `tail` was literally "Platform" (no number), the regex
+  // strips everything and we end up empty — caught by the length check.
+  return stripped;
+}
+
+/**
  * Trim the TfL " Underground Station" / " DLR Station" / " Rail Station"
  * suffix so station/destination names match the real dot-matrix board,
  * where "Morden Underground Station" is rendered as just "Morden".
