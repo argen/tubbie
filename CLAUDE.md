@@ -313,48 +313,28 @@ to whichever fits when you discover a new failure mode.
 | `crates/tfl-domain/tests/compass_from_towards.rs` | Per-line `towards` → compass mapping (#23)                                                                                          |
 | `web/src/lib/__tests__/dom/`                      | Board store latest-wins (#7), debounce-coalesce, line-group rendering + line-stripe correctness (#11), OG line colours, settings UI (display-mode, favorites, OG chips), adaptive resize, board-error event, line-id display-filter (#22) |
 
-## Verifying a stream/config change
+## Verifying a change
+
+When wrapping up any non-trivial change, the
+[`verify-tubbie-change`](.claude/skills/verify-tubbie-change/SKILL.md)
+skill runs the full workflow: cargo + npm tests, clippy, self-review,
+manual smoke from [`docs/manual-smoke.md`](docs/manual-smoke.md), and
+iOS submodule-impact check. It triggers automatically on wrap-up
+phrases ("done", "ready to commit", "ship it") or after edits to
+`src-tauri/`, `crates/tfl-*`, or `web/`.
+
+Quick reference, in order:
 
 1. `cargo test --workspace` — green.
 2. `cd web && npm test` — green.
 3. `cargo clippy --workspace --all-targets -- -D warnings` — clean.
-4. **Manual smoke** (don't skip for stream/config changes — `cargo tauri dev`):
-   - Switch station to a multi-line station (King's Cross). Board updates
-     within ~1 s. Tail log for 429s and `stream tick recovered`.
-   - Rapid-toggle 6+ chips. No flicker, no stream respawn.
-   - A → B → A. Board emits each in turn (B briefly visible, then A).
-   - `poll_seconds` 30 → 60 via slider. Next tick fires ~60 s later. No
-     stream restart in logs.
-
-For **display-mode** changes (`apply_display_mode_effects` /
-`save_display_mode` / `display_mode` lock):
-
-- Window → menubar: dock icon disappears, window hides, tray appears, tray
-  click shows popover at 380×560.
-- Menubar → window: tray gone, dock back, window 980×720 centered with the
-  LED title bar (no native chrome).
-- Toggle 5× rapidly: no crashes, no duplicate trays, final state matches
-  last toggle.
-- Mid-tick mode swap: `board://updated` keeps flowing (mode swap touches
-  no stream state).
-- Mode swap → station change still works (no lock starvation, no leaked
-  Arc cycle).
-
-For **adaptive resize / line-grouped layout** (`apply_board_size` /
-`Board.svelte::pickBoardSize` / `linesGrouped`). Cycle through:
-
-- **1-line** (Belsize Park, Stockwell): menubar 380×520, window 700×560.
-  One LINE header, two direction columns under it.
-- **2-line** (Oxford Circus, Green Park): menubar 380×620, window 980×680.
-- **3-line** (Tottenham Court Road, Bank): menubar 380×720, window 1200×760.
-- **4+ line** (Baker Street, King's Cross): menubar 380×800, window
-  1200×880. **Every line stripe must match its line header** — no Bakerloo
-  orange under Metropolitan, no Jubilee silver under Bakerloo. Mixed
-  stripes = invariant #11 regressed.
-- Back to 1-line: single resize step, no flicker, no intermediate sizes.
-- Sitting on one station 60 s (two ticks) MUST NOT issue extra resize
-  requests — the renderer-side `lastSizeKey` dedupe is what protects the
-  Cocoa main-thread dispatch.
+4. Manual smoke from [`docs/manual-smoke.md`](docs/manual-smoke.md) —
+   pick the section matching what changed (stream/config,
+   display-mode, or adaptive-resize). Don't skip it for those change
+   types; automated tests don't catch tray, resize, or stream-respawn
+   regressions.
+5. If `crates/tfl-*` public surface changed, flag iOS submodule
+   impact in the PR per `docs/ADR/crates-as-public-contract.md`.
 
 ## External consumers of `crates/tfl-*`
 
