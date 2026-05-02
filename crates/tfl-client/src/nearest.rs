@@ -51,8 +51,7 @@ pub fn haversine_m(lat1: f64, lon1: f64, lat2: f64, lon2: f64) -> f64 {
     let phi2 = lat2.to_radians();
     let dphi = (lat2 - lat1).to_radians();
     let dlambda = (lon2 - lon1).to_radians();
-    let a = (dphi / 2.0).sin().powi(2)
-        + phi1.cos() * phi2.cos() * (dlambda / 2.0).sin().powi(2);
+    let a = (dphi / 2.0).sin().powi(2) + phi1.cos() * phi2.cos() * (dlambda / 2.0).sin().powi(2);
     let c = 2.0 * a.sqrt().asin();
     EARTH_RADIUS_M * c
 }
@@ -134,8 +133,14 @@ mod tests {
             station("STP", "St Paul's", 51.5146, -0.0973),
         ];
         let ranked = rank_nearest(stations, 51.5133, -0.0886, 4);
-        let names: Vec<&str> = ranked.iter().map(|n| n.station.common_name.as_str()).collect();
-        assert_eq!(names, vec!["Bank", "Monument", "St Paul's", "Oxford Circus"]);
+        let names: Vec<&str> = ranked
+            .iter()
+            .map(|n| n.station.common_name.as_str())
+            .collect();
+        assert_eq!(
+            names,
+            vec!["Bank", "Monument", "St Paul's", "Oxford Circus"]
+        );
     }
 
     #[test]
@@ -146,8 +151,15 @@ mod tests {
             station("RDG", "Reading", 51.4585, -0.9710),
         ];
         let ranked = rank_nearest(stations, 51.5133, -0.0886, 8);
-        let names: Vec<&str> = ranked.iter().map(|n| n.station.common_name.as_str()).collect();
-        assert_eq!(names, vec!["Bank"], "Reading must be dropped (outside 25 km)");
+        let names: Vec<&str> = ranked
+            .iter()
+            .map(|n| n.station.common_name.as_str())
+            .collect();
+        assert_eq!(
+            names,
+            vec!["Bank"],
+            "Reading must be dropped (outside 25 km)"
+        );
     }
 
     #[test]

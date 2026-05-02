@@ -55,14 +55,14 @@ use tfl_client::{clock::SystemClock, http::ReqwestTflHttp, TflClient};
 use tokio::sync::RwLock;
 use tokio::task::AbortHandle;
 
-use commands::{
-    add_favorite, apply_board_size, find_nearest_stations, get_board, get_line_status,
-    has_app_key, list_favorites, load_app_key, load_config, load_display_mode,
-    load_display_prefs, remove_favorite, save_app_key, save_config, save_display_mode,
-    save_display_prefs, search_stations,
-};
 #[cfg(target_os = "macos")]
 use commands::request_current_location;
+use commands::{
+    add_favorite, apply_board_size, find_nearest_stations, get_board, get_line_status, has_app_key,
+    list_favorites, load_app_key, load_config, load_display_mode, load_display_prefs,
+    remove_favorite, save_app_key, save_config, save_display_mode, save_display_prefs,
+    search_stations,
+};
 use state::{AnyBoardService, AppState};
 use store_impl::{StorePluginConfigStore, StorePluginFavoritesStore};
 

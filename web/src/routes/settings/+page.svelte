@@ -11,18 +11,9 @@
   import ThemePicker from '$lib/components/ThemePicker.svelte';
   import { hasAppKey, saveAppKey, saveDisplayMode, type DisplayMode } from '$lib/ipc/commands.js';
   import { displayMode } from '$lib/stores/displayMode.js';
-  import {
-    displayPrefs,
-    initDisplayPrefs,
-    updateDisplayPrefs,
-  } from '$lib/stores/displayPrefs.js';
+  import { displayPrefs, initDisplayPrefs, updateDisplayPrefs } from '$lib/stores/displayPrefs.js';
   import { board } from '$lib/stores/board.js';
-  import {
-    favorites,
-    initFavorites,
-    addFavorite,
-    removeFavorite,
-  } from '$lib/stores/favorites.js';
+  import { favorites, initFavorites, addFavorite, removeFavorite } from '$lib/stores/favorites.js';
   import { debounce } from '$lib/utils/debounce.js';
   import { shortStationName } from '$lib/utils/format.js';
   import type { Direction, Favorite, LineRef, Station } from '$lib/ipc/types.js';
@@ -184,9 +175,7 @@
   // ---------------------------------------------------------------------------
 
   /** True iff the currently-selected station is in the favorites list. */
-  const isCurrentStationFavorited = $derived(
-    $favorites.some((f) => f.station_id === stationId),
-  );
+  const isCurrentStationFavorited = $derived($favorites.some((f) => f.station_id === stationId));
 
   async function handleToggleFavorite(): Promise<void> {
     if (isCurrentStationFavorited) {
@@ -488,9 +477,7 @@
                 data-testid="favorite-row"
                 data-station-id={fav.station_id}
               >
-                <span class="favorites__row-name"
-                  >{shortStationName(fav.common_name)}</span
-                >
+                <span class="favorites__row-name">{shortStationName(fav.common_name)}</span>
                 <span class="favorites__row-chips" aria-hidden="true">
                   {#each fav.lines as line (line.id)}
                     <span class="settings__chip favorites__row-chip">{line.name}</span>

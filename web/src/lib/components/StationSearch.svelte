@@ -141,11 +141,7 @@
     }
 
     try {
-      const nearby = await findNearestStations(
-        fixResult.fix.lat,
-        fixResult.fix.lon,
-        NEAREST_LIMIT,
-      );
+      const nearby = await findNearestStations(fixResult.fix.lat, fixResult.fix.lon, NEAREST_LIMIT);
       // Empty list means we're outside the 25 km radius (Paris query, …) —
       // surface that as a typed error row so the user knows to fall back
       // to text search rather than retry.
@@ -369,13 +365,11 @@
   </span>
 
   {#if listboxOpen && nearMe.kind === 'locating'}
-    <ul
-      id="station-listbox"
-      class="station-search__results"
-      role="listbox"
-      aria-label="Locating"
-    >
-      <li class="station-search__result station-search__result--status" data-testid="station-search-locating">
+    <ul id="station-listbox" class="station-search__results" role="listbox" aria-label="Locating">
+      <li
+        class="station-search__result station-search__result--status"
+        data-testid="station-search-locating"
+      >
         ACQUIRING FIX<span class="station-search__dots" aria-hidden="true">···</span>
       </li>
     </ul>
@@ -393,7 +387,9 @@
         data-testid="station-search-location-error"
         data-error-kind={nearMe.error.kind}
         onmousedown={() => {
-          handleErrorRowClick(nearMe.kind === 'error' ? nearMe.error : { kind: 'Internal', message: '' });
+          handleErrorRowClick(
+            nearMe.kind === 'error' ? nearMe.error : { kind: 'Internal', message: '' },
+          );
         }}
       >
         {errorRowLabel(nearMe.error)}
@@ -414,12 +410,17 @@
           class:station-search__result--selected={item.station.id === selectedId}
           role="option"
           aria-selected={item.station.id === selectedId}
-          aria-label="{shortStationName(item.station.common_name)}, {formatDistance(item.distance_m, distanceLocale)}"
+          aria-label="{shortStationName(item.station.common_name)}, {formatDistance(
+            item.distance_m,
+            distanceLocale,
+          )}"
           onmousedown={() => {
             selectStation(item.station);
           }}
         >
-          <span class="station-search__result-name">{shortStationName(item.station.common_name)}</span>
+          <span class="station-search__result-name"
+            >{shortStationName(item.station.common_name)}</span
+          >
           <span class="station-search__result-distance" aria-hidden="true">
             {formatDistance(item.distance_m, distanceLocale)}
           </span>
@@ -640,7 +641,8 @@
   }
 
   @keyframes dots {
-    0%, 20% {
+    0%,
+    20% {
       content: '';
     }
     40% {
@@ -649,7 +651,8 @@
     60% {
       content: '··';
     }
-    80%, 100% {
+    80%,
+    100% {
       content: '···';
     }
   }

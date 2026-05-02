@@ -131,11 +131,7 @@ export function isNearbyStation(v: unknown): v is NearbyStation {
 
 export function isLocationFix(v: unknown): v is LocationFix {
   if (!isRecord(v)) return false;
-  return (
-    typeof v.lat === 'number' &&
-    typeof v.lon === 'number' &&
-    typeof v.accuracy_m === 'number'
-  );
+  return typeof v.lat === 'number' && typeof v.lon === 'number' && typeof v.accuracy_m === 'number';
 }
 
 // ---------------------------------------------------------------------------
@@ -249,9 +245,7 @@ export function isLineStatus(v: unknown): v is LineStatus {
 export function isFavorite(v: unknown): v is Favorite {
   if (!isRecord(v)) return false;
   return (
-    typeof v.station_id === 'string' &&
-    typeof v.common_name === 'string' &&
-    Array.isArray(v.lines)
+    typeof v.station_id === 'string' && typeof v.common_name === 'string' && Array.isArray(v.lines)
   );
 }
 

@@ -214,7 +214,8 @@ export function formatDistance(meters: number, locale: string): string {
 
   const adjusted = meters * 1.3;
   const lc = locale.toLowerCase();
-  const useMiles = lc === 'en-gb' || lc === 'en-us' || lc.startsWith('en-gb-') || lc.startsWith('en-us-');
+  const useMiles =
+    lc === 'en-gb' || lc === 'en-us' || lc.startsWith('en-gb-') || lc.startsWith('en-us-');
 
   if (useMiles) {
     const miles = adjusted / 1609.344;

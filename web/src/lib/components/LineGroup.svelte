@@ -34,13 +34,7 @@
     groupDestinations?: boolean;
   }
 
-  const {
-    lineId,
-    lineName,
-    directions,
-    maxRows,
-    groupDestinations = false,
-  }: Props = $props();
+  const { lineId, lineName, directions, maxRows, groupDestinations = false }: Props = $props();
 
   const headerLabel = $derived(
     lineName !== undefined && lineName.length > 0 ? lineName : prettyLineName(lineId),

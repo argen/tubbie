@@ -144,9 +144,12 @@
     // still reads as "min" not "mins" — matches platform-board grammar.
     const last = visible[visible.length - 1] ?? 0;
     const lastFormatted = formatTimeToStation(last);
-    const suffix = lastFormatted === 'Due' ? '' : / mins?$/.test(lastFormatted)
-      ? lastFormatted.replace(/^\d+\s*/, '')
-      : 'min';
+    const suffix =
+      lastFormatted === 'Due'
+        ? ''
+        : / mins?$/.test(lastFormatted)
+          ? lastFormatted.replace(/^\d+\s*/, '')
+          : 'min';
     const head = parts.join(', ');
     const body = suffix.length > 0 ? `${head} ${suffix}`.trim() : head;
     return more > 0 ? `${body} · +${String(more)} more` : body;
@@ -188,10 +191,8 @@
                cell empty rather than guess. The grid alignment with
                non-grouped rows still works because the column slot exists. -->
           <span class="arrival-row__platform"></span>
-          <span
-            class="arrival-row__time"
-            class:due-pulse={groupDue}
-            class:led-accent={groupDue}>{summary}</span
+          <span class="arrival-row__time" class:due-pulse={groupDue} class:led-accent={groupDue}
+            >{summary}</span
           >
         </li>
       {/each}

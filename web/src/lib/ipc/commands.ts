@@ -88,7 +88,7 @@ export async function requestCurrentLocation(): Promise<
     // (string error from a panic, network failure, etc.) we collapse
     // it onto `Timeout` so the UI shows the retry-prone row.
     if (typeof e === 'object' && e !== null && 'kind' in e) {
-      const kind = (e as { kind: unknown }).kind;
+      const kind = e.kind;
       switch (kind) {
         case 'PermissionDenied':
         case 'PermissionRestricted':

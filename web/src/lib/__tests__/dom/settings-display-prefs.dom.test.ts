@@ -64,7 +64,9 @@ describe('Settings — display-prefs toggle', () => {
   it('clicking the toggle persists the new value AND updates the store immediately', async () => {
     const saveCalls: { group_destinations: boolean }[] = [];
     setMockHandler('save_display_prefs', (args) => {
-      saveCalls.push((args.prefs as { group_destinations: boolean }) ?? { group_destinations: false });
+      saveCalls.push(
+        (args.prefs as { group_destinations: boolean }) ?? { group_destinations: false },
+      );
       return null;
     });
 

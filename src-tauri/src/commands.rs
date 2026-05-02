@@ -95,19 +95,13 @@ pub(crate) fn validate_nearest_args(lat: f64, lon: f64, limit: u32) -> Result<()
         return Err("validation: lat/lon must be finite".to_string());
     }
     if !(-90.0..=90.0).contains(&lat) {
-        return Err(format!(
-            "validation: lat must be in [-90, 90], got {lat}"
-        ));
+        return Err(format!("validation: lat must be in [-90, 90], got {lat}"));
     }
     if !(-180.0..=180.0).contains(&lon) {
-        return Err(format!(
-            "validation: lon must be in [-180, 180], got {lon}"
-        ));
+        return Err(format!("validation: lon must be in [-180, 180], got {lon}"));
     }
     if !(1..=20).contains(&limit) {
-        return Err(format!(
-            "validation: limit must be in [1, 20], got {limit}"
-        ));
+        return Err(format!("validation: limit must be in [1, 20], got {limit}"));
     }
     Ok(())
 }
@@ -242,12 +236,9 @@ pub(crate) async fn find_nearest_stations_inner(
         // Diagnostic line — never logs lat/lon, only the result count
         // and the closest station's name + distance so we can sanity-
         // check ranking from a dev console.
-        let first = nearby.first().map(|n| {
-            (
-                n.station.common_name.as_str(),
-                n.distance_m.round() as i64,
-            )
-        });
+        let first = nearby
+            .first()
+            .map(|n| (n.station.common_name.as_str(), n.distance_m.round() as i64));
         eprintln!(
             "[find_nearest_stations] elapsed={}ms results={} first={:?}",
             started.elapsed().as_millis(),
