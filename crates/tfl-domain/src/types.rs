@@ -271,6 +271,20 @@ impl<'de> Deserialize<'de> for Station {
     }
 }
 
+/// A station ranked by distance from a given coordinate, returned by the
+/// `find_nearest_stations` IPC command.
+///
+/// `distance_m` is the great-circle (haversine) distance in metres from the
+/// query point to the station's `lat`/`lon`. The renderer applies a 1.3×
+/// fudge factor when formatting to approximate walking distance — keeping
+/// the raw geodesic value in the wire type so other consumers (analytics,
+/// debug overlay) can read it unmodified.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct NearbyStation {
+    pub station: Station,
+    pub distance_m: f64,
+}
+
 /// Thin reference to a line (id + name) used inside `Station`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct LineRef {

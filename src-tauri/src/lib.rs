@@ -36,6 +36,8 @@
 #![deny(unsafe_code)]
 
 pub mod commands;
+#[cfg(target_os = "macos")]
+pub mod location;
 pub mod state;
 pub mod store_impl;
 
@@ -53,10 +55,13 @@ use tfl_client::{clock::SystemClock, http::ReqwestTflHttp, TflClient};
 use tokio::sync::RwLock;
 use tokio::task::AbortHandle;
 
+#[cfg(target_os = "macos")]
+use commands::request_current_location;
 use commands::{
-    add_favorite, apply_board_size, get_board, get_line_status, has_app_key, list_favorites,
-    load_app_key, load_config, load_display_mode, load_display_prefs, remove_favorite,
-    save_app_key, save_config, save_display_mode, save_display_prefs, search_stations,
+    add_favorite, apply_board_size, find_nearest_stations, get_board, get_line_status, has_app_key,
+    list_favorites, load_app_key, load_config, load_display_mode, load_display_prefs,
+    remove_favorite, save_app_key, save_config, save_display_mode, save_display_prefs,
+    search_stations,
 };
 use state::{AnyBoardService, AppState};
 use store_impl::{StorePluginConfigStore, StorePluginFavoritesStore};
@@ -885,6 +890,9 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             search_stations,
+            find_nearest_stations,
+            #[cfg(target_os = "macos")]
+            request_current_location,
             get_board,
             save_config,
             load_config,

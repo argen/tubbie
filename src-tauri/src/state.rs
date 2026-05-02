@@ -20,7 +20,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tfl_board::{BoardConfig, BoardError, BoardService, LifecyclePhase};
 use tfl_client::{clock::Clock, http::TflHttp};
-use tfl_domain::{Board, Favorite, LineStatus, Station};
+use tfl_domain::{Board, Favorite, LineStatus, NearbyStation, Station};
 use tokio::{
     sync::{watch, RwLock},
     task::AbortHandle,
@@ -282,6 +282,12 @@ impl ConfigStore for MemoryConfigStore {
 #[async_trait::async_trait]
 pub trait AnyBoardService: Send + Sync + 'static {
     async fn search_stations(&self, query: &str) -> Result<Vec<Station>, BoardError>;
+    async fn find_nearest_stations(
+        &self,
+        lat: f64,
+        lon: f64,
+        limit: usize,
+    ) -> Result<Vec<NearbyStation>, BoardError>;
     async fn get_line_status(&self, line_id: &str) -> Result<LineStatus, BoardError>;
     async fn refresh(&self, cfg: &BoardConfig) -> Result<Board, BoardError>;
     async fn warm_stop_points_cache(&self) -> Result<usize, BoardError>;
@@ -292,6 +298,15 @@ pub trait AnyBoardService: Send + Sync + 'static {
 impl<H: TflHttp + 'static, C: Clock + 'static> AnyBoardService for BoardService<H, C> {
     async fn search_stations(&self, query: &str) -> Result<Vec<Station>, BoardError> {
         BoardService::search_stations(self, query).await
+    }
+
+    async fn find_nearest_stations(
+        &self,
+        lat: f64,
+        lon: f64,
+        limit: usize,
+    ) -> Result<Vec<NearbyStation>, BoardError> {
+        BoardService::find_nearest_stations(self, lat, lon, limit).await
     }
 
     async fn get_line_status(&self, line_id: &str) -> Result<LineStatus, BoardError> {

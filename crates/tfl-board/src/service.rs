@@ -31,7 +31,9 @@ use futures::stream::{self, Stream};
 use tokio::time::{interval, MissedTickBehavior};
 
 use tfl_client::{clock::Clock, http::TflHttp, TflClient};
-use tfl_domain::{line_compass_axis, Arrival, Board, Direction, LineStatus, Platform, Station};
+use tfl_domain::{
+    line_compass_axis, Arrival, Board, Direction, LineStatus, NearbyStation, Platform, Station,
+};
 
 use crate::config::BoardConfig;
 use crate::error::BoardError;
@@ -71,6 +73,25 @@ impl<H: TflHttp + 'static, C: Clock + 'static> BoardService<H, C> {
     /// Returns `BoardError::Fetch` if the TfL client returns an error.
     pub async fn search_stations(&self, query: &str) -> Result<Vec<Station>, BoardError> {
         Ok(self.client.search_stations(query).await?)
+    }
+
+    /// Find the closest stations to `(lat, lon)`, sorted ascending by
+    /// haversine distance and capped at `limit` entries.
+    ///
+    /// Delegates to `TflClient::find_nearest_stations`, which reuses the
+    /// stale-OK stop-points cache and applies the same NaPTAN-prefix
+    /// whitelist + hub-dedupe that `search_stations` does.
+    ///
+    /// # Errors
+    /// Returns `BoardError::Fetch` if the TfL client returns an error
+    /// (e.g. cold cache + network failure).
+    pub async fn find_nearest_stations(
+        &self,
+        lat: f64,
+        lon: f64,
+        limit: usize,
+    ) -> Result<Vec<NearbyStation>, BoardError> {
+        Ok(self.client.find_nearest_stations(lat, lon, limit).await?)
     }
 
     /// Pre-fetch the multi-mode stop-points list so the first settings-search
