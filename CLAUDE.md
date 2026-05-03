@@ -261,6 +261,21 @@ referenced from tests and PRs — don't renumber.
     leaves a whole mode missing for the full 14-minute window. User
     symptom: "tube doesn't appear in search but DLR does".
 
+### Network status
+
+25. **`severity_bucket` in `tfl-domain` is the single canonical mapping
+    from TfL severity codes to render tiers.** UI consumers (Svelte today,
+    future SwiftUI) MUST consume the `bucket: SeverityBucket` field on
+    `StatusEntry` rather than re-mapping numeric codes. The wire-format
+    seam (`tfl_line_to_line_status` in `crates/tfl-client/src/client.rs`)
+    populates the field from `severity_bucket(s.status_severity)`. A
+    duplicate table in TS or Swift will drift the day TfL adds a new code
+    (e.g. some future "Service Diversion" variant) — drift looks like a
+    minor disruption silently rendering as Good Service. The Status tab's
+    worst-first sort and tab-dot indicator both pivot on this bucket; one
+    place to update keeps the contract honest. Test:
+    `crates/tfl-domain/tests/severity_bucket.rs`.
+
 ### Frontend
 
 22. **The `line_ids` chip filter is a frontend-only display mask.**

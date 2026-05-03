@@ -250,6 +250,280 @@ mod tests {
     }
 
     // -------------------------------------------------------------------------
+    // get_all_line_statuses — Status-tab feed (added 2026-05).
+    //
+    // Drives the iOS Status tab. Reads the same 60-second `line_status_cache`
+    // as `get_line_status`, returns the merged Vec<LineStatus> sorted
+    // worst-first then alphabetical by line_id.
+    // -------------------------------------------------------------------------
+
+    #[tokio::test]
+    async fn get_all_line_statuses_returns_lines_from_every_supported_mode() {
+        let client = real_client();
+        let statuses = client
+            .get_all_line_statuses()
+            .await
+            .expect("workspace fixture must yield a populated line list");
+
+        let ids: std::collections::HashSet<&str> =
+            statuses.iter().map(|s| s.line_id.as_str()).collect();
+
+        // One line per surfaced mode — workspace fixture covers all four.
+        assert!(
+            ids.contains("northern"),
+            "expected tube line 'northern', got: {ids:?}"
+        );
+        assert!(
+            ids.contains("dlr"),
+            "expected DLR line 'dlr', got: {ids:?}"
+        );
+        assert!(
+            ids.contains("elizabeth"),
+            "expected Elizabeth line 'elizabeth', got: {ids:?}"
+        );
+        assert!(
+            ids.contains("mildmay"),
+            "expected Overground line 'mildmay', got: {ids:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn get_all_line_statuses_sorts_worst_first_then_alphabetical() {
+        use tfl_domain::types::SeverityBucket;
+
+        // Hand-rolled fixture: three tube lines with mixed severities so we
+        // can pin down the ordering contract independently of TfL's day-to-day.
+        // - "alpha-line": Closed (severity 1)         → bucket Closed (rank 0)
+        // - "bravo-line": Severe Delays (severity 6)  → bucket SevereDelays (rank 2)
+        // - "charlie-line": Minor Delays (severity 9) → bucket MinorDelays (rank 4)
+        // - "delta-line":  Severe Delays (severity 6) → bucket SevereDelays (rank 2)
+        // - "echo-line":   Good Service (severity 10) → bucket GoodService (rank 7)
+        // Expected order: alpha, bravo, delta, charlie, echo.
+        let dir = tempfile::tempdir().expect("tempdir");
+        let endpoint_dir = dir.path().join("line-status");
+        fs::create_dir_all(&endpoint_dir).unwrap();
+        let fixture = serde_json::json!([
+            { "id": "echo-line", "name": "Echo", "lineStatuses": [
+                { "statusSeverity": 10, "statusSeverityDescription": "Good Service" }
+            ]},
+            { "id": "delta-line", "name": "Delta", "lineStatuses": [
+                { "statusSeverity": 6, "statusSeverityDescription": "Severe Delays" }
+            ]},
+            { "id": "charlie-line", "name": "Charlie", "lineStatuses": [
+                { "statusSeverity": 9, "statusSeverityDescription": "Minor Delays" }
+            ]},
+            { "id": "bravo-line", "name": "Bravo", "lineStatuses": [
+                { "statusSeverity": 6, "statusSeverityDescription": "Severe Delays" }
+            ]},
+            { "id": "alpha-line", "name": "Alpha", "lineStatuses": [
+                { "statusSeverity": 1, "statusSeverityDescription": "Closed" }
+            ]},
+        ]);
+        fs::write(
+            endpoint_dir.join("tube.json"),
+            serde_json::to_string(&fixture).unwrap(),
+        )
+        .unwrap();
+
+        // Subset client: tube-only so the missing other-mode fixtures don't
+        // pollute the result with unrelated lines.
+        let client = TflClient::with_modes(FixtureTflHttp::new(dir.path()), &["tube"]);
+        let statuses = client
+            .get_all_line_statuses()
+            .await
+            .expect("get_all_line_statuses should succeed with tube fixture");
+
+        let order: Vec<&str> = statuses.iter().map(|s| s.line_id.as_str()).collect();
+        assert_eq!(
+            order,
+            vec![
+                "alpha-line",
+                "bravo-line",
+                "delta-line",
+                "charlie-line",
+                "echo-line",
+            ],
+            "expected worst-first then alphabetical by line_id"
+        );
+
+        // Buckets should be populated on every entry.
+        for s in &statuses {
+            for entry in &s.status {
+                assert_ne!(
+                    entry.bucket,
+                    SeverityBucket::Other,
+                    "fixture-known severities must NOT bucket as Other; line={}",
+                    s.line_id,
+                );
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn get_all_line_statuses_warm_cache_does_not_refetch() {
+        // CountingTflHttp wraps the fixture transport and counts every fetch.
+        // Two calls to get_all_line_statuses inside the 60s TTL window must
+        // total at most one fetch per surfaced mode (the cold-cache fan-out);
+        // the second call MUST hit the cache.
+        use crate::http::TflHttp;
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use std::sync::Arc;
+
+        struct CountingTflHttp {
+            inner: FixtureTflHttp,
+            line_status_calls: Arc<AtomicUsize>,
+        }
+        impl TflHttp for CountingTflHttp {
+            fn fetch(
+                &self,
+                endpoint: &str,
+                id: &str,
+            ) -> impl std::future::Future<Output = Result<serde_json::Value, TflError>> + Send
+            {
+                if endpoint == "line-status" {
+                    self.line_status_calls.fetch_add(1, Ordering::SeqCst);
+                }
+                let inner = self.inner.clone();
+                let endpoint = endpoint.to_string();
+                let id = id.to_string();
+                async move { inner.fetch(&endpoint, &id).await }
+            }
+        }
+
+        let counter = Arc::new(AtomicUsize::new(0));
+        let http = CountingTflHttp {
+            inner: FixtureTflHttp::new(workspace_fixtures_dir()),
+            line_status_calls: counter.clone(),
+        };
+        // Subset client (tube only) — keeps the per-mode count predictable.
+        let client = TflClient::with_modes(http, &["tube"]);
+
+        client
+            .get_all_line_statuses()
+            .await
+            .expect("first call should succeed");
+        let after_cold = counter.load(Ordering::SeqCst);
+        assert_eq!(after_cold, 1, "cold-cache call should fetch tube exactly once");
+
+        client
+            .get_all_line_statuses()
+            .await
+            .expect("warm-cache call should succeed");
+        let after_warm = counter.load(Ordering::SeqCst);
+        assert_eq!(
+            after_warm, 1,
+            "warm-cache call MUST NOT refetch; expected 1 call total, got {after_warm}",
+        );
+    }
+
+    #[tokio::test]
+    async fn get_all_line_statuses_populates_validity_periods_when_present() {
+        // Fixture with one line carrying a validityPeriods entry — verifies
+        // the wire-format projection actually surfaces the time window.
+        let dir = tempfile::tempdir().expect("tempdir");
+        let endpoint_dir = dir.path().join("line-status");
+        fs::create_dir_all(&endpoint_dir).unwrap();
+        let fixture = serde_json::json!([
+            {
+                "id": "liberty",
+                "name": "Liberty",
+                "lineStatuses": [
+                    {
+                        "statusSeverity": 4,
+                        "statusSeverityDescription": "Planned Closure",
+                        "reason": "Liberty: planned closure for engineering work.",
+                        "validityPeriods": [
+                            {
+                                "fromDate": "2026-05-04T22:00:00Z",
+                                "toDate": "2026-05-05T04:30:00Z",
+                                "isNow": true
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]);
+        fs::write(
+            endpoint_dir.join("overground.json"),
+            serde_json::to_string(&fixture).unwrap(),
+        )
+        .unwrap();
+
+        let client = TflClient::with_modes(FixtureTflHttp::new(dir.path()), &["overground"]);
+        let statuses = client
+            .get_all_line_statuses()
+            .await
+            .expect("get_all_line_statuses should succeed");
+
+        let liberty = statuses
+            .iter()
+            .find(|s| s.line_id == "liberty")
+            .expect("liberty should be present");
+
+        assert_eq!(
+            liberty.validity_periods.len(),
+            1,
+            "liberty fixture has exactly one validity period",
+        );
+        let vp = &liberty.validity_periods[0];
+        assert!(vp.is_now, "is_now must round-trip from `isNow` (camelCase wire)");
+        assert_eq!(
+            vp.from.to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+            "2026-05-04T22:00:00Z",
+        );
+        assert_eq!(
+            vp.to.to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+            "2026-05-05T04:30:00Z",
+        );
+    }
+
+    #[tokio::test]
+    async fn get_all_line_statuses_empty_validity_when_absent() {
+        // Status without validityPeriods (Good Service is the common case)
+        // must yield an empty Vec — never a panic, never a None confusion.
+        let dir = tempfile::tempdir().expect("tempdir");
+        let endpoint_dir = dir.path().join("line-status");
+        fs::create_dir_all(&endpoint_dir).unwrap();
+        let fixture = serde_json::json!([
+            {
+                "id": "jubilee",
+                "name": "Jubilee",
+                "lineStatuses": [
+                    { "statusSeverity": 10, "statusSeverityDescription": "Good Service" }
+                ]
+            }
+        ]);
+        fs::write(
+            endpoint_dir.join("tube.json"),
+            serde_json::to_string(&fixture).unwrap(),
+        )
+        .unwrap();
+
+        let client = TflClient::with_modes(FixtureTflHttp::new(dir.path()), &["tube"]);
+        let statuses = client.get_all_line_statuses().await.expect("should succeed");
+        assert_eq!(statuses.len(), 1);
+        assert!(statuses[0].validity_periods.is_empty());
+    }
+
+    #[tokio::test]
+    async fn get_all_line_statuses_all_modes_failed_returns_err() {
+        // Empty fixture dir: every per-mode fetch hits NotFound. The merged
+        // vec is empty so the method MUST surface the failure rather than
+        // returning Ok(vec![]) — the Status tab needs to render an error
+        // banner, not "all good service" silently.
+        let dir = tempfile::tempdir().expect("tempdir");
+        let client = TflClient::with_modes(FixtureTflHttp::new(dir.path()), &["tube"]);
+        let err = client
+            .get_all_line_statuses()
+            .await
+            .expect_err("all-modes-failed must propagate as error");
+        assert!(
+            matches!(err, TflError::NotFound(_)),
+            "expected NotFound (matches existing get_line_status fail-path), got {err:?}"
+        );
+    }
+
+    // -------------------------------------------------------------------------
     // search_stations
     // -------------------------------------------------------------------------
 

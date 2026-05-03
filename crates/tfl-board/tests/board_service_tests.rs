@@ -1481,3 +1481,62 @@ async fn stream_continues_with_stale_fallback_when_last_ok_exists() {
         }
     }
 }
+
+// ---------------------------------------------------------------------------
+// Test 11: get_all_line_statuses_delegates_to_client
+// ---------------------------------------------------------------------------
+
+/// `BoardService::get_all_line_statuses` is a thin pass-through to
+/// `TflClient::get_all_line_statuses`. Verifies that the workspace fixture
+/// returns a populated, worst-first sorted list including lines from every
+/// surfaced mode — guarding the iOS Status tab IPC seam.
+#[tokio::test]
+async fn get_all_line_statuses_delegates_to_client() {
+    use tfl_domain::types::SeverityBucket;
+
+    let svc = fixture_service("2026-04-23T12:00:00Z");
+    let statuses = svc
+        .get_all_line_statuses()
+        .await
+        .expect("workspace fixture must yield a populated line list");
+
+    assert!(
+        !statuses.is_empty(),
+        "fixture should produce ≥1 LineStatus across all 4 surfaced modes"
+    );
+
+    // Worst-first sort contract: each entry's worst bucket must rank
+    // less-than-or-equal-to the next.
+    fn worst_rank(s: &tfl_domain::LineStatus) -> u8 {
+        s.status
+            .iter()
+            .map(|e| e.bucket)
+            .min_by_key(|b| b.sort_rank())
+            .unwrap_or(SeverityBucket::GoodService)
+            .sort_rank()
+    }
+    for window in statuses.windows(2) {
+        let a_rank = worst_rank(&window[0]);
+        let b_rank = worst_rank(&window[1]);
+        assert!(
+            a_rank <= b_rank,
+            "service must return worst-first; {} (rank {a_rank}) sorted before {} (rank {b_rank})",
+            window[0].line_id,
+            window[1].line_id,
+        );
+    }
+
+    // Bucket field must be populated on every status entry — the iOS
+    // Status tab consumes it directly without re-mapping severity codes.
+    for s in &statuses {
+        for entry in &s.status {
+            assert_eq!(
+                entry.bucket,
+                tfl_domain::severity_bucket(entry.severity),
+                "bucket must match severity_bucket(severity); line={}, severity={}",
+                s.line_id,
+                entry.severity,
+            );
+        }
+    }
+}

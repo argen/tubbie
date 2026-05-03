@@ -120,6 +120,18 @@ impl<H: TflHttp + 'static, C: Clock + 'static> BoardService<H, C> {
         Ok(self.client.get_line_status(line_id).await?)
     }
 
+    /// Fetch the merged status of every line across all surfaced modes,
+    /// pre-sorted worst-first then alphabetically. Drives the Status tab
+    /// in tubbie-ios. Delegates to [`TflClient::get_all_line_statuses`] —
+    /// shares the same 60s cache as `get_line_status` (no extra TfL traffic
+    /// when the per-line ticker has already warmed it).
+    ///
+    /// # Errors
+    /// Returns `BoardError::Fetch` if every per-mode fetch failed.
+    pub async fn get_all_line_statuses(&self) -> Result<Vec<LineStatus>, BoardError> {
+        Ok(self.client.get_all_line_statuses().await?)
+    }
+
     /// Fetch and filter arrivals for one station, returning a `Board`.
     ///
     /// `generated_at` is set from the injected clock, never from `Utc::now()`.
