@@ -60,8 +60,8 @@ use std::collections::HashMap;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 use tfl_domain::types::{
-    is_supported_line_id, pretty_line_name, Arrival, LineRef, LineStatus, Station, StatusEntry,
-    TflLine,
+    is_supported_line_id, pretty_line_name, severity_bucket, Arrival, LineRef, LineStatus,
+    SeverityBucket, Station, StatusEntry, TflLine, ValidityPeriod,
 };
 
 /// TfL modes tubbie surfaces. `TflClient::new` defaults to this set; the
@@ -460,9 +460,51 @@ impl<H: TflHttp> TflClient<H> {
     /// - `TflError::NotFound` — `line_id` not found across any surfaced mode.
     /// - `TflError::Transport` — every mode's fetch failed (network only).
     pub async fn get_line_status(&self, line_id: &str) -> Result<LineStatus, TflError> {
-        // Serve from the TTL cache when fresh. The merged line list is
-        // fetched once per LINE_STATUS_TTL window across all surfaced
-        // modes; per-line lookups all run against the cached Vec<TflLine>.
+        let lines = self.cache_or_fetch_lines().await?;
+
+        let tfl_line = lines
+            .into_iter()
+            .find(|l| l.id == line_id)
+            .ok_or_else(|| TflError::NotFound(format!("line not found: {line_id}")))?;
+
+        Ok(tfl_line_to_line_status(tfl_line))
+    }
+
+    /// Fetch the merged status of every line across all surfaced modes.
+    ///
+    /// Reads the same 60-second `line_status_cache` as [`Self::get_line_status`];
+    /// on cold cache triggers the same per-mode fan-out via
+    /// [`Self::fetch_line_status_all_modes`]. Returns [`LineStatus`]es sorted
+    /// **worst-first** by [`SeverityBucket::sort_rank`], then alphabetical by
+    /// `line_id`. This is the canonical ordering for the iOS Status tab — UI
+    /// consumers MUST NOT re-sort, and the contract is exercised by
+    /// `get_all_line_statuses_sorts_worst_first_then_alphabetical`.
+    ///
+    /// # Errors
+    /// - `TflError::NotFound` — every per-mode fetch failed (mirrors the
+    ///   error variant `get_line_status` propagates from
+    ///   `fetch_line_status_all_modes`). Returning `Ok(vec![])` here would
+    ///   silently render an empty Status tab as "all good service", which
+    ///   is the wrong signal.
+    pub async fn get_all_line_statuses(&self) -> Result<Vec<LineStatus>, TflError> {
+        let lines = self.cache_or_fetch_lines().await?;
+
+        let mut out: Vec<LineStatus> = lines.into_iter().map(tfl_line_to_line_status).collect();
+        out.sort_by(|a, b| {
+            worst_bucket_for(a)
+                .sort_rank()
+                .cmp(&worst_bucket_for(b).sort_rank())
+                .then_with(|| a.line_id.cmp(&b.line_id))
+        });
+        Ok(out)
+    }
+
+    /// Read the line-status cache when fresh, else fan out per-mode fetches
+    /// and stamp the cache. Single helper shared by `get_line_status` and
+    /// `get_all_line_statuses` so the lock + TTL + fan-out logic exists in
+    /// exactly one place — duplicating it had been the source of two prior
+    /// inconsistencies.
+    async fn cache_or_fetch_lines(&self) -> Result<Vec<TflLine>, TflError> {
         let cached_lines = {
             let guard = self.line_status_cache.lock().unwrap_or_else(|p| {
                 eprintln!("[tfl-client] line_status_cache mutex poisoned; recovering");
@@ -477,29 +519,22 @@ impl<H: TflHttp> TflClient<H> {
             })
         };
 
-        let lines = if let Some(lines) = cached_lines {
-            lines
-        } else {
-            let fresh = self.fetch_line_status_all_modes().await?;
-            match self.line_status_cache.lock() {
-                Ok(mut guard) => {
-                    *guard = Some((Instant::now(), fresh.clone()));
-                }
-                Err(poison) => {
-                    eprintln!("[tfl-client] line_status_cache mutex poisoned on write; recovering");
-                    let mut guard = poison.into_inner();
-                    *guard = Some((Instant::now(), fresh.clone()));
-                }
+        if let Some(lines) = cached_lines {
+            return Ok(lines);
+        }
+
+        let fresh = self.fetch_line_status_all_modes().await?;
+        match self.line_status_cache.lock() {
+            Ok(mut guard) => {
+                *guard = Some((Instant::now(), fresh.clone()));
             }
-            fresh
-        };
-
-        let tfl_line = lines
-            .into_iter()
-            .find(|l| l.id == line_id)
-            .ok_or_else(|| TflError::NotFound(format!("line not found: {line_id}")))?;
-
-        Ok(tfl_line_to_line_status(tfl_line))
+            Err(poison) => {
+                eprintln!("[tfl-client] line_status_cache mutex poisoned on write; recovering");
+                let mut guard = poison.into_inner();
+                *guard = Some((Instant::now(), fresh.clone()));
+            }
+        }
+        Ok(fresh)
     }
 
     /// Fan out `line-status/{mode}` fetches for every configured mode and
@@ -1136,8 +1171,12 @@ fn relevance_tier(name_lower: &str, query_lower: &str) -> u8 {
 
 /// Convert a TfL wire-format `TflLine` into a domain `LineStatus`.
 ///
-/// Status entries are derived from `lineStatuses`.
+/// Status entries are derived from `lineStatuses`. Each entry's `bucket`
+/// is computed via [`severity_bucket`] so UI consumers never re-map raw
+/// codes (per CLAUDE.md invariant #25).
 /// Disruption text is assembled from unique, non-empty `reason` fields.
+/// Validity periods are projected from every entry's `validityPeriods[]`
+/// in TfL declaration order (the `isNow` window typically appears first).
 fn tfl_line_to_line_status(line: TflLine) -> LineStatus {
     let status: Vec<StatusEntry> = line
         .line_statuses
@@ -1145,6 +1184,7 @@ fn tfl_line_to_line_status(line: TflLine) -> LineStatus {
         .map(|s| StatusEntry {
             severity: s.status_severity,
             description: s.status_severity_description.clone(),
+            bucket: severity_bucket(s.status_severity),
         })
         .collect();
 
@@ -1169,9 +1209,32 @@ fn tfl_line_to_line_status(line: TflLine) -> LineStatus {
         Some(disruption_parts.join(" | "))
     };
 
+    let validity_periods: Vec<ValidityPeriod> = line
+        .line_statuses
+        .iter()
+        .flat_map(|s| s.validity_periods.iter())
+        .map(|vp| ValidityPeriod {
+            from: vp.from_date,
+            to: vp.to_date,
+            is_now: vp.is_now,
+        })
+        .collect();
+
     LineStatus {
         line_id: line.id,
         status,
         disruption_text,
+        validity_periods,
     }
+}
+
+/// The worst (lowest-rank) `SeverityBucket` across a `LineStatus`'s entries.
+/// Drives the worst-first sort in `get_all_line_statuses`. Empty status →
+/// `GoodService` so the line still sorts after disrupted entries.
+fn worst_bucket_for(s: &LineStatus) -> SeverityBucket {
+    s.status
+        .iter()
+        .map(|e| e.bucket)
+        .min_by_key(|b| b.sort_rank())
+        .unwrap_or(SeverityBucket::GoodService)
 }

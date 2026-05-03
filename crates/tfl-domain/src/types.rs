@@ -391,6 +391,13 @@ pub struct LineStatus {
     pub line_id: String,
     pub status: Vec<StatusEntry>,
     pub disruption_text: Option<String>,
+    /// Active disruption time windows from TfL's `validityPeriods[]`,
+    /// surfaced on the Status tab as the "Until …" chip on planned
+    /// closures. `#[serde(default)]` keeps backwards compatibility with
+    /// pre-existing payloads (empty Vec when omitted) so the iOS submodule
+    /// bump is non-breaking for any cached serialized state.
+    #[serde(default)]
+    pub validity_periods: Vec<ValidityPeriod>,
 }
 
 /// An individual severity entry within a `LineStatus`.
@@ -402,6 +409,102 @@ pub struct StatusEntry {
     pub severity: i32,
     /// Human-readable severity description, e.g. `"Good Service"`.
     pub description: String,
+    /// Render-tier bucket derived from `severity` via [`severity_bucket`].
+    /// Computed at the wire-format seam so UI consumers never re-map raw
+    /// codes — see `SeverityBucket` docs for the canonicality contract.
+    /// `#[serde(default)]` keeps backwards compatibility with payloads
+    /// that pre-date the field; default is computed from `severity`.
+    #[serde(default = "default_status_entry_bucket")]
+    pub bucket: SeverityBucket,
+}
+
+fn default_status_entry_bucket() -> SeverityBucket {
+    // Used only when deserializing legacy payloads that omit `bucket`.
+    // The interpreted-type LineStatus is built by tfl-client which always
+    // populates it, so this is a safety net for stored snapshots.
+    SeverityBucket::Other
+}
+
+/// Render-tier bucket for a TfL severity code.
+///
+/// Encodes the contract published at https://api.tfl.gov.uk/StatusSeverity
+/// (codes 0–20). This mapping is the **single canonical source** consumed
+/// by every UI surface — Svelte today, future SwiftUI. UI code MUST NOT
+/// redefine it; consume the `bucket` field on `StatusEntry` instead.
+///
+/// Sort order (via [`SeverityBucket::sort_rank`]) is "worst first":
+/// Closed < PartClosure < SevereDelays < ReducedService < MinorDelays
+/// < Information < Other < GoodService.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum SeverityBucket {
+    /// 1 (Closed), 2 (Suspended), 16 (Not Running), 20 (Service Closed).
+    /// Renders with strikethrough on the Status tab.
+    Closed,
+    /// 3 (Part Suspended), 4 (Planned Closure), 5 (Part Closure), 11 (Part Closed).
+    PartClosure,
+    /// 6 (Severe Delays).
+    SevereDelays,
+    /// 7 (Reduced Service), 8 (Bus Service replacement), 15 (Diverted).
+    ReducedService,
+    /// 9 (Minor Delays), 14 (Change of Frequency).
+    MinorDelays,
+    /// 17 (Issues Reported), 19 (Information).
+    Information,
+    /// 0 (Special Service), 12 (Exit Only), 13 (No Step Free Access),
+    /// plus any unrecognised future code. Treated as low-priority.
+    Other,
+    /// 10 (Good Service), 18 (No Issues). Sorts last.
+    GoodService,
+}
+
+impl SeverityBucket {
+    /// Numeric ordering key — lower = worse. Drives the worst-first
+    /// sort on the Status tab. `GoodService` sorts strictly last so the
+    /// "all other lines: Good Service" footer grouping is stable.
+    pub fn sort_rank(&self) -> u8 {
+        match self {
+            SeverityBucket::Closed => 0,
+            SeverityBucket::PartClosure => 1,
+            SeverityBucket::SevereDelays => 2,
+            SeverityBucket::ReducedService => 3,
+            SeverityBucket::MinorDelays => 4,
+            SeverityBucket::Information => 5,
+            SeverityBucket::Other => 6,
+            SeverityBucket::GoodService => 7,
+        }
+    }
+}
+
+/// Map a TfL numeric severity code to its render-tier bucket.
+///
+/// Out-of-range codes (negative or unrecognised) fall through to
+/// [`SeverityBucket::Other`] so a future TfL extension never panics
+/// or silently mis-categorises into a more severe tier.
+pub fn severity_bucket(severity: i32) -> SeverityBucket {
+    match severity {
+        1 | 2 | 16 | 20 => SeverityBucket::Closed,
+        3 | 4 | 5 | 11 => SeverityBucket::PartClosure,
+        6 => SeverityBucket::SevereDelays,
+        7 | 8 | 15 => SeverityBucket::ReducedService,
+        9 | 14 => SeverityBucket::MinorDelays,
+        10 | 18 => SeverityBucket::GoodService,
+        17 | 19 => SeverityBucket::Information,
+        _ => SeverityBucket::Other,
+    }
+}
+
+/// Time window during which a `TflLineStatus` entry applies. Mirrors
+/// TfL's `validityPeriods[]`. Surfaced on the Status tab as an
+/// "Until …" chip on planned closures so the user knows when service
+/// resumes.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ValidityPeriod {
+    pub from: DateTime<Utc>,
+    pub to: DateTime<Utc>,
+    /// TfL's `isNow` flag — true when the period is the currently-active
+    /// one. The client preserves this so consumers can pick the active
+    /// window without re-running clock comparisons.
+    pub is_now: bool,
 }
 
 // ---------------------------------------------------------------------------
@@ -458,6 +561,23 @@ pub struct TflLineStatus {
     pub reason: Option<String>,
     #[serde(default)]
     pub disruption: Option<TflDisruption>,
+    /// TfL `validityPeriods[]` for this status entry. Drives the
+    /// "Until …" chip on planned closures in the iOS Status tab. Empty
+    /// for Good Service entries (TfL omits the array).
+    #[serde(default)]
+    pub validity_periods: Vec<TflValidityPeriod>,
+}
+
+/// TfL wire-format validity period — separate from the domain
+/// [`ValidityPeriod`] because the field names differ (`fromDate`/`toDate`
+/// on the wire vs. snake-case on the IPC boundary).
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TflValidityPeriod {
+    pub from_date: DateTime<Utc>,
+    pub to_date: DateTime<Utc>,
+    #[serde(default)]
+    pub is_now: bool,
 }
 
 /// TfL wire format for disruption info nested inside a line status.

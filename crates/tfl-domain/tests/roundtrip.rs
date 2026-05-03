@@ -7,7 +7,7 @@
 
 use chrono::{DateTime, Utc};
 use tfl_domain::{
-    types::{Board, Line, LineStatus, Platform, StatusEntry},
+    types::{Board, Line, LineStatus, Platform, SeverityBucket, StatusEntry, ValidityPeriod},
     Direction,
 };
 
@@ -37,6 +37,8 @@ fn line_deserializes_from_domain_json() {
 #[test]
 fn line_status_deserializes() {
     // Minimal domain-format JSON (LineStatus is domain-interpreted, not TfL wire).
+    // Note: pre-existing payloads omit the post-2026-05 `bucket` and
+    // `validity_periods` fields; serde defaults must keep them parseable.
     let json = r#"{
         "line_id": "northern",
         "status": [
@@ -54,11 +56,68 @@ fn line_status_deserializes() {
         ls.disruption_text.as_deref(),
         Some("Severe delays due to strike action.")
     );
+    // Backwards compatibility: payload without `validity_periods` defaults to empty.
+    assert!(ls.validity_periods.is_empty());
 
     // Round-trip.
     let v = serde_json::to_value(&ls).expect("LineStatus must serialize");
     let back: LineStatus = serde_json::from_value(v).expect("LineStatus must re-deserialize");
     assert_eq!(ls, back);
+}
+
+#[test]
+fn line_status_with_validity_periods_round_trips() {
+    let from: DateTime<Utc> = "2026-05-04T22:00:00Z".parse().expect("valid timestamp");
+    let to: DateTime<Utc> = "2026-05-05T04:30:00Z".parse().expect("valid timestamp");
+
+    let ls = LineStatus {
+        line_id: "liberty".to_string(),
+        status: vec![StatusEntry {
+            severity: 4,
+            description: "Planned Closure".to_string(),
+            bucket: SeverityBucket::PartClosure,
+        }],
+        disruption_text: Some("Engineering work — entire line closed.".to_string()),
+        validity_periods: vec![
+            ValidityPeriod {
+                from,
+                to,
+                is_now: true,
+            },
+            ValidityPeriod {
+                from: to,
+                to: "2026-05-05T05:00:00Z".parse().expect("valid timestamp"),
+                is_now: false,
+            },
+        ],
+    };
+
+    let v = serde_json::to_value(&ls).expect("LineStatus with validity must serialize");
+    let back: LineStatus =
+        serde_json::from_value(v).expect("LineStatus with validity must re-deserialize");
+    assert_eq!(ls, back);
+    assert_eq!(back.validity_periods.len(), 2);
+    assert!(back.validity_periods[0].is_now);
+    assert_eq!(back.validity_periods[0].from, from);
+    assert_eq!(back.validity_periods[0].to, to);
+}
+
+#[test]
+fn validity_period_deserializes_from_camel_snake_round_trip() {
+    let from: DateTime<Utc> = "2026-05-04T22:00:00Z".parse().expect("valid timestamp");
+    let to: DateTime<Utc> = "2026-05-05T04:30:00Z".parse().expect("valid timestamp");
+
+    let vp = ValidityPeriod {
+        from,
+        to,
+        is_now: true,
+    };
+    let v = serde_json::to_value(&vp).expect("ValidityPeriod must serialize");
+    // Snake-case field on the IPC boundary (matches the rest of LineStatus).
+    assert_eq!(v["is_now"], serde_json::json!(true));
+    let back: ValidityPeriod =
+        serde_json::from_value(v).expect("ValidityPeriod must re-deserialize");
+    assert_eq!(vp, back);
 }
 
 // ---------------------------------------------------------------------------
@@ -71,9 +130,26 @@ fn status_entry_deserializes() {
     let entry: StatusEntry = serde_json::from_str(json).expect("StatusEntry must deserialize");
     assert_eq!(entry.severity, 10);
     assert_eq!(entry.description, "Good Service");
+    // Backwards compatibility: legacy payloads without `bucket` get the
+    // serde default (SeverityBucket::Other). Producers (the client layer)
+    // populate the field explicitly so this only triggers for stored snapshots.
+    assert_eq!(entry.bucket, SeverityBucket::Other);
 
-    // Round-trip.
+    // Round-trip — re-serializing now emits the bucket field.
     let v = serde_json::to_value(&entry).expect("StatusEntry must serialize");
+    let back: StatusEntry = serde_json::from_value(v).expect("StatusEntry must re-deserialize");
+    assert_eq!(entry, back);
+}
+
+#[test]
+fn status_entry_with_bucket_round_trips() {
+    let entry = StatusEntry {
+        severity: 6,
+        description: "Severe Delays".to_string(),
+        bucket: SeverityBucket::SevereDelays,
+    };
+    let v = serde_json::to_value(&entry).expect("StatusEntry must serialize");
+    assert_eq!(v["bucket"], serde_json::json!("SevereDelays"));
     let back: StatusEntry = serde_json::from_value(v).expect("StatusEntry must re-deserialize");
     assert_eq!(entry, back);
 }
