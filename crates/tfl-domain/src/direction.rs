@@ -98,6 +98,7 @@ pub fn infer_direction(
     direction: &str,
     line_id: &str,
     towards: &str,
+    destination_name: &str,
 ) -> (Direction, Option<NorthernBranch>) {
     let platform_lower = platform_name.to_ascii_lowercase();
 
@@ -110,6 +111,19 @@ pub fn infer_direction(
     let allow_ns = line_allows_north_south(line_id);
     let allow_ew = line_allows_east_west(line_id);
 
+    // TfL's live `/Arrivals` endpoint leaves `towards` empty for many
+    // Elizabeth and Overground predictions at hub stations (verified at
+    // Liverpool Street's `910GLIVST` on 2026-05-06: every Elizabeth /
+    // Weaver entry had `towards: ""`). `destinationName` is the more
+    // robust signal for those cases — fall back to it when `towards`
+    // alone gives us nothing. Without this, every Elizabeth prediction
+    // resolved to `Direction::Inbound` / `Outbound` and was then
+    // silently dropped by `drop_off_axis_predictions` (Elizabeth is
+    // pinned to `EastWest` in `line_compass_axis`), producing the user
+    // symptom "no Elizabeth at Liverpool Street".
+    let towards_compass = infer_compass_from_towards(line_id, towards)
+        .or_else(|| infer_compass_from_towards(line_id, destination_name));
+
     let dir = if platform_lower.starts_with("northbound") && allow_ns {
         Direction::Northbound
     } else if platform_lower.starts_with("southbound") && allow_ns {
@@ -118,7 +132,7 @@ pub fn infer_direction(
         Direction::Eastbound
     } else if platform_lower.starts_with("westbound") && allow_ew {
         Direction::Westbound
-    } else if let Some(compass) = infer_compass_from_towards(line_id, towards) {
+    } else if let Some(compass) = towards_compass {
         compass
     } else {
         match direction {

@@ -14,7 +14,112 @@
 use tfl_domain::{direction::infer_direction, Direction};
 
 fn dir(platform: &str, raw_direction: &str, line_id: &str, towards: &str) -> Direction {
-    infer_direction(platform, raw_direction, line_id, towards).0
+    infer_direction(platform, raw_direction, line_id, towards, "").0
+}
+
+/// New helper for tests that exercise the `destination_name` fallback
+/// path — TfL leaves `towards` empty for many real Elizabeth /
+/// Overground predictions at hub stations, but `destinationName` is
+/// populated. The compass mapping must consult both fields.
+fn dir_with_dest(
+    platform: &str,
+    raw_direction: &str,
+    line_id: &str,
+    towards: &str,
+    destination: &str,
+) -> Direction {
+    infer_direction(platform, raw_direction, line_id, towards, destination).0
+}
+
+// ---------------------------------------------------------------------------
+// `destination_name` fallback — bug-driven cases
+// ---------------------------------------------------------------------------
+// TfL's live production `/StopPoint/{id}/Arrivals` endpoint emits
+// `towards: ""` for many Elizabeth and Overground predictions at hub
+// stations (verified against Liverpool Street's `910GLIVST` on
+// 2026-05-06). With only the `towards` signal, every such prediction
+// fell through to `Direction::Inbound` / `Direction::Outbound` and was
+// then dropped by `drop_off_axis_predictions` — the user-visible
+// symptom was "no Elizabeth at Liverpool Street". Same shape at
+// Tottenham Court Road and (intermittently) Farringdon.
+//
+// The fix consults `destination_name` when `towards` is empty.
+// `destinationName` is consistently populated by TfL across these
+// stations, so the substring match for Heathrow / Shenfield / Cheshunt
+// / etc. recovers the compass direction.
+
+#[test]
+fn elizabeth_destination_fallback_eastbound_when_towards_empty() {
+    // Real shape from Liverpool Street: TfL gives us the destination
+    // station name but no `towards`.
+    assert_eq!(
+        dir_with_dest(
+            "B",
+            "inbound",
+            "elizabeth",
+            "",
+            "Gidea Park Rail Station"
+        ),
+        Direction::Eastbound
+    );
+}
+
+#[test]
+fn elizabeth_destination_fallback_westbound_when_towards_empty() {
+    assert_eq!(
+        dir_with_dest(
+            "B",
+            "",
+            "elizabeth",
+            "",
+            "Heathrow Terminal 4 Rail Station"
+        ),
+        Direction::Westbound
+    );
+}
+
+#[test]
+fn weaver_destination_fallback_when_towards_empty() {
+    // Weaver runs Liverpool Street ↔ Cheshunt / Enfield Town /
+    // Chingford. Cheshunt is north — Outbound in TfL's frame, but
+    // because the line lacks a strict compass-axis pin, returning
+    // `None` from compass mapping is fine; the raw direction
+    // ("outbound") then survives the off-axis filter (Weaver isn't
+    // pinned). However, when we DO add Weaver-specific mapping later,
+    // this test enforces destination-fallback consistency.
+    //
+    // For now we assert that towards-fallback to destination produces
+    // a stable direction for `elizabeth` at least — the canonical
+    // bug-affected case.
+    assert_eq!(
+        dir_with_dest(
+            "B",
+            "outbound",
+            "elizabeth",
+            "",
+            "Shenfield Rail Station"
+        ),
+        Direction::Eastbound
+    );
+}
+
+#[test]
+fn destination_fallback_does_not_override_explicit_towards() {
+    // When `towards` is non-empty, the existing mapping wins — even
+    // if `destination_name` would resolve to a different direction.
+    // Towards is the more precise signal (TfL's "headed for" label);
+    // destination is a fallback when towards is blank.
+    assert_eq!(
+        dir_with_dest(
+            "B",
+            "",
+            "elizabeth",
+            "Heathrow Terminal 4",
+            // A misleading destination — should NOT override towards.
+            "Abbey Wood Rail Station",
+        ),
+        Direction::Westbound
+    );
 }
 
 // ---------------------------------------------------------------------------

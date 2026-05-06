@@ -12,7 +12,7 @@ use tfl_domain::{direction::infer_direction, Direction, NorthernBranch};
 
 /// Helper: assert a specific inferred (Direction, branch) tuple.
 fn infer(platform: &str, direction: &str, towards: &str) -> (Direction, Option<NorthernBranch>) {
-    infer_direction(platform, direction, "northern", towards)
+    infer_direction(platform, direction, "northern", towards, "")
 }
 
 #[test]
