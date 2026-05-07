@@ -9,7 +9,8 @@
   } from '$lib/stores/config.js';
   import StationSearch from '$lib/components/StationSearch.svelte';
   import ThemePicker from '$lib/components/ThemePicker.svelte';
-  import { hasAppKey, saveAppKey, saveDisplayMode, type DisplayMode } from '$lib/ipc/commands.js';
+  import ApiKeySection from '$lib/components/ApiKeySection.svelte';
+  import { saveDisplayMode, type DisplayMode } from '$lib/ipc/commands.js';
   import { displayMode } from '$lib/stores/displayMode.js';
   import { displayPrefs, initDisplayPrefs, updateDisplayPrefs } from '$lib/stores/displayPrefs.js';
   import { board } from '$lib/stores/board.js';
@@ -36,11 +37,6 @@
   let selectedDirections = $state<Direction[]>([...$config.directions]);
   let pollSeconds = $state($config.poll_seconds);
   let theme = $state<string>($config.theme);
-  let appKey = $state('');
-  let hasStoredAppKey = $state(false);
-  let appKeyVisible = $state(false);
-  let appKeyStatus = $state<string | null>(null);
-  let appKeySaving = $state(false);
 
   // Display-mode picker state. The Rust side now applies the swap live,
   // so we no longer mirror into a separate `pendingDisplayMode` — the
@@ -93,18 +89,7 @@
     { id: 'windrush', label: 'Windrush' },
   ];
 
-  onMount(async () => {
-    try {
-      // SECURITY: only fetch presence, not the actual key value.
-      // The key must never be loaded into the renderer heap unless the user
-      // explicitly triggers a "reveal" action (post-MVP).
-      hasStoredAppKey = await hasAppKey();
-      appKeyStatus = hasStoredAppKey
-        ? 'Using your TfL API key'
-        : 'Using anonymous access (50 requests/min)';
-    } catch {
-      appKeyStatus = 'Could not load API key status';
-    }
+  onMount(() => {
     // Load favorites once on mount. Errors surface via $favoritesError.
     void initFavorites();
     // Hydrate display prefs from disk (defaults to all-false on first run).
@@ -341,37 +326,6 @@
       displayModeStatus = null;
       displayModeStatusTimer = null;
     }, 2400);
-  }
-
-  async function handleSaveAppKey(): Promise<void> {
-    appKeySaving = true;
-    try {
-      const trimmed = appKey.trim();
-      const keyToSave = trimmed.length > 0 ? trimmed : null;
-      const msg = await saveAppKey(keyToSave);
-      // Clear from heap immediately — key must not linger in renderer state.
-      appKey = '';
-      hasStoredAppKey = keyToSave !== null;
-      appKeyStatus = keyToSave ? `Using your TfL API key — ${msg}` : `Cleared. ${msg}`;
-    } catch (err: unknown) {
-      appKeyStatus = `Error: ${err instanceof Error ? err.message : String(err)}`;
-    } finally {
-      appKeySaving = false;
-    }
-  }
-
-  async function handleClearAppKey(): Promise<void> {
-    appKeySaving = true;
-    try {
-      await saveAppKey(null);
-      appKey = '';
-      hasStoredAppKey = false;
-      appKeyStatus = 'Cleared. Restart to apply.';
-    } catch (err: unknown) {
-      appKeyStatus = `Error: ${err instanceof Error ? err.message : String(err)}`;
-    } finally {
-      appKeySaving = false;
-    }
   }
 
   async function handleBack(): Promise<void> {
@@ -645,73 +599,7 @@
       </label>
     </section>
 
-    <!-- API key -->
-    <section class="settings__section" aria-labelledby="section-apikey">
-      <h2 id="section-apikey" class="settings__section-title">TfL API Key</h2>
-      {#if appKeyStatus}
-        <p class="settings__api-status" aria-live="polite">{appKeyStatus}</p>
-      {/if}
-      <p class="settings__api-hint">
-        Optional. Register at
-        <a
-          href="https://api-portal.tfl.gov.uk"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="settings__link">api-portal.tfl.gov.uk</a
-        >. Anonymous access allows 50 req/min.
-      </p>
-      <div class="settings__api-input-row">
-        <input
-          type={appKeyVisible ? 'text' : 'password'}
-          id="api-key-input"
-          class="settings__api-input"
-          bind:value={appKey}
-          placeholder={hasStoredAppKey
-            ? '(stored — type new to replace)'
-            : '(optional TfL API key)'}
-          autocomplete="off"
-          maxlength={64}
-          aria-label="TfL API key (optional)"
-          aria-describedby="api-key-hint"
-        />
-        <button
-          type="button"
-          class="settings__api-reveal-btn"
-          onclick={() => {
-            appKeyVisible = !appKeyVisible;
-          }}
-          aria-label={appKeyVisible ? 'Hide API key' : 'Show API key'}
-          aria-pressed={appKeyVisible}
-        >
-          {appKeyVisible ? 'Hide' : 'Show'}
-        </button>
-      </div>
-      <div class="settings__api-actions">
-        <button
-          type="button"
-          class="settings__btn settings__btn--secondary"
-          onclick={handleSaveAppKey}
-          disabled={appKeySaving}
-          aria-label="Save API key (requires restart)"
-        >
-          {appKeySaving ? 'Saving…' : 'Save Key'}
-        </button>
-        {#if hasStoredAppKey}
-          <button
-            type="button"
-            class="settings__btn settings__btn--secondary"
-            onclick={handleClearAppKey}
-            disabled={appKeySaving}
-            aria-label="Clear stored API key"
-          >
-            Clear Key
-          </button>
-        {/if}
-      </div>
-      <p id="api-key-hint" class="settings__api-hint settings__api-hint--small">
-        Key is stored securely in the system app-data folder. Restart required to apply.
-      </p>
-    </section>
+    <ApiKeySection />
   </div>
 </div>
 
@@ -806,13 +694,15 @@
     overflow-y: auto;
   }
 
-  .settings__section {
+  /* `:global` so child components (ApiKeySection.svelte) can use the same
+     classes without duplicating the rules. */
+  :global(.settings__section) {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
   }
 
-  .settings__section-title {
+  :global(.settings__section-title) {
     font-family: var(--font-board);
     font-size: 1.1rem;
     color: var(--platform-label);
@@ -1028,8 +918,9 @@
     opacity: 0.5;
   }
 
-  /* API key */
-  .settings__api-status {
+  /* Shared status / hint typography. `:global` so ApiKeySection.svelte
+     can use the same classes without duplicating the rules. */
+  :global(.settings__api-status) {
     font-family: var(--font-ui);
     font-size: 0.95rem;
     color: var(--accent);
@@ -1037,18 +928,13 @@
     opacity: 0.9;
   }
 
-  .settings__api-hint {
+  :global(.settings__api-hint) {
     font-family: var(--font-ui);
     font-size: 0.85rem;
     color: var(--platform-label);
     margin: 0;
     opacity: 0.7;
     line-height: 1.4;
-  }
-
-  .settings__api-hint--small {
-    font-size: 0.75rem;
-    opacity: 0.5;
   }
 
   /* Generic toggle row used by display-prefs (and any future renderer-only flags). */
@@ -1132,59 +1018,9 @@
     opacity: 0.75;
   }
 
-  .settings__link {
-    color: var(--fg);
-    opacity: 0.9;
-  }
-
-  .settings__api-input-row {
-    display: flex;
-    gap: 0.5rem;
-  }
-
-  .settings__api-input {
-    flex: 1;
-    background: var(--input-bg);
-    border: 1px solid var(--input-border);
-    color: var(--fg);
-    font-family: var(--font-ui);
-    font-size: 1rem;
-    padding: 0.5rem 0.75rem;
-    border-radius: 2px;
-    outline: none;
-    letter-spacing: 0.04em;
-  }
-
-  .settings__api-input:focus {
-    border-color: var(--fg);
-    box-shadow: 0 0 0 2px var(--focus-ring);
-  }
-
-  .settings__api-reveal-btn {
-    font-family: var(--font-ui);
-    font-size: 0.9rem;
-    background: var(--chip-bg);
-    color: var(--fg);
-    border: 1px solid var(--input-border);
-    padding: 0.3rem 0.75rem;
-    cursor: pointer;
-    border-radius: 2px;
-    white-space: nowrap;
-  }
-
-  .settings__api-reveal-btn:hover,
-  .settings__api-reveal-btn:focus {
-    border-color: var(--platform-label);
-  }
-
-  .settings__api-actions {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-  }
-
-  /* Buttons */
-  .settings__btn {
+  /* Buttons. `:global` so ApiKeySection.svelte can use the same classes
+     without duplicating the rules. */
+  :global(.settings__btn) {
     font-family: var(--font-ui);
     font-size: 1.1rem;
     padding: 0.5rem 1.5rem;
@@ -1196,19 +1032,19 @@
     width: fit-content;
   }
 
-  .settings__btn:disabled {
+  :global(.settings__btn:disabled) {
     opacity: 0.5;
     cursor: not-allowed;
   }
 
-  .settings__btn--secondary {
+  :global(.settings__btn--secondary) {
     background: transparent;
     color: var(--fg);
     border: 1px solid var(--input-border);
   }
 
-  .settings__btn--secondary:hover:not(:disabled),
-  .settings__btn--secondary:focus:not(:disabled) {
+  :global(.settings__btn--secondary:hover:not(:disabled)),
+  :global(.settings__btn--secondary:focus:not(:disabled)) {
     border-color: var(--fg);
   }
 
