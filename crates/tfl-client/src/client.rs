@@ -303,7 +303,63 @@ impl<H: TflHttp> TflClient<H> {
             }
         }
 
-        let value = self.http.fetch("stop-point", hub_id).await?;
+        // Same retry policy as `hub_lines_cached` and the per-mode
+        // stop-points fetch — without this, a single 429 (anonymous
+        // bucket) drops `resolve_arrival_ids` to single-id fallback
+        // for the rest of the cache lifetime, and the user loses
+        // every Elizabeth / Overground / DLR sibling-stop-point
+        // arrival at the queried hub.
+        let value = {
+            let schedule = STOP_POINTS_FETCH_BACKOFF
+                .iter()
+                .copied()
+                .map(Some)
+                .chain(std::iter::once(None))
+                .enumerate();
+
+            let mut got: Option<serde_json::Value> = None;
+            let mut last_err: Option<TflError> = None;
+            for (attempt, backoff) in schedule {
+                match self.http.fetch("stop-point", hub_id).await {
+                    Ok(v) => {
+                        got = Some(v);
+                        break;
+                    }
+                    Err(err @ TflError::NotFound(_))
+                    | Err(err @ TflError::Parse(_))
+                    | Err(err @ TflError::ParseAt { .. }) => {
+                        return Err(err);
+                    }
+                    Err(err) => {
+                        let is_last = backoff.is_none();
+                        if is_last {
+                            eprintln!(
+                                "[tfl-client] hub-children/{hub_id} fetch failed (attempt {}/{}): {err}",
+                                attempt + 1,
+                                STOP_POINTS_FETCH_ATTEMPTS,
+                            );
+                            return Err(err);
+                        }
+                        eprintln!(
+                            "[tfl-client] hub-children/{hub_id} attempt {} failed (will retry): {err}",
+                            attempt + 1,
+                        );
+                        last_err = Some(err);
+                        if let Some(wait) = backoff {
+                            tokio::time::sleep(wait).await;
+                        }
+                    }
+                }
+            }
+            match got {
+                Some(v) => v,
+                None => {
+                    return Err(last_err.unwrap_or_else(|| {
+                        TflError::NotFound(format!("hub-children/{hub_id}: all attempts failed"))
+                    }))
+                }
+            }
+        };
         // Hub StopPoint detail JSON has `children: [ { id, modes, ... } ]`.
         let children = value
             .get("children")
@@ -358,15 +414,76 @@ impl<H: TflHttp> TflClient<H> {
             }
         }
 
-        let value = match self.http.fetch("stop-point", hub_id).await {
-            Ok(v) => v,
-            Err(TflError::NotFound(_)) => {
-                if let Ok(mut guard) = self.hub_lines_cache.lock() {
-                    guard.insert(hub_id.to_string(), vec![]);
+        // Retry transient errors with the same backoff schedule as the
+        // per-mode fetch. Without retries, a single 429 mid-fan-out
+        // (anonymous bucket = 50 req/min, ~90 hubs in a single warm)
+        // leaves a hub's lines empty for the cache lifetime — which
+        // means the queried station's `Station.lines` field doesn't
+        // get the hub-merged Elizabeth / Overground / DLR lines, and
+        // `drop_arrivals_for_lines_not_serving` then drops every
+        // multi-mode prediction at that station for the next 14
+        // minutes. User-visible symptom on iOS: "no Elizabeth at
+        // Liverpool Street" appearing intermittently across cold
+        // launches. Reproduces ~20 % of runs against the anonymous
+        // bucket. `NotFound` is still terminal (cached as empty so we
+        // don't refetch known-missing hubs every warm); `Parse` /
+        // `ParseAt` are also terminal — bad data, retrying won't help.
+        let value = {
+            let schedule = STOP_POINTS_FETCH_BACKOFF
+                .iter()
+                .copied()
+                .map(Some)
+                .chain(std::iter::once(None))
+                .enumerate();
+
+            let mut last_terminal: Option<TflError> = None;
+            let mut maybe_value = None;
+            for (attempt, backoff) in schedule {
+                match self.http.fetch("stop-point", hub_id).await {
+                    Ok(v) => {
+                        maybe_value = Some(v);
+                        break;
+                    }
+                    Err(err @ TflError::NotFound(_))
+                    | Err(err @ TflError::Parse(_))
+                    | Err(err @ TflError::ParseAt { .. }) => {
+                        last_terminal = Some(err);
+                        break;
+                    }
+                    Err(err) => {
+                        let is_last = backoff.is_none();
+                        if is_last {
+                            eprintln!(
+                                "[tfl-client] hub-lines/{hub_id} fetch failed (attempt {}/{}): {err}",
+                                attempt + 1,
+                                STOP_POINTS_FETCH_ATTEMPTS,
+                            );
+                            // Transient final-attempt failure is NOT
+                            // cached — next caller (next warm cycle,
+                            // next subscription) gets a fresh shot.
+                            return vec![];
+                        }
+                        eprintln!(
+                            "[tfl-client] hub-lines/{hub_id} attempt {} failed (will retry): {err}",
+                            attempt + 1,
+                        );
+                        if let Some(wait) = backoff {
+                            tokio::time::sleep(wait).await;
+                        }
+                    }
                 }
-                return vec![];
             }
-            Err(_) => return vec![],
+
+            match (maybe_value, last_terminal) {
+                (Some(v), _) => v,
+                (None, Some(TflError::NotFound(_))) => {
+                    if let Ok(mut guard) = self.hub_lines_cache.lock() {
+                        guard.insert(hub_id.to_string(), vec![]);
+                    }
+                    return vec![];
+                }
+                _ => return vec![],
+            }
         };
 
         let mut seen = std::collections::HashSet::new();

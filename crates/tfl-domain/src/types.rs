@@ -110,8 +110,13 @@ impl<'de> Deserialize<'de> for Arrival {
         // downstream consumer (display filter, compass mapping, defensive
         // line-allow filter) sees one stable id.
         let line_id = canonicalize_line_id(&raw.line_id);
-        let (direction, northern_branch) =
-            infer_direction(&raw.platform_name, &raw.direction, &line_id, &raw.towards);
+        let (direction, northern_branch) = infer_direction(
+            &raw.platform_name,
+            &raw.direction,
+            &line_id,
+            &raw.towards,
+            &raw.destination_name,
+        );
         Ok(Arrival {
             id: raw.id,
             station_name: raw.station_name,
