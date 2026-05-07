@@ -353,9 +353,11 @@ impl<H: TflHttp> TflClient<H> {
             }
             match got {
                 Some(v) => v,
-                None => return Err(last_err.unwrap_or_else(|| {
-                    TflError::NotFound(format!("hub-children/{hub_id}: all attempts failed"))
-                })),
+                None => {
+                    return Err(last_err.unwrap_or_else(|| {
+                        TflError::NotFound(format!("hub-children/{hub_id}: all attempts failed"))
+                    }))
+                }
             }
         };
         // Hub StopPoint detail JSON has `children: [ { id, modes, ... } ]`.

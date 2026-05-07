@@ -53,13 +53,7 @@ fn elizabeth_destination_fallback_eastbound_when_towards_empty() {
     // Real shape from Liverpool Street: TfL gives us the destination
     // station name but no `towards`.
     assert_eq!(
-        dir_with_dest(
-            "B",
-            "inbound",
-            "elizabeth",
-            "",
-            "Gidea Park Rail Station"
-        ),
+        dir_with_dest("B", "inbound", "elizabeth", "", "Gidea Park Rail Station"),
         Direction::Eastbound
     );
 }
@@ -67,13 +61,7 @@ fn elizabeth_destination_fallback_eastbound_when_towards_empty() {
 #[test]
 fn elizabeth_destination_fallback_westbound_when_towards_empty() {
     assert_eq!(
-        dir_with_dest(
-            "B",
-            "",
-            "elizabeth",
-            "",
-            "Heathrow Terminal 4 Rail Station"
-        ),
+        dir_with_dest("B", "", "elizabeth", "", "Heathrow Terminal 4 Rail Station"),
         Direction::Westbound
     );
 }
@@ -92,13 +80,7 @@ fn weaver_destination_fallback_when_towards_empty() {
     // a stable direction for `elizabeth` at least — the canonical
     // bug-affected case.
     assert_eq!(
-        dir_with_dest(
-            "B",
-            "outbound",
-            "elizabeth",
-            "",
-            "Shenfield Rail Station"
-        ),
+        dir_with_dest("B", "outbound", "elizabeth", "", "Shenfield Rail Station"),
         Direction::Eastbound
     );
 }

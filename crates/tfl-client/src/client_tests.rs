@@ -273,10 +273,7 @@ mod tests {
             ids.contains("northern"),
             "expected tube line 'northern', got: {ids:?}"
         );
-        assert!(
-            ids.contains("dlr"),
-            "expected DLR line 'dlr', got: {ids:?}"
-        );
+        assert!(ids.contains("dlr"), "expected DLR line 'dlr', got: {ids:?}");
         assert!(
             ids.contains("elizabeth"),
             "expected Elizabeth line 'elizabeth', got: {ids:?}"
@@ -403,7 +400,10 @@ mod tests {
             .await
             .expect("first call should succeed");
         let after_cold = counter.load(Ordering::SeqCst);
-        assert_eq!(after_cold, 1, "cold-cache call should fetch tube exactly once");
+        assert_eq!(
+            after_cold, 1,
+            "cold-cache call should fetch tube exactly once"
+        );
 
         client
             .get_all_line_statuses()
@@ -466,7 +466,10 @@ mod tests {
             "liberty fixture has exactly one validity period",
         );
         let vp = &liberty.validity_periods[0];
-        assert!(vp.is_now, "is_now must round-trip from `isNow` (camelCase wire)");
+        assert!(
+            vp.is_now,
+            "is_now must round-trip from `isNow` (camelCase wire)"
+        );
         assert_eq!(
             vp.from.to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
             "2026-05-04T22:00:00Z",
@@ -500,7 +503,10 @@ mod tests {
         .unwrap();
 
         let client = TflClient::with_modes(FixtureTflHttp::new(dir.path()), &["tube"]);
-        let statuses = client.get_all_line_statuses().await.expect("should succeed");
+        let statuses = client
+            .get_all_line_statuses()
+            .await
+            .expect("should succeed");
         assert_eq!(statuses.len(), 1);
         assert!(statuses[0].validity_periods.is_empty());
     }
