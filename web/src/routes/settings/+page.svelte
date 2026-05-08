@@ -7,6 +7,7 @@
   import DisplayPrefsSection from '$lib/components/DisplayPrefsSection.svelte';
   import ThemeSection from '$lib/components/ThemeSection.svelte';
   import PollIntervalSection from '$lib/components/PollIntervalSection.svelte';
+  import DirectionsSection from '$lib/components/DirectionsSection.svelte';
   import { board } from '$lib/stores/board.js';
   import { favorites, initFavorites, addFavorite, removeFavorite } from '$lib/stores/favorites.js';
   import {
@@ -20,7 +21,7 @@
     updateForm,
   } from '$lib/stores/settingsForm.js';
   import { shortStationName } from '$lib/utils/format.js';
-  import type { Direction, Favorite, Station } from '$lib/ipc/types.js';
+  import type { Favorite, Station } from '$lib/ipc/types.js';
   import { onDestroy, onMount } from 'svelte';
 
   // Form state lives in `$lib/stores/settingsForm` so the section components
@@ -28,15 +29,6 @@
   // / Lines / Directions / Poll / Theme to follow) can read + write without
   // prop drilling. This page reads via `$settingsForm.x` and mutates via
   // `updateForm({ x })` then `persist()` or `persistDebounced()`.
-
-  const DIRECTIONS: { id: Direction; label: string }[] = [
-    { id: 'Northbound', label: 'Northbound' },
-    { id: 'Southbound', label: 'Southbound' },
-    { id: 'Eastbound', label: 'Eastbound' },
-    { id: 'Westbound', label: 'Westbound' },
-    { id: 'Inbound', label: 'Inbound' },
-    { id: 'Outbound', label: 'Outbound' },
-  ];
 
   // Master roster of selectable line chips. Tube + DLR + Elizabeth +
   // the six named Overground lines (Mildmay/Lioness/Suffragette/Windrush/
@@ -187,13 +179,6 @@
     // the final state, instead of 12 disk writes + 12 cfg_tx.send round
     // trips. The flushPending hook in onDestroy / beforeunload makes
     // sure a click made just before closing Settings still saves.
-    persistDebounced();
-  }
-
-  function toggleDirection(dir: Direction): void {
-    const current = $settingsForm.selectedDirections;
-    const next = current.includes(dir) ? current.filter((d) => d !== dir) : [...current, dir];
-    updateForm({ selectedDirections: next });
     persistDebounced();
   }
 
@@ -370,29 +355,7 @@
       </div>
     </section>
 
-    <!-- Direction filter -->
-    <section class="settings__section" aria-labelledby="section-directions">
-      <h2 id="section-directions" class="settings__section-title">
-        Directions
-        <span class="settings__section-hint">(empty = all directions)</span>
-      </h2>
-      <div class="settings__chips" role="group" aria-label="Select directions to filter">
-        {#each DIRECTIONS as dir (dir.id)}
-          <button
-            type="button"
-            class="settings__chip"
-            class:settings__chip--selected={$settingsForm.selectedDirections.includes(dir.id)}
-            onclick={() => {
-              toggleDirection(dir.id);
-            }}
-            aria-pressed={$settingsForm.selectedDirections.includes(dir.id)}
-            aria-label="Toggle {dir.label} direction"
-          >
-            {dir.label}
-          </button>
-        {/each}
-      </div>
-    </section>
+    <DirectionsSection />
 
     <PollIntervalSection />
 
@@ -517,7 +480,8 @@
     padding-bottom: 0.3rem;
   }
 
-  .settings__section-hint {
+  /* `:global` so the Lines / Directions section components can use it. */
+  :global(.settings__section-hint) {
     font-size: 0.7rem;
     opacity: 0.5;
     text-transform: lowercase;
@@ -649,14 +613,15 @@
     color: var(--stale-accent);
   }
 
-  /* Chips */
-  .settings__chips {
+  /* Chips. `:global` so the Lines / Directions / Favorites sections
+     share these classes without duplicating the rules. */
+  :global(.settings__chips) {
     display: flex;
     flex-wrap: wrap;
     gap: 0.4rem;
   }
 
-  .settings__chip {
+  :global(.settings__chip) {
     font-family: var(--font-ui);
     font-size: 0.9rem;
     background: var(--chip-bg);
@@ -669,25 +634,25 @@
     opacity: 0.8;
   }
 
-  .settings__chip:hover {
+  :global(.settings__chip:hover) {
     opacity: 1;
     border-color: var(--platform-label);
   }
 
-  .settings__chip--selected {
+  :global(.settings__chip--selected) {
     background: var(--chip-selected-bg);
     color: var(--chip-selected-fg);
     border-color: var(--chip-selected-bg);
     opacity: 1;
   }
 
-  .settings__chip--unavailable {
+  :global(.settings__chip--unavailable) {
     opacity: 0.3;
     cursor: not-allowed;
     border-style: dashed;
   }
 
-  .settings__chip--unavailable:hover {
+  :global(.settings__chip--unavailable:hover) {
     opacity: 0.3;
     border-color: var(--input-border);
   }
