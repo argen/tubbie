@@ -10,8 +10,7 @@
   import StationSearch from '$lib/components/StationSearch.svelte';
   import ThemePicker from '$lib/components/ThemePicker.svelte';
   import ApiKeySection from '$lib/components/ApiKeySection.svelte';
-  import { saveDisplayMode, type DisplayMode } from '$lib/ipc/commands.js';
-  import { displayMode } from '$lib/stores/displayMode.js';
+  import DisplayModeSection from '$lib/components/DisplayModeSection.svelte';
   import { displayPrefs, initDisplayPrefs, updateDisplayPrefs } from '$lib/stores/displayPrefs.js';
   import { board } from '$lib/stores/board.js';
   import { favorites, initFavorites, addFavorite, removeFavorite } from '$lib/stores/favorites.js';
@@ -38,11 +37,6 @@
   let pollSeconds = $state($config.poll_seconds);
   let theme = $state<string>($config.theme);
 
-  // Display-mode picker state. The Rust side now applies the swap live,
-  // so we no longer mirror into a separate `pendingDisplayMode` — the
-  // `$displayMode` store updates as soon as `save_display_mode` returns.
-  let displayModeStatus = $state<string | null>(null);
-  let displayModeStatusTimer: ReturnType<typeof setTimeout> | null = null;
   /** Transient "saved X seconds ago" chip next to the header. */
   let saveState = $state<'idle' | 'saving' | 'saved'>('idle');
   let saveStateTimer: ReturnType<typeof setTimeout> | null = null;
@@ -291,42 +285,7 @@
     if (typeof window !== 'undefined') {
       window.removeEventListener('beforeunload', flushPending);
     }
-    if (displayModeStatusTimer !== null) {
-      clearTimeout(displayModeStatusTimer);
-      displayModeStatusTimer = null;
-    }
   });
-
-  async function handleDisplayModeChange(next: DisplayMode): Promise<void> {
-    if (next === $displayMode) return;
-    const previous = $displayMode;
-    // Optimistic update: flip the store before the IPC round-trip so the
-    // radio + downstream UI (popover chrome, board density) react instantly.
-    // We roll back on error.
-    displayMode.set(next);
-    try {
-      await saveDisplayMode(next);
-      showDisplayModeStatus(`Switched to ${prettyDisplayMode(next)}.`);
-    } catch (err: unknown) {
-      displayMode.set(previous);
-      showDisplayModeStatus(`Error: ${err instanceof Error ? err.message : String(err)}`);
-    }
-  }
-
-  function prettyDisplayMode(mode: DisplayMode): string {
-    return mode === 'menubar' ? 'Menu bar popover' : 'Floating window';
-  }
-
-  function showDisplayModeStatus(text: string): void {
-    displayModeStatus = text;
-    if (displayModeStatusTimer !== null) {
-      clearTimeout(displayModeStatusTimer);
-    }
-    displayModeStatusTimer = setTimeout(() => {
-      displayModeStatus = null;
-      displayModeStatusTimer = null;
-    }, 2400);
-  }
 
   async function handleBack(): Promise<void> {
     await goto('/');
@@ -543,44 +502,7 @@
       <ThemePicker selected={theme} onSelect={handleThemeSelect} />
     </section>
 
-    <!-- Display mode -->
-    <section class="settings__section" aria-labelledby="section-display-mode">
-      <h2 id="section-display-mode" class="settings__section-title">Display mode</h2>
-      <p class="settings__api-hint">
-        Choose how Tubbie shows its board. Changes apply immediately.
-      </p>
-      <div class="settings__display-mode" role="radiogroup" aria-label="Display mode">
-        <label class="settings__display-mode-option">
-          <input
-            type="radio"
-            name="display-mode"
-            value="window"
-            checked={$displayMode === 'window'}
-            onchange={() => void handleDisplayModeChange('window')}
-          />
-          <span class="settings__display-mode-label">Floating window</span>
-          <span class="settings__display-mode-hint">
-            Resizable desktop window with full board layout.
-          </span>
-        </label>
-        <label class="settings__display-mode-option">
-          <input
-            type="radio"
-            name="display-mode"
-            value="menubar"
-            checked={$displayMode === 'menubar'}
-            onchange={() => void handleDisplayModeChange('menubar')}
-          />
-          <span class="settings__display-mode-label">Menu bar popover</span>
-          <span class="settings__display-mode-hint">
-            Compact popover anchored to a menu bar icon.
-          </span>
-        </label>
-      </div>
-      {#if displayModeStatus}
-        <p class="settings__api-status" aria-live="polite">{displayModeStatus}</p>
-      {/if}
-    </section>
+    <DisplayModeSection />
 
     <!-- Display preferences (frontend-only render flags) -->
     <section class="settings__section" aria-labelledby="section-display-prefs">
@@ -969,49 +891,6 @@
   }
 
   .settings__toggle-hint {
-    font-family: var(--font-ui);
-    font-size: 0.8rem;
-    color: var(--platform-label);
-    opacity: 0.75;
-  }
-
-  .settings__display-mode {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .settings__display-mode-option {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    column-gap: 0.6rem;
-    row-gap: 0.15rem;
-    align-items: baseline;
-    padding: 0.5rem 0.75rem;
-    background: var(--chip-bg);
-    border: 1px solid var(--input-border);
-    border-radius: 2px;
-    cursor: pointer;
-  }
-
-  .settings__display-mode-option:hover,
-  .settings__display-mode-option:focus-within {
-    border-color: var(--platform-label);
-  }
-
-  .settings__display-mode-option input[type='radio'] {
-    grid-row: 1 / span 2;
-    accent-color: var(--fg);
-    margin: 0;
-  }
-
-  .settings__display-mode-label {
-    font-family: var(--font-ui);
-    font-size: 1rem;
-    color: var(--fg);
-  }
-
-  .settings__display-mode-hint {
     font-family: var(--font-ui);
     font-size: 0.8rem;
     color: var(--platform-label);
