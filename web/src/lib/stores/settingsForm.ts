@@ -25,7 +25,7 @@ import { config, configError, updateConfig } from './config.js';
 import { board } from './board.js';
 import { debounce, type Debounced } from '$lib/utils/debounce.js';
 import { shortStationName } from '$lib/utils/format.js';
-import type { Direction, LineRef } from '$lib/ipc/types.js';
+import type { Direction, LineRef, Station } from '$lib/ipc/types.js';
 
 export interface SettingsFormState {
   stationId: string;
@@ -114,6 +114,29 @@ export function updateForm(patch: Partial<SettingsFormState>): void {
  */
 export function resyncFormFromConfig(): void {
   settingsForm.set(initialFormState());
+}
+
+/**
+ * Apply a station selection to the form: set id/name/lines, prune
+ * `lineIds` to those the new station actually serves (so we never
+ * persist a filter the station can't honour), and force-persist
+ * immediately. Used by both `StationSection` (search picker callback)
+ * and `FavoritesSection` (clicking a favorite row reuses this so
+ * invariant #2 — station_id changes trigger an immediate refresh —
+ * stays honest).
+ */
+export function selectStation(station: Station): void {
+  const prunedLineIds =
+    station.lines.length > 0
+      ? get(settingsForm).lineIds.filter((id) => new Set(station.lines.map((l) => l.id)).has(id))
+      : get(settingsForm).lineIds;
+  updateForm({
+    stationId: station.id,
+    stationName: station.common_name,
+    stationLines: station.lines,
+    lineIds: prunedLineIds,
+  });
+  void persist();
 }
 
 /**
