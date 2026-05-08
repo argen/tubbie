@@ -6,6 +6,7 @@
   import DisplayModeSection from '$lib/components/DisplayModeSection.svelte';
   import DisplayPrefsSection from '$lib/components/DisplayPrefsSection.svelte';
   import ThemeSection from '$lib/components/ThemeSection.svelte';
+  import PollIntervalSection from '$lib/components/PollIntervalSection.svelte';
   import { board } from '$lib/stores/board.js';
   import { favorites, initFavorites, addFavorite, removeFavorite } from '$lib/stores/favorites.js';
   import {
@@ -193,14 +194,6 @@
     const current = $settingsForm.selectedDirections;
     const next = current.includes(dir) ? current.filter((d) => d !== dir) : [...current, dir];
     updateForm({ selectedDirections: next });
-    persistDebounced();
-  }
-
-  function handlePollSlider(event: Event): void {
-    const value = +(event.currentTarget as HTMLInputElement).value;
-    updateForm({ pollSeconds: value });
-    // Fires on every slider tick; the debounced persist coalesces the drag
-    // so we don't slam save_config → stream-restart 295 times on a full sweep.
     persistDebounced();
   }
 
@@ -401,33 +394,7 @@
       </div>
     </section>
 
-    <!-- Poll interval -->
-    <section class="settings__section" aria-labelledby="section-poll">
-      <h2 id="section-poll" class="settings__section-title">Poll Interval</h2>
-      <div class="settings__range-wrap">
-        <label for="poll-slider" class="settings__range-label">
-          Every {$settingsForm.pollSeconds}s
-        </label>
-        <input
-          id="poll-slider"
-          type="range"
-          min="10"
-          max="300"
-          step="5"
-          value={$settingsForm.pollSeconds}
-          oninput={handlePollSlider}
-          class="settings__range"
-          aria-label="Poll interval in seconds: {$settingsForm.pollSeconds}"
-          aria-valuemin={10}
-          aria-valuemax={300}
-          aria-valuenow={$settingsForm.pollSeconds}
-        />
-        <div class="settings__range-bounds" aria-hidden="true">
-          <span>10s</span>
-          <span>300s</span>
-        </div>
-      </div>
-    </section>
+    <PollIntervalSection />
 
     <ThemeSection />
 
@@ -723,35 +690,6 @@
   .settings__chip--unavailable:hover {
     opacity: 0.3;
     border-color: var(--input-border);
-  }
-
-  /* Range slider */
-  .settings__range-wrap {
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-  }
-
-  .settings__range-label {
-    font-family: var(--font-ui);
-    font-size: 1rem;
-    color: var(--fg);
-    letter-spacing: 0.05em;
-  }
-
-  .settings__range {
-    width: 100%;
-    accent-color: var(--fg);
-    cursor: pointer;
-  }
-
-  .settings__range-bounds {
-    display: flex;
-    justify-content: space-between;
-    font-family: var(--font-ui);
-    font-size: 0.75rem;
-    color: var(--platform-label);
-    opacity: 0.5;
   }
 
   /* Shared status / hint typography. `:global` so ApiKeySection.svelte
