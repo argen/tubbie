@@ -10,4 +10,7 @@ pub mod nearest;
 #[cfg(test)]
 mod client_tests;
 
+#[cfg(test)]
+mod multi_mode_hub_completeness_tests;
+
 pub use client::TflClient;

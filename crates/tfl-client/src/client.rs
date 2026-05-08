@@ -74,6 +74,92 @@ use tfl_domain::types::{
 /// and an entry in the `is_supported_line_id` whitelist in `tfl-domain`.
 pub const SUPPORTED_MODES: &[&str] = &["tube", "overground", "dlr", "elizabeth-line"];
 
+/// Canonical multi-mode interchanges where the user MUST see every mode's
+/// lines, post hub-merge. Each entry is `(station_id, expected_lines)` —
+/// `expected_lines` is a *superset* contract: the warm result must contain
+/// every id listed, but may contain more (TfL adds named Overground sublines
+/// from time to time).
+///
+/// **This list is the regression contract.** Both the in-process
+/// [`Self::warn_incomplete_hub_coverage`] runtime check and the
+/// `multi_mode_hub_completeness_tests` harness iterate this constant. Adding
+/// a hub here is one line; the matching scenario in the test harness is
+/// auto-discovered.
+///
+/// Why these eight: every interchange where a `940GZZLU*` (tube) station id
+/// is the canonical search-result for the hub but the hub physically serves
+/// at least one non-tube mode. If you add an interchange that's missing
+/// here, expect a recurrence of the "Elizabeth missing at TCR / DLR missing
+/// at Bank" bug class — which is exactly the regression this list defends
+/// against.
+pub const CANONICAL_MULTI_MODE_HUBS: &[(&str, &[&str])] = &[
+    // Tottenham Court Road — Central, Northern, + Elizabeth via HUBTCR.
+    ("940GZZLUTCR", &["central", "northern", "elizabeth"]),
+    // Bank — Central, Northern, Waterloo & City, + DLR via HUBBAN.
+    (
+        "940GZZLUBNK",
+        &["central", "northern", "waterloo-city", "dlr"],
+    ),
+    // Liverpool Street — Central, Circle, Hammersmith & City, Metropolitan,
+    // + Elizabeth and Weaver via HUBLVT.
+    (
+        "940GZZLULVT",
+        &[
+            "central",
+            "circle",
+            "hammersmith-city",
+            "metropolitan",
+            "elizabeth",
+            "weaver",
+        ],
+    ),
+    // Stratford — Central, Jubilee, + DLR, Elizabeth, Mildmay via HUBSTD.
+    (
+        "940GZZLUSTD",
+        &["central", "jubilee", "dlr", "elizabeth", "mildmay"],
+    ),
+    // Canary Wharf — Jubilee + DLR + Elizabeth via HUBCWX.
+    ("940GZZLUCYF", &["jubilee", "dlr", "elizabeth"]),
+    // Whitechapel — District, Hammersmith & City, + Elizabeth, Mildmay,
+    // Windrush via HUBWCL.
+    (
+        "940GZZLUWCL",
+        &[
+            "district",
+            "hammersmith-city",
+            "elizabeth",
+            "mildmay",
+            "windrush",
+        ],
+    ),
+    // Paddington — Bakerloo, Circle, District, Hammersmith & City,
+    // + Elizabeth via HUBPAD.
+    (
+        "940GZZLUPAC",
+        &[
+            "bakerloo",
+            "circle",
+            "district",
+            "hammersmith-city",
+            "elizabeth",
+        ],
+    ),
+    // Farringdon — Circle, Hammersmith & City, Metropolitan,
+    // + Elizabeth via HUBFFD.
+    (
+        "940GZZLUFRD",
+        &["circle", "hammersmith-city", "metropolitan", "elizabeth"],
+    ),
+    // Bond Street — Central, Jubilee, + Elizabeth via HUBBDS. The
+    // tube-side canonical record `940GZZLUBND` only carries Central +
+    // Jubilee; Elizabeth comes from the sibling `910GBONDST` under the
+    // shared hub. Same hub-merge contract as TCR; missed in the original
+    // canonical list and surfaced as a TestFlight regression on
+    // 2026-05-08. Appended (not inserted) to preserve the position-
+    // indexed live test ordering in `live_hub_completeness.rs`.
+    ("940GZZLUBND", &["central", "jubilee", "elizabeth"]),
+];
+
 /// How long a `stop-points/tube` response stays cached before the next
 /// `search_stations` call refetches. 15 minutes keeps the 16 MB payload off
 /// the wire for typical settings-page sessions while still picking up TfL
@@ -1116,6 +1202,16 @@ impl<H: TflHttp> TflClient<H> {
             }
         }
 
+        // Coverage check: every canonical multi-mode interchange must have
+        // its expected lines after warm. A miss here is the live signal of
+        // the "Elizabeth missing at TCR / DLR missing at Bank" bug class —
+        // either a hub fetch failed silently, the hub doc came back
+        // degraded, or TfL is having a moment. Emitting one stderr line per
+        // (station, line) miss surfaces it in TestFlight logs without
+        // panicking — fail-soft, matching the pattern in
+        // `drop_arrivals_for_lines_not_serving` (invariant #10).
+        warn_incomplete_hub_coverage(&stations);
+
         Ok(stations)
     }
 
@@ -1212,6 +1308,51 @@ impl<H: TflHttp> TflClient<H> {
 ///   would duplicate rows in any results list
 /// - `HUB*` — multi-mode aggregators with no stable arrivals id
 ///
+/// Walk [`CANONICAL_MULTI_MODE_HUBS`] against the freshly-warmed station
+/// list and emit one stderr warning per (station_id, missing_line) pair
+/// that the contract expects but the warm didn't produce.
+///
+/// **Why this exists.** The compile-time fixture harness in
+/// `multi_mode_hub_completeness_tests.rs` pins the contract for hermetic
+/// inputs, but it can't catch live failures (TfL temporarily 404'ing a
+/// hub, an unfortunate burst of 429s during cellular cold-launch, etc.).
+/// This runtime check fires after each warm and surfaces a structured log
+/// line — same pattern as `[tfl-board] arrival dropped because line not
+/// served` (invariant #10). One line per miss, fail-soft, never panics.
+///
+/// Visibility on iOS: `eprintln!` is captured by the standard iOS
+/// log subsystem when the app runs under TestFlight or Xcode. Grep for
+/// `[tfl-client] expected line` in the device console.
+///
+/// Output cap: only emit for stations that are actually in the warm
+/// result. A station id that was filtered out entirely (because no mode
+/// feed surfaced it) would otherwise produce a noisy "missing every
+/// line" report that obscures the real signal.
+pub(crate) fn warn_incomplete_hub_coverage(stations: &[Station]) {
+    for (station_id, expected_lines) in CANONICAL_MULTI_MODE_HUBS {
+        let Some(station) = stations.iter().find(|s| s.id == *station_id) else {
+            // Station absent from the warm — likely a per-mode fetch
+            // failure or fixture gap. Single line; the per-mode warm
+            // path already logs its own retries on stderr.
+            eprintln!(
+                "[tfl-client] canonical multi-mode hub {station_id} \
+                 absent from warm result entirely (no mode surfaced it)",
+            );
+            continue;
+        };
+        for expected in *expected_lines {
+            let present = station.lines.iter().any(|l| l.id == *expected);
+            if !present {
+                eprintln!(
+                    "[tfl-client] expected line `{expected}` missing from \
+                     station `{station_id}` after warm — possible TfL data \
+                     drift, hub fetch failure, or regression in hub-merge",
+                );
+            }
+        }
+    }
+}
+
 /// Used by both `search_stations` and `find_nearest_stations`. See
 /// invariant #13 in `tubbie/CLAUDE.md`.
 pub(crate) fn is_canonical_station_id(s: &Station) -> bool {
