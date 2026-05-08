@@ -1,11 +1,11 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
-  import { configError, applyTheme, type ThemeId } from '$lib/stores/config.js';
+  import { configError } from '$lib/stores/config.js';
   import StationSearch from '$lib/components/StationSearch.svelte';
-  import ThemePicker from '$lib/components/ThemePicker.svelte';
   import ApiKeySection from '$lib/components/ApiKeySection.svelte';
   import DisplayModeSection from '$lib/components/DisplayModeSection.svelte';
   import DisplayPrefsSection from '$lib/components/DisplayPrefsSection.svelte';
+  import ThemeSection from '$lib/components/ThemeSection.svelte';
   import { board } from '$lib/stores/board.js';
   import { favorites, initFavorites, addFavorite, removeFavorite } from '$lib/stores/favorites.js';
   import {
@@ -193,15 +193,6 @@
     const current = $settingsForm.selectedDirections;
     const next = current.includes(dir) ? current.filter((d) => d !== dir) : [...current, dir];
     updateForm({ selectedDirections: next });
-    persistDebounced();
-  }
-
-  function handleThemeSelect(newTheme: ThemeId): void {
-    updateForm({ theme: newTheme });
-    // Live preview — apply to DOM immediately, then debounce the persist.
-    // The user sees the theme change instantly; the disk write coalesces
-    // if they tap through several themes in quick succession.
-    applyTheme(newTheme);
     persistDebounced();
   }
 
@@ -438,11 +429,7 @@
       </div>
     </section>
 
-    <!-- Theme -->
-    <section class="settings__section" aria-labelledby="section-theme">
-      <h2 id="section-theme" class="settings__section-title">Theme</h2>
-      <ThemePicker selected={$settingsForm.theme} onSelect={handleThemeSelect} />
-    </section>
+    <ThemeSection />
 
     <DisplayModeSection />
 
