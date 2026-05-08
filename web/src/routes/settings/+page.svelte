@@ -8,13 +8,14 @@
   import ThemeSection from '$lib/components/ThemeSection.svelte';
   import PollIntervalSection from '$lib/components/PollIntervalSection.svelte';
   import DirectionsSection from '$lib/components/DirectionsSection.svelte';
+  import LinesSection from '$lib/components/LinesSection.svelte';
   import { board } from '$lib/stores/board.js';
   import { favorites, initFavorites, addFavorite, removeFavorite } from '$lib/stores/favorites.js';
   import {
     settingsForm,
     saveState,
+    currentStationName,
     persist,
-    persistDebounced,
     flushPending,
     cancelSaveStateTimer,
     resyncFormFromConfig,
@@ -29,39 +30,6 @@
   // / Lines / Directions / Poll / Theme to follow) can read + write without
   // prop drilling. This page reads via `$settingsForm.x` and mutates via
   // `updateForm({ x })` then `persist()` or `persistDebounced()`.
-
-  // Master roster of selectable line chips. Tube + DLR + Elizabeth +
-  // the six named Overground lines (Mildmay/Lioness/Suffragette/Windrush/
-  // Weaver/Liberty — TfL split the Overground in November 2024). The
-  // visible/disabled subset for any station is intersected with that
-  // station's `Station.lines` field in `handleStationSelect`.
-  //
-  // Elizabeth uses the line-form id `'elizabeth'` (matches
-  // `Station.lines[].id` and the wire format after
-  // `tfl_domain::canonicalize_line_id` runs at deserialization). The
-  // mode-form `'elizabeth-line'` is migrated on config load so any
-  // historical config keeps working.
-  const KNOWN_LINES: { id: string; label: string }[] = [
-    { id: 'bakerloo', label: 'Bakerloo' },
-    { id: 'central', label: 'Central' },
-    { id: 'circle', label: 'Circle' },
-    { id: 'district', label: 'District' },
-    { id: 'elizabeth', label: 'Elizabeth' },
-    { id: 'hammersmith-city', label: 'Hammersmith & City' },
-    { id: 'jubilee', label: 'Jubilee' },
-    { id: 'metropolitan', label: 'Metropolitan' },
-    { id: 'northern', label: 'Northern' },
-    { id: 'piccadilly', label: 'Piccadilly' },
-    { id: 'victoria', label: 'Victoria' },
-    { id: 'waterloo-city', label: 'Waterloo & City' },
-    { id: 'dlr', label: 'DLR' },
-    { id: 'liberty', label: 'Liberty' },
-    { id: 'lioness', label: 'Lioness' },
-    { id: 'mildmay', label: 'Mildmay' },
-    { id: 'suffragette', label: 'Suffragette' },
-    { id: 'weaver', label: 'Weaver' },
-    { id: 'windrush', label: 'Windrush' },
-  ];
 
   onMount(() => {
     // Re-sync form to the latest $config — otherwise stale form state
@@ -132,54 +100,6 @@
 
   async function handleRemoveFavorite(stationIdToRemove: string): Promise<void> {
     await removeFavorite(stationIdToRemove);
-  }
-
-  /**
-   * Human-readable name of the station currently saved in config.
-   *
-   * Precedence:
-   *  1. Local `stationName` — set by `handleStationSelect` so a freshly-picked
-   *     station shows its name before the board stream catches up.
-   *  2. `station_name` from the latest board arrival — survives settings
-   *     re-entry when the user already has an active board.
-   *
-   * `shortStationName` strips the " Underground Station" suffix so the label
-   * matches what the board header shows. Empty when neither source is
-   * populated (e.g. brand-new install, no arrivals yet).
-   */
-  const currentStationName = $derived.by(() => {
-    if ($settingsForm.stationName.length > 0) return shortStationName($settingsForm.stationName);
-    const fromBoard = $board?.platforms[0]?.arrivals[0]?.station_name ?? '';
-    return fromBoard.length > 0 ? shortStationName(fromBoard) : '';
-  });
-
-  /**
-   * Lines the selected station actually serves, or `null` when unknown
-   * (first mount, or stations whose metadata is empty). `null` fails open:
-   * every chip is interactive. A non-null set disables everything outside it.
-   */
-  const availableLineIds = $derived<Set<string> | null>(
-    $settingsForm.stationLines.length > 0
-      ? new Set($settingsForm.stationLines.map((l) => l.id))
-      : null,
-  );
-
-  function isLineAvailable(lineId: string): boolean {
-    return availableLineIds === null || availableLineIds.has(lineId);
-  }
-
-  function toggleLine(lineId: string): void {
-    if (!isLineAvailable(lineId)) return;
-    const current = $settingsForm.lineIds;
-    const next = current.includes(lineId)
-      ? current.filter((id) => id !== lineId)
-      : [...current, lineId];
-    updateForm({ lineIds: next });
-    // Debounce: a 12-chip toggle burst becomes one save_config carrying
-    // the final state, instead of 12 disk writes + 12 cfg_tx.send round
-    // trips. The flushPending hook in onDestroy / beforeunload makes
-    // sure a click made just before closing Settings still saves.
-    persistDebounced();
   }
 
   // beforeunload fires when the window/tab closes or the user navigates
@@ -254,14 +174,14 @@
     <!-- Station search -->
     <section class="settings__section" aria-labelledby="section-station">
       <h2 id="section-station" class="settings__section-title">Station</h2>
-      {#if currentStationName}
+      {#if $currentStationName}
         <p
           class="settings__current-station"
           aria-live="polite"
           data-testid="settings-current-station"
         >
           <span class="settings__current-station-label">Current:</span>
-          <span class="settings__current-station-name">{currentStationName}</span>
+          <span class="settings__current-station-name">{$currentStationName}</span>
           <button
             type="button"
             class="settings__star"
@@ -269,8 +189,8 @@
             onclick={() => void handleToggleFavorite()}
             aria-pressed={isCurrentStationFavorited}
             aria-label={isCurrentStationFavorited
-              ? `Remove ${currentStationName} from favorites`
-              : `Save ${currentStationName} as favorite`}
+              ? `Remove ${$currentStationName} from favorites`
+              : `Save ${$currentStationName} as favorite`}
             data-testid="settings-star"
           >
             {isCurrentStationFavorited ? '★' : '☆'}
@@ -324,36 +244,7 @@
       {/if}
     </section>
 
-    <!-- Line filter -->
-    <section class="settings__section" aria-labelledby="section-lines">
-      <h2 id="section-lines" class="settings__section-title">
-        Lines
-        <span class="settings__section-hint">(empty = all lines)</span>
-      </h2>
-      <div class="settings__chips" role="group" aria-label="Select lines to filter">
-        {#each KNOWN_LINES as line (line.id)}
-          {@const available = isLineAvailable(line.id)}
-          <button
-            type="button"
-            class="settings__chip"
-            class:settings__chip--selected={$settingsForm.lineIds.includes(line.id)}
-            class:settings__chip--unavailable={!available}
-            disabled={!available}
-            onclick={() => {
-              toggleLine(line.id);
-            }}
-            aria-pressed={$settingsForm.lineIds.includes(line.id)}
-            aria-disabled={!available}
-            aria-label={available
-              ? `Toggle ${line.label} line`
-              : `${line.label} line is not served by this station`}
-            title={available ? undefined : `Not served by ${currentStationName || 'this station'}`}
-          >
-            {line.label}
-          </button>
-        {/each}
-      </div>
-    </section>
+    <LinesSection />
 
     <DirectionsSection />
 

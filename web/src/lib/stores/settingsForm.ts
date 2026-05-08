@@ -20,9 +20,11 @@
  * so a click made inside the debounce window survives navigation.
  */
 
-import { writable, get } from 'svelte/store';
+import { writable, derived, get } from 'svelte/store';
 import { config, configError, updateConfig } from './config.js';
+import { board } from './board.js';
 import { debounce, type Debounced } from '$lib/utils/debounce.js';
+import { shortStationName } from '$lib/utils/format.js';
 import type { Direction, LineRef } from '$lib/ipc/types.js';
 
 export interface SettingsFormState {
@@ -66,6 +68,34 @@ function initialFormState(): SettingsFormState {
 
 export const settingsForm = writable<SettingsFormState>(initialFormState());
 export const saveState = writable<SaveState>('idle');
+
+/**
+ * Human-readable name of the station currently saved in config.
+ *
+ * Precedence:
+ *  1. Local `stationName` — set by `handleStationSelect` so a freshly-picked
+ *     station shows its name before the board stream catches up.
+ *  2. `station_name` from the latest board arrival — survives settings
+ *     re-entry when the user already has an active board.
+ *
+ * `shortStationName` strips the " Underground Station" suffix so the label
+ * matches what the board header shows. Empty when neither source is
+ * populated (e.g. brand-new install, no arrivals yet).
+ */
+export const currentStationName = derived([settingsForm, board], ([form, b]) => {
+  if (form.stationName.length > 0) return shortStationName(form.stationName);
+  const fromBoard = b?.platforms[0]?.arrivals[0]?.station_name ?? '';
+  return fromBoard.length > 0 ? shortStationName(fromBoard) : '';
+});
+
+/**
+ * Lines the selected station actually serves, or `null` when unknown
+ * (first mount, or stations whose metadata is empty). `null` fails open:
+ * every chip is interactive. A non-null set disables everything outside it.
+ */
+export const availableLineIds = derived(settingsForm, (form) =>
+  form.stationLines.length > 0 ? new Set(form.stationLines.map((l) => l.id)) : null,
+);
 
 let saveStateTimer: ReturnType<typeof setTimeout> | null = null;
 
