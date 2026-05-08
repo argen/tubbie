@@ -1,12 +1,6 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
-  import {
-    config,
-    configError,
-    updateConfig,
-    applyTheme,
-    type ThemeId,
-  } from '$lib/stores/config.js';
+  import { configError, applyTheme, type ThemeId } from '$lib/stores/config.js';
   import StationSearch from '$lib/components/StationSearch.svelte';
   import ThemePicker from '$lib/components/ThemePicker.svelte';
   import ApiKeySection from '$lib/components/ApiKeySection.svelte';
@@ -14,32 +8,25 @@
   import DisplayPrefsSection from '$lib/components/DisplayPrefsSection.svelte';
   import { board } from '$lib/stores/board.js';
   import { favorites, initFavorites, addFavorite, removeFavorite } from '$lib/stores/favorites.js';
-  import { debounce } from '$lib/utils/debounce.js';
+  import {
+    settingsForm,
+    saveState,
+    persist,
+    persistDebounced,
+    flushPending,
+    cancelSaveStateTimer,
+    resyncFormFromConfig,
+    updateForm,
+  } from '$lib/stores/settingsForm.js';
   import { shortStationName } from '$lib/utils/format.js';
-  import type { Direction, Favorite, LineRef, Station } from '$lib/ipc/types.js';
+  import type { Direction, Favorite, Station } from '$lib/ipc/types.js';
   import { onDestroy, onMount } from 'svelte';
 
-  // ---------------------------------------------------------------------------
-  // Local form state (mirrors config; auto-persisted on change)
-  // ---------------------------------------------------------------------------
-
-  let stationId = $state($config.station_id);
-  let stationName = $state('');
-  /**
-   * Lines served by the currently-selected station, populated from
-   * `StationSearch.onSelect`. Empty on first mount (we don't know which
-   * lines the saved station serves without refetching) — the UI then falls
-   * back to the global KNOWN_LINES list.
-   */
-  let stationLines = $state<LineRef[]>([]);
-  let lineIds = $state<string[]>([...$config.line_ids]);
-  let selectedDirections = $state<Direction[]>([...$config.directions]);
-  let pollSeconds = $state($config.poll_seconds);
-  let theme = $state<string>($config.theme);
-
-  /** Transient "saved X seconds ago" chip next to the header. */
-  let saveState = $state<'idle' | 'saving' | 'saved'>('idle');
-  let saveStateTimer: ReturnType<typeof setTimeout> | null = null;
+  // Form state lives in `$lib/stores/settingsForm` so the section components
+  // (Api / DisplayMode / DisplayPrefs already extracted; Station / Favorites
+  // / Lines / Directions / Poll / Theme to follow) can read + write without
+  // prop drilling. This page reads via `$settingsForm.x` and mutates via
+  // `updateForm({ x })` then `persist()` or `persistDebounced()`.
 
   const DIRECTIONS: { id: Direction; label: string }[] = [
     { id: 'Northbound', label: 'Northbound' },
@@ -84,59 +71,27 @@
   ];
 
   onMount(() => {
+    // Re-sync form to the latest $config — otherwise stale form state
+    // survives across SPA navigations (the module-scoped store outlives
+    // the page component).
+    resyncFormFromConfig();
     // Load favorites once on mount. Errors surface via $favoritesError.
     void initFavorites();
   });
 
-  /**
-   * Persist the current form state. `updateConfig` catches its own errors
-   * and drives `$configError`, so callers never need to try/catch.
-   *
-   * The backend's `save_config` publishes the new config to a watch channel
-   * the running stream observes; the stream applies the change on its next
-   * tick (or immediately for `poll_seconds`/`station_id`) without
-   * restarting. The board page subscribes to the same `$config` store and
-   * updates in place — no explicit navigation needed.
-   */
-  async function persist(): Promise<void> {
-    if (saveStateTimer !== null) {
-      clearTimeout(saveStateTimer);
-      saveStateTimer = null;
-    }
-    saveState = 'saving';
-    await updateConfig({
-      station_id: stationId,
-      line_ids: lineIds,
-      directions: selectedDirections,
-      poll_seconds: Math.min(300, Math.max(10, pollSeconds)),
-      theme,
-    });
-    if ($configError !== null) {
-      saveState = 'idle';
-      return;
-    }
-    saveState = 'saved';
-    saveStateTimer = setTimeout(() => {
-      saveState = 'idle';
-      saveStateTimer = null;
-    }, 1500);
-  }
-
-  // Slider events fire on every tick of the drag, and chip / direction /
-  // theme toggles can come in bursts. Debounce to the trailing edge so a
-  // burst becomes one disk write and one watch-channel publish.
-  const persistDebounced = debounce(persist, 400);
-
   function handleStationSelect(station: Station): void {
-    stationId = station.id;
-    stationName = station.common_name;
-    stationLines = station.lines;
     // Prune line_ids to those the new station actually serves so we never
     // persist a filter the station can't honour.
-    if (station.lines.length > 0) {
-      const allowed = new Set(station.lines.map((l) => l.id));
-      lineIds = lineIds.filter((id) => allowed.has(id));
-    }
+    const prunedLineIds =
+      station.lines.length > 0
+        ? $settingsForm.lineIds.filter((id) => new Set(station.lines.map((l) => l.id)).has(id))
+        : $settingsForm.lineIds;
+    updateForm({
+      stationId: station.id,
+      stationName: station.common_name,
+      stationLines: station.lines,
+      lineIds: prunedLineIds,
+    });
     void persist();
   }
 
@@ -145,20 +100,22 @@
   // ---------------------------------------------------------------------------
 
   /** True iff the currently-selected station is in the favorites list. */
-  const isCurrentStationFavorited = $derived($favorites.some((f) => f.station_id === stationId));
+  const isCurrentStationFavorited = $derived(
+    $favorites.some((f) => f.station_id === $settingsForm.stationId),
+  );
 
   async function handleToggleFavorite(): Promise<void> {
     if (isCurrentStationFavorited) {
-      await removeFavorite(stationId);
+      await removeFavorite($settingsForm.stationId);
     } else {
       // Use whatever name + lines we know about right now. `currentStationName`
       // already falls back to the latest board's station_name when local
       // state is empty (e.g. user opens Settings on a fresh launch).
       const name =
-        stationName.length > 0
-          ? stationName
-          : ($board?.platforms[0]?.arrivals[0]?.station_name ?? stationId);
-      await addFavorite(stationId, name, stationLines);
+        $settingsForm.stationName.length > 0
+          ? $settingsForm.stationName
+          : ($board?.platforms[0]?.arrivals[0]?.station_name ?? $settingsForm.stationId);
+      await addFavorite($settingsForm.stationId, name, $settingsForm.stationLines);
     }
   }
 
@@ -198,7 +155,7 @@
    * populated (e.g. brand-new install, no arrivals yet).
    */
   const currentStationName = $derived.by(() => {
-    if (stationName.length > 0) return shortStationName(stationName);
+    if ($settingsForm.stationName.length > 0) return shortStationName($settingsForm.stationName);
     const fromBoard = $board?.platforms[0]?.arrivals[0]?.station_name ?? '';
     return fromBoard.length > 0 ? shortStationName(fromBoard) : '';
   });
@@ -209,7 +166,9 @@
    * every chip is interactive. A non-null set disables everything outside it.
    */
   const availableLineIds = $derived<Set<string> | null>(
-    stationLines.length > 0 ? new Set(stationLines.map((l) => l.id)) : null,
+    $settingsForm.stationLines.length > 0
+      ? new Set($settingsForm.stationLines.map((l) => l.id))
+      : null,
   );
 
   function isLineAvailable(lineId: string): boolean {
@@ -218,11 +177,11 @@
 
   function toggleLine(lineId: string): void {
     if (!isLineAvailable(lineId)) return;
-    if (lineIds.includes(lineId)) {
-      lineIds = lineIds.filter((id) => id !== lineId);
-    } else {
-      lineIds = [...lineIds, lineId];
-    }
+    const current = $settingsForm.lineIds;
+    const next = current.includes(lineId)
+      ? current.filter((id) => id !== lineId)
+      : [...current, lineId];
+    updateForm({ lineIds: next });
     // Debounce: a 12-chip toggle burst becomes one save_config carrying
     // the final state, instead of 12 disk writes + 12 cfg_tx.send round
     // trips. The flushPending hook in onDestroy / beforeunload makes
@@ -231,16 +190,14 @@
   }
 
   function toggleDirection(dir: Direction): void {
-    if (selectedDirections.includes(dir)) {
-      selectedDirections = selectedDirections.filter((d) => d !== dir);
-    } else {
-      selectedDirections = [...selectedDirections, dir];
-    }
+    const current = $settingsForm.selectedDirections;
+    const next = current.includes(dir) ? current.filter((d) => d !== dir) : [...current, dir];
+    updateForm({ selectedDirections: next });
     persistDebounced();
   }
 
   function handleThemeSelect(newTheme: ThemeId): void {
-    theme = newTheme;
+    updateForm({ theme: newTheme });
     // Live preview — apply to DOM immediately, then debounce the persist.
     // The user sees the theme change instantly; the disk write coalesces
     // if they tap through several themes in quick succession.
@@ -248,19 +205,12 @@
     persistDebounced();
   }
 
-  function handlePollInput(): void {
+  function handlePollSlider(event: Event): void {
+    const value = +(event.currentTarget as HTMLInputElement).value;
+    updateForm({ pollSeconds: value });
     // Fires on every slider tick; the debounced persist coalesces the drag
     // so we don't slam save_config → stream-restart 295 times on a full sweep.
     persistDebounced();
-  }
-
-  /**
-   * Run any pending debounced persist immediately. Called on
-   * `onDestroy` (settings unmount) and `beforeunload` (window close)
-   * so a click made just inside the debounce window isn't lost.
-   */
-  function flushPending(): void {
-    persistDebounced.flush();
   }
 
   // beforeunload fires when the window/tab closes or the user navigates
@@ -273,6 +223,7 @@
 
   onDestroy(() => {
     flushPending();
+    cancelSaveStateTimer();
     if (typeof window !== 'undefined') {
       window.removeEventListener('beforeunload', flushPending);
     }
@@ -316,15 +267,15 @@
     <h1 class="settings__title">Settings</h1>
     <span
       class="settings__save-state"
-      class:settings__save-state--saving={saveState === 'saving'}
-      class:settings__save-state--saved={saveState === 'saved'}
+      class:settings__save-state--saving={$saveState === 'saving'}
+      class:settings__save-state--saved={$saveState === 'saved'}
       role="status"
       aria-live="polite"
       data-testid="settings-save-state"
     >
-      {#if saveState === 'saving'}
+      {#if $saveState === 'saving'}
         Saving…
-      {:else if saveState === 'saved'}
+      {:else if $saveState === 'saved'}
         Saved
       {/if}
     </span>
@@ -357,7 +308,7 @@
           </button>
         </p>
       {/if}
-      <StationSearch selectedId={stationId} onSelect={handleStationSelect} />
+      <StationSearch selectedId={$settingsForm.stationId} onSelect={handleStationSelect} />
     </section>
 
     <!-- Favorites -->
@@ -416,13 +367,13 @@
           <button
             type="button"
             class="settings__chip"
-            class:settings__chip--selected={lineIds.includes(line.id)}
+            class:settings__chip--selected={$settingsForm.lineIds.includes(line.id)}
             class:settings__chip--unavailable={!available}
             disabled={!available}
             onclick={() => {
               toggleLine(line.id);
             }}
-            aria-pressed={lineIds.includes(line.id)}
+            aria-pressed={$settingsForm.lineIds.includes(line.id)}
             aria-disabled={!available}
             aria-label={available
               ? `Toggle ${line.label} line`
@@ -446,11 +397,11 @@
           <button
             type="button"
             class="settings__chip"
-            class:settings__chip--selected={selectedDirections.includes(dir.id)}
+            class:settings__chip--selected={$settingsForm.selectedDirections.includes(dir.id)}
             onclick={() => {
               toggleDirection(dir.id);
             }}
-            aria-pressed={selectedDirections.includes(dir.id)}
+            aria-pressed={$settingsForm.selectedDirections.includes(dir.id)}
             aria-label="Toggle {dir.label} direction"
           >
             {dir.label}
@@ -464,7 +415,7 @@
       <h2 id="section-poll" class="settings__section-title">Poll Interval</h2>
       <div class="settings__range-wrap">
         <label for="poll-slider" class="settings__range-label">
-          Every {pollSeconds}s
+          Every {$settingsForm.pollSeconds}s
         </label>
         <input
           id="poll-slider"
@@ -472,13 +423,13 @@
           min="10"
           max="300"
           step="5"
-          bind:value={pollSeconds}
-          oninput={handlePollInput}
+          value={$settingsForm.pollSeconds}
+          oninput={handlePollSlider}
           class="settings__range"
-          aria-label="Poll interval in seconds: {pollSeconds}"
+          aria-label="Poll interval in seconds: {$settingsForm.pollSeconds}"
           aria-valuemin={10}
           aria-valuemax={300}
-          aria-valuenow={pollSeconds}
+          aria-valuenow={$settingsForm.pollSeconds}
         />
         <div class="settings__range-bounds" aria-hidden="true">
           <span>10s</span>
@@ -490,7 +441,7 @@
     <!-- Theme -->
     <section class="settings__section" aria-labelledby="section-theme">
       <h2 id="section-theme" class="settings__section-title">Theme</h2>
-      <ThemePicker selected={theme} onSelect={handleThemeSelect} />
+      <ThemePicker selected={$settingsForm.theme} onSelect={handleThemeSelect} />
     </section>
 
     <DisplayModeSection />
