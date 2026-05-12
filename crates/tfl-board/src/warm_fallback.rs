@@ -278,4 +278,33 @@ mod tests {
 
         assert_eq!(outcome, WarmOutcome::Timeout);
     }
+
+    /// Dropped sender → fail-open as Timeout, not Event.
+    ///
+    /// When the sender half of the event channel is dropped without ever
+    /// sending, `event_rx` resolves to `Err` immediately. `WarmFallback`
+    /// must treat that as fail-open (`WarmOutcome::Timeout`) rather than
+    /// hanging forever or panicking. The timer is configured to NOT fire
+    /// (its release handle is kept alive), so the only resolution path is
+    /// the closed-channel branch.
+    #[tokio::test]
+    async fn receiver_dropped_falls_open_to_timeout() {
+        let deadline = Duration::from_secs(8);
+        let (timer, _release) = FakeTimer::new();
+        // _release is intentionally kept alive — the timer will NOT fire.
+        // The only path to resolution is the dropped-sender branch.
+        let fallback = WarmFallback::new(timer, deadline);
+
+        let (tx, rx) = oneshot::channel::<()>();
+        // Drop tx immediately without sending — closes the channel.
+        drop(tx);
+
+        let outcome = fallback.wait(rx).await;
+
+        assert_eq!(
+            outcome,
+            WarmOutcome::Timeout,
+            "a dropped sender must fail-open as Timeout, not block or return Event"
+        );
+    }
 }
