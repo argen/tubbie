@@ -1,0 +1,27 @@
+[package]
+name = "tfl-cache"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "TfL stop-points cache, hub-detail cache, line-status cache, single-flighted refresh, SWR, and per-mode retry — wraps tfl-client's HTTP transport layer."
+
+[features]
+# Gates integration tests that hit api.tfl.gov.uk.
+live = ["tfl-client/live"]
+
+[dependencies]
+tfl-domain = { path = "../tfl-domain" }
+tfl-client = { path = "../tfl-client" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true, features = ["time"] }
+futures = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }
+insta = { workspace = true }
+tempfile = "3"
+chrono = { workspace = true }
+wiremock = "0.6"
+reqwest = { workspace = true }
