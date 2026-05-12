@@ -12,6 +12,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 [dependencies]
 tfl-domain = { path = "../crates/tfl-domain" }
 tfl-client = { path = "../crates/tfl-client" }
+tfl-cache = { path = "../crates/tfl-cache" }
 tfl-board = { path = "../crates/tfl-board" }
 
 tauri = { version = "2", features = ["macos-private-api", "test", "tray-icon", "image-png"] }

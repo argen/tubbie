@@ -8,6 +8,7 @@ description = "BoardService: filtering, polling stream, and stale-data fallback 
 [dependencies]
 tfl-domain = { path = "../tfl-domain" }
 tfl-client = { path = "../tfl-client" }
+tfl-cache = { path = "../tfl-cache" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true, features = ["rt-multi-thread", "macros", "time", "sync"] }

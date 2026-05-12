@@ -51,7 +51,8 @@ use tauri::{
     Emitter, Listener, LogicalSize, Manager, PhysicalPosition, WindowEvent,
 };
 use tfl_board::{BoardConfig, BoardService, LifecyclePhase};
-use tfl_client::{clock::SystemClock, http::ReqwestTflHttp, TflClient};
+use tfl_cache::TflClient;
+use tfl_client::{clock::SystemClock, http::ReqwestTflHttp};
 use tokio::sync::RwLock;
 use tokio::task::AbortHandle;
 
