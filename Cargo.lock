@@ -4165,10 +4165,29 @@ dependencies = [
  "futures",
  "serde",
  "serde_json",
+ "tfl-cache",
  "tfl-client",
  "tfl-domain",
  "thiserror 2.0.18",
  "tokio",
+]
+
+[[package]]
+name = "tfl-cache"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "futures",
+ "insta",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tfl-client",
+ "tfl-domain",
+ "thiserror 2.0.18",
+ "tokio",
+ "wiremock",
 ]
 
 [[package]]
@@ -4573,6 +4592,7 @@ dependencies = [
  "tauri-plugin-store",
  "tempfile",
  "tfl-board",
+ "tfl-cache",
  "tfl-client",
  "tfl-domain",
  "thiserror 2.0.18",
