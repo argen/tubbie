@@ -1504,6 +1504,262 @@ mod tests {
     /// After `n` concurrent `warm_stop_points_cache` calls, the total
     /// `stop-points` fetch count must equal `SUPPORTED_MODES.len()` (one
     /// per mode, not `n * SUPPORTED_MODES.len()`).
+    /// **Invariant #15 — Hub-line cache caches `NotFound` but not transient errors.**
+    ///
+    /// Contract under test (`hub_lines_cached`):
+    /// - `TflError::NotFound` → cached as empty `Vec<LineRef>`. A second warm
+    ///   for the same hub MUST NOT re-fetch; the call count for that hub stays at 1.
+    /// - Transient errors (`RateLimited`, `Transport`) → NOT cached. A second
+    ///   warm MUST re-fetch; if the second attempt succeeds, the result is cached.
+    ///
+    /// The test drives `hub_lines_cached` indirectly via
+    /// `refresh_stop_points_cache`, which fans out per-hub fetches during the
+    /// `stop_points_cached` → `refresh_stop_points_inner` path.
+    #[tokio::test(flavor = "current_thread")]
+    async fn hub_lines_cache_caches_not_found_but_not_transient_errors() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use std::sync::Arc;
+
+        /// Per-hub call counters and a scripted response table.
+        ///
+        /// On each `stop-point/{hub_id}` call:
+        ///   HUBXYZ → always `NotFound`
+        ///   HUBABC → first call returns `RateLimited`; subsequent calls return
+        ///            a minimal valid hub payload with one DLR child line.
+        struct ScriptedHubHttp {
+            inner: FixtureTflHttp,
+            hubxyz_calls: Arc<AtomicUsize>,
+            hubabc_calls: Arc<AtomicUsize>,
+        }
+
+        impl TflHttp for ScriptedHubHttp {
+            fn fetch(
+                &self,
+                endpoint: &str,
+                id: &str,
+            ) -> impl std::future::Future<Output = Result<serde_json::Value, TflError>> + Send {
+                let is_hubxyz = endpoint == "stop-point" && id == "HUBXYZ";
+                let is_hubabc = endpoint == "stop-point" && id == "HUBABC";
+
+                let hubxyz_call_n = if is_hubxyz {
+                    self.hubxyz_calls.fetch_add(1, Ordering::SeqCst)
+                } else {
+                    0
+                };
+                let hubabc_call_n = if is_hubabc {
+                    self.hubabc_calls.fetch_add(1, Ordering::SeqCst)
+                } else {
+                    0
+                };
+
+                let inner_fut = if is_hubxyz || is_hubabc {
+                    None
+                } else {
+                    Some(self.inner.fetch(endpoint, id))
+                };
+
+                async move {
+                    if is_hubxyz {
+                        // Always 404 — genuinely unknown hub.
+                        let _ = hubxyz_call_n;
+                        return Err(TflError::NotFound("HUBXYZ: simulated 404".to_string()));
+                    }
+                    if is_hubabc {
+                        if hubabc_call_n == 0 {
+                            // First attempt: transient 429 — must NOT be cached.
+                            return Err(TflError::RateLimited { retry_after: None });
+                        }
+                        // Second+ attempt: success — a hub with one DLR child.
+                        return Ok(serde_json::json!({
+                            "id": "HUBABC",
+                            "children": [{
+                                "id": "940GZZDLABC",
+                                "modes": ["dlr"],
+                                "lineModeGroups": [{
+                                    "modeName": "dlr",
+                                    "lineIdentifier": ["dlr"]
+                                }]
+                            }]
+                        }));
+                    }
+                    inner_fut.unwrap().await
+                }
+            }
+        }
+
+        let hubxyz_calls = Arc::new(AtomicUsize::new(0));
+        let hubabc_calls = Arc::new(AtomicUsize::new(0));
+
+        let http = ScriptedHubHttp {
+            // The stop-points fixture has two synthetic hub-bearing stations.
+            // We serve them from an in-memory tempdir so the hub NaPTAN codes
+            // are exactly HUBXYZ / HUBABC and nothing else leaks in.
+            inner: FixtureTflHttp::new({
+                let dir = tempfile::tempdir().expect("tempdir");
+                let sp_dir = dir.path().join("stop-points");
+                std::fs::create_dir_all(&sp_dir).unwrap();
+                let ls_dir = dir.path().join("line-status");
+                std::fs::create_dir_all(&ls_dir).unwrap();
+
+                let fixture = serde_json::json!({
+                    "stopPoints": [
+                        {
+                            "id": "940GZZLUXYZ",
+                            "commonName": "Hub XYZ Underground Station",
+                            "modes": ["tube"],
+                            "lat": 51.5, "lon": -0.1,
+                            "hubNaptanCode": "HUBXYZ",
+                            "lineModeGroups": [{"modeName": "tube", "lineIdentifier": ["central"]}]
+                        },
+                        {
+                            "id": "940GZZLUABC",
+                            "commonName": "Hub ABC Underground Station",
+                            "modes": ["tube"],
+                            "lat": 51.5, "lon": -0.1,
+                            "hubNaptanCode": "HUBABC",
+                            "lineModeGroups": [{"modeName": "tube", "lineIdentifier": ["northern"]}]
+                        }
+                    ]
+                });
+                std::fs::write(
+                    sp_dir.join("tube.json"),
+                    serde_json::to_string(&fixture).unwrap(),
+                ).unwrap();
+                // Provide empty fixtures for the other three modes so the multi-mode
+                // fan-out doesn't hit NotFound for those.
+                for mode in ["overground", "dlr", "elizabeth-line"] {
+                    std::fs::write(sp_dir.join(format!("{mode}.json")), r#"{"stopPoints":[]}"#).unwrap();
+                    std::fs::write(ls_dir.join(format!("{mode}.json")), "[]").unwrap();
+                }
+                std::fs::write(ls_dir.join("tube.json"), "[]").unwrap();
+
+                // Leak the tempdir so the path stays valid for the test duration.
+                let path = dir.path().to_path_buf();
+                std::mem::forget(dir);
+                path
+            }),
+            hubxyz_calls: hubxyz_calls.clone(),
+            hubabc_calls: hubabc_calls.clone(),
+        };
+
+        let client = TflClient::new(http);
+
+        // ── First warm ──────────────────────────────────────────────────────
+        // HUBXYZ fetch → NotFound → cached as empty Vec.
+        // HUBABC fetch → RateLimited on attempt 0 (backoff retries follow
+        //   in the impl, but our scripted http returns RateLimited for every
+        //   attempt until call_n >= 1; since the retry loop fires multiple
+        //   times, HUBABC will actually succeed on the second attempt within
+        //   the SAME warm — that is fine: the point of this test is that
+        //   RateLimited is not cached after exhaustion, and we verify that
+        //   separately below with a second warm after resetting the counter).
+        //
+        // To isolate the "not cached after transient" assertion cleanly, we
+        // use `refresh_stop_points_cache` (force = true) for the second warm
+        // so we bypass the stale-ok short-circuit.
+        client.warm_stop_points_cache().await.expect("first warm must succeed");
+
+        let hubxyz_after_first = hubxyz_calls.load(Ordering::SeqCst);
+        assert!(
+            hubxyz_after_first >= 1,
+            "HUBXYZ must have been fetched at least once on first warm; got {hubxyz_after_first}",
+        );
+
+        // ── Second warm ─────────────────────────────────────────────────────
+        // HUBXYZ: NotFound was cached ⟹ no re-fetch. Call count stays the same.
+        // HUBABC: transient failure on call 0 was NOT cached. But within the
+        //   first warm's retry loop it may have succeeded (call_n ≥ 1 returns Ok).
+        //   Either way: if it succeeded, it's now cached and won't re-fetch either.
+        //   The invariant we pin is only the NotFound side here.
+        client.refresh_stop_points_cache().await.expect("second warm (forced refresh) must succeed");
+
+        let hubxyz_after_second = hubxyz_calls.load(Ordering::SeqCst);
+        assert_eq!(
+            hubxyz_after_second, hubxyz_after_first,
+            "HUBXYZ: NotFound was cached — second warm must NOT re-fetch (count must stay at {hubxyz_after_first}); \
+             got {hubxyz_after_second} total calls",
+        );
+
+        // ── Verify transient error is NOT cached: fresh client, HUBABC always fails ──
+        // Build a second client where HUBABC always returns RateLimited (never
+        // succeeds) so we can verify that after the first warm it is still
+        // re-fetched on the second warm (i.e. NOT cached).
+        struct AlwaysRateLimitedHubHttp {
+            inner: FixtureTflHttp,
+            hubabc_calls: Arc<AtomicUsize>,
+        }
+        impl TflHttp for AlwaysRateLimitedHubHttp {
+            fn fetch(
+                &self,
+                endpoint: &str,
+                id: &str,
+            ) -> impl std::future::Future<Output = Result<serde_json::Value, TflError>> + Send {
+                let is_hubabc = endpoint == "stop-point" && id == "HUBABC";
+                if is_hubabc {
+                    self.hubabc_calls.fetch_add(1, Ordering::SeqCst);
+                }
+                let inner_fut = self.inner.fetch(endpoint, id);
+                async move {
+                    if is_hubabc {
+                        return Err(TflError::RateLimited { retry_after: None });
+                    }
+                    inner_fut.await
+                }
+            }
+        }
+
+        let always_rate_limited_hubabc_calls = Arc::new(AtomicUsize::new(0));
+        let http2 = AlwaysRateLimitedHubHttp {
+            inner: FixtureTflHttp::new({
+                let dir2 = tempfile::tempdir().expect("tempdir2");
+                let sp_dir2 = dir2.path().join("stop-points");
+                std::fs::create_dir_all(&sp_dir2).unwrap();
+                let ls_dir2 = dir2.path().join("line-status");
+                std::fs::create_dir_all(&ls_dir2).unwrap();
+                let fixture2 = serde_json::json!({
+                    "stopPoints": [{
+                        "id": "940GZZLUABC",
+                        "commonName": "Hub ABC Underground Station",
+                        "modes": ["tube"],
+                        "lat": 51.5, "lon": -0.1,
+                        "hubNaptanCode": "HUBABC",
+                        "lineModeGroups": [{"modeName": "tube", "lineIdentifier": ["northern"]}]
+                    }]
+                });
+                std::fs::write(sp_dir2.join("tube.json"), serde_json::to_string(&fixture2).unwrap()).unwrap();
+                for mode in ["overground", "dlr", "elizabeth-line"] {
+                    std::fs::write(sp_dir2.join(format!("{mode}.json")), r#"{"stopPoints":[]}"#).unwrap();
+                    std::fs::write(ls_dir2.join(format!("{mode}.json")), "[]").unwrap();
+                }
+                std::fs::write(ls_dir2.join("tube.json"), "[]").unwrap();
+                let path2 = dir2.path().to_path_buf();
+                std::mem::forget(dir2);
+                path2
+            }),
+            hubabc_calls: always_rate_limited_hubabc_calls.clone(),
+        };
+
+        let client2 = TflClient::new(http2);
+
+        // First warm: HUBABC → RateLimited (all STOP_POINTS_FETCH_ATTEMPTS).
+        // Not cached.
+        client2.warm_stop_points_cache().await.expect("warm with transient hubabc must not fail overall");
+        let after_first_warm = always_rate_limited_hubabc_calls.load(Ordering::SeqCst);
+        assert!(
+            after_first_warm >= 1,
+            "HUBABC must have been attempted at least once in first warm; got {after_first_warm}",
+        );
+
+        // Second warm (forced): HUBABC was NOT cached → must be re-fetched again.
+        client2.refresh_stop_points_cache().await.expect("second warm must still succeed overall");
+        let after_second_warm = always_rate_limited_hubabc_calls.load(Ordering::SeqCst);
+        assert!(
+            after_second_warm > after_first_warm,
+            "HUBABC: RateLimited was NOT cached — second warm MUST re-fetch; \
+             expected > {after_first_warm} calls total, got {after_second_warm}",
+        );
+    }
+
     #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
     async fn single_flight_concurrent_warm_issues_one_fetch_per_mode() {
         use std::sync::atomic::{AtomicUsize, Ordering};
