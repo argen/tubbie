@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "scenarios": [
+    {
+      "id": "tcr_serves_central_northern_elizabeth",
+      "station_id": "940GZZLUTCR",
+      "hub_id": "HUBTCR",
+      "name": "Tottenham Court Road",
+      "expected_lines": ["central", "northern", "elizabeth"],
+      "negative": false,
+      "notes": "tube-only canonical entry; Elizabeth comes via sibling 910GTOTCTRD under HUBTCR — the hub-merge silent-fail bug class origin."
+    },
+    {
+      "id": "bank_serves_central_northern_waterloo_city_dlr",
+      "station_id": "940GZZLUBNK",
+      "hub_id": "HUBBAN",
+      "name": "Bank",
+      "expected_lines": ["central", "northern", "waterloo-city", "dlr"],
+      "negative": false,
+      "notes": "tube-only canonical id; DLR sibling 940GZZDLBNK under HUBBAN. Same hub-merge path as TCR but tube+DLR pair."
+    },
+    {
+      "id": "liverpool_street_serves_tube_elizabeth_weaver",
+      "station_id": "940GZZLULVT",
+      "hub_id": "HUBLVT",
+      "name": "Liverpool Street",
+      "expected_lines": ["central", "circle", "hammersmith-city", "metropolitan", "elizabeth", "weaver"],
+      "negative": false,
+      "notes": "Most multi-mode interchange in the canonical list: four tube lines + Elizabeth + Weaver (post-Nov-2024 Overground rename). Guards against legacy london-overground umbrella id sneaking back."
+    },
+    {
+      "id": "stratford_serves_tube_dlr_elizabeth_mildmay",
+      "station_id": "940GZZLUSTD",
+      "hub_id": "HUBSTD",
+      "name": "Stratford",
+      "expected_lines": ["central", "jubilee", "dlr", "elizabeth", "mildmay"],
+      "negative": false,
+      "notes": "Three non-tube modes (DLR, Elizabeth, Overground/Mildmay) on one hub. If any of the three fan-out merges drops, test names which."
+    },
+    {
+      "id": "canary_wharf_serves_jubilee_dlr_elizabeth",
+      "station_id": "940GZZLUCYF",
+      "hub_id": "HUBCWX",
+      "name": "Canary Wharf",
+      "expected_lines": ["jubilee", "dlr", "elizabeth"],
+      "negative": false,
+      "notes": "Jubilee (tube) + DLR + Elizabeth — all three modalities via HUBCWX."
+    },
+    {
+      "id": "whitechapel_serves_district_hc_elizabeth_mildmay_windrush",
+      "station_id": "940GZZLUWCL",
+      "hub_id": "HUBWCL",
+      "name": "Whitechapel",
+      "expected_lines": ["district", "hammersmith-city", "elizabeth", "mildmay", "windrush"],
+      "negative": false,
+      "notes": "Two named Overground lines (Mildmay + Windrush) on the same hub — defends against lazy-collapse of OG named lines back to a single sibling entry."
+    },
+    {
+      "id": "paddington_serves_bakerloo_circle_district_hc_elizabeth",
+      "station_id": "940GZZLUPAC",
+      "hub_id": "HUBPAD",
+      "name": "Paddington",
+      "expected_lines": ["bakerloo", "circle", "district", "hammersmith-city", "elizabeth"],
+      "negative": false,
+      "notes": "Four tube lines on one parent + Elizabeth from sibling 910GPADTLL. Largest tube-line set in the canonical list."
+    },
+    {
+      "id": "farringdon_serves_circle_hc_metropolitan_elizabeth",
+      "station_id": "940GZZLUFRD",
+      "hub_id": "HUBFFD",
+      "name": "Farringdon",
+      "expected_lines": ["circle", "hammersmith-city", "metropolitan", "elizabeth"],
+      "negative": false,
+      "notes": "Three tube lines + Elizabeth via HUBFFD."
+    },
+    {
+      "id": "bond_street_serves_central_jubilee_elizabeth",
+      "station_id": "940GZZLUBND",
+      "hub_id": "HUBBDS",
+      "name": "Bond Street",
+      "expected_lines": ["central", "jubilee", "elizabeth"],
+      "negative": false,
+      "notes": "Central + Jubilee (tube) + Elizabeth via HUBBDS. Added after TestFlight regression on 2026-05-08 — originally absent from the canonical list."
+    },
+    {
+      "id": "belsize_park_does_not_inherit_unrelated_hub_lines",
+      "station_id": "940GZZLUBZP",
+      "hub_id": null,
+      "name": "Belsize Park",
+      "expected_lines": ["northern"],
+      "negative": true,
+      "notes": "Single-mode tube stop with no hubNaptanCode. Must NOT pick up DLR/Elizabeth/Overground lines from any other hub even when they are present in the warm. Guards against over-merge by lat/lon proximity or any heuristic ignoring the hub partition. Assert exact equality, not superset."
+    }
+  ]
+}
