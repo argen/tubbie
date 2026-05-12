@@ -123,6 +123,12 @@ gh api -X PUT /repos/argen/tubbie/branches/main/protection \
 `enforce_admins=false` keeps an admin bypass while the project is
 solo-maintained; flip to `true` once there's a second maintainer.
 
+## CI secrets
+
+| Secret | Used by | Purpose |
+|--------|---------|---------|
+| `TFL_APP_KEY` | `.github/workflows/fixture-freshness.yml` | Authenticates the monthly `just record-fixtures` run against the live TfL API. Set at: **Settings → Secrets and variables → Actions → New repository secret**. Without it the workflow fails loudly before touching any fixtures. |
+
 ## Upstream watchlist
 
 Issues we're watching to remove deferrals:
