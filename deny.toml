@@ -5,6 +5,11 @@
 # This file is the in-tree source of truth for accepted-risk advisories
 # and the workspace's license / source allowlist. SECURITY.md mirrors
 # the rationale for human readers.
+#
+# ACTION REQUIRED 2026-07-25: Re-triage calendar advisory deferrals —
+# see SECURITY.md accepted-risk register (RUSTSEC-2024-0429, RUSTSEC-2026-0097,
+# and the Tauri gtk-rs unmaintained family). If Tauri has not resolved the
+# upstream ecosystem bump by then, escalate to a tracked issue.
 
 [graph]
 all-features = true
