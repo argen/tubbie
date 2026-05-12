@@ -11,7 +11,7 @@
   import { reducedMotion } from '$lib/stores/reducedMotion.js';
   import { displayMode } from '$lib/stores/displayMode.js';
   import { displayPrefs } from '$lib/stores/displayPrefs.js';
-  import { applyBoardSize } from '$lib/ipc/commands.js';
+  import { applyBoardSize, openSettingsWindow } from '$lib/ipc/commands.js';
   import LineGroup from './LineGroup.svelte';
   import LineStatusTicker from './LineStatusTicker.svelte';
 
@@ -407,7 +407,13 @@
         {clockStr}
       </time>
 
-      <a href="/settings" class="board__settings-btn" aria-label="Open settings" title="Settings">
+      <button
+        type="button"
+        class="board__settings-btn"
+        onclick={() => void openSettingsWindow()}
+        aria-label="Open settings"
+        title="Settings"
+      >
         <svg
           aria-hidden="true"
           focusable="false"
@@ -425,7 +431,7 @@
             d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
           />
         </svg>
-      </a>
+      </button>
     </div>
   </header>
 
@@ -650,13 +656,15 @@
     align-items: center;
     justify-content: center;
     color: var(--platform-label);
-    text-decoration: none;
+    background: transparent;
+    cursor: pointer;
     width: 32px;
     height: 32px;
     border: 1px solid var(--row-divider);
     border-radius: 2px;
     transition: color 0.15s ease;
     opacity: 0.7;
+    padding: 0;
   }
 
   .board__settings-btn:hover,

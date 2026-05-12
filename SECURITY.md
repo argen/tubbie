@@ -26,6 +26,16 @@ There is no server, no auth, no user-controlled HTML or cookies. The
 only network egress is to the public TfL Unified API (read-only). The
 shipped frontend is a SvelteKit static-adapter build (no SSR).
 
+### Credential storage
+
+The TfL API key is stored in the **macOS Keychain** (system credential
+storage) via `security-framework`'s `set_generic_password` /
+`get_generic_password`. Service identifier: `app.tubbie`. It is never
+written to `config.json` or any other file on disk. The on-disk store
+(`~/Library/Application Support/app.tubbie/config.json`) contains only
+non-sensitive config: current station, line filters, direction filters,
+display mode, and poll interval.
+
 The non-trivial attack surfaces we track are:
 
 1. **TfL response parsing** — a hostile or compromised upstream
@@ -35,6 +45,20 @@ The non-trivial attack surfaces we track are:
 3. **Forks running `npm run dev`** — once open source, contributors run
    the SvelteKit dev server, which exercises code paths the shipped
    static bundle does not.
+4. **API key in TfL request URLs** — The TfL Unified API requires the
+   `app_key` credential to be sent as a URL query parameter
+   (`?app_key=…`) rather than an HTTP request header; this is a TfL API
+   design constraint, not a Tubbie choice. As a result, the key is
+   likely to appear in TfL's server-side access logs and almost
+   certainly in any intermediate proxy logs
+   (e.g. a corporate HTTPS-intercepting proxy or a local debugging tool
+   such as Charles or Proxyman). Tubbie already redacts the request URL
+   from all error message paths and wraps the key in a zero-on-drop
+   `AppKey` type, but these controls do not affect TfL's own logging.
+   Treat `app_key` as a rotatable credential rather than a long-lived
+   secret: if you believe the key has been exposed through a log breach
+   or proxy capture, regenerate it via the TfL developer portal
+   (https://api-portal.tfl.gov.uk) and update it in Tubbie's Settings.
 
 ## Accepted-risk register
 

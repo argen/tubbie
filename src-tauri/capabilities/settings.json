@@ -1,0 +1,17 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "settings",
+  "description": "Capability set for the Settings webview window. This window is the only context permitted to call load_app_key — the command that returns the raw TfL API key to the renderer. The main window intentionally does not have this capability (MEDIUM-2 / M7 TODO). save_app_key is also listed here for documentation completeness; it is not capability-gated at the Tauri layer because it is a write-only operation with no data-exfiltration risk.",
+  "windows": ["settings"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-close",
+    "core:window:allow-minimize",
+    "core:window:allow-maximize",
+    "core:window:allow-set-title",
+    "core:window:allow-start-dragging",
+    "core:window:allow-set-fullscreen",
+    "core:window:allow-is-fullscreen",
+    "store:default"
+  ]
+}

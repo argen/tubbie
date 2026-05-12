@@ -6,12 +6,12 @@
 //! ## Architecture
 //!
 //! - `AppState` is constructed here and `manage()`d into the Tauri builder.
-//!   It holds the live `BoardService`, the `StorePluginConfigStore`, and an
+//!   It holds the live `BoardService`, the `KeychainBackedConfigStore`, and an
 //!   `AbortHandle` for the active stream task.
 //! - All IPC commands live in `commands.rs`. They are thin wrappers that
 //!   delegate to `tfl-board` / `tfl-client` and return `Result<T, String>`.
 //! - `state.rs` defines `AppState` + the `ConfigStore` trait + `MemoryConfigStore`
-//!   (for tests). `store_impl.rs` has the production `StorePluginConfigStore`.
+//!   (for tests). `store_impl.rs` has the production `KeychainBackedConfigStore`.
 //!
 //! ## Polling stream wiring (M6)
 //!
@@ -60,11 +60,11 @@ use commands::request_current_location;
 use commands::{
     add_favorite, apply_board_size, find_nearest_stations, get_board, get_line_status, has_app_key,
     list_favorites, load_app_key, load_config, load_display_mode, load_display_prefs,
-    remove_favorite, save_app_key, save_config, save_display_mode, save_display_prefs,
-    search_stations,
+    open_settings_window, open_settings_window_impl, remove_favorite, save_app_key, save_config,
+    save_display_mode, save_display_prefs, search_stations,
 };
 use state::{AnyBoardService, AppState};
-use store_impl::{StorePluginConfigStore, StorePluginFavoritesStore};
+use store_impl::{KeychainBackedConfigStore, StorePluginConfigStore, StorePluginFavoritesStore};
 
 /// RAII handle for a Tauri event listener. Calling `unlisten` in `Drop`
 /// guarantees cleanup even if the awaiting task is aborted mid-flight (window
@@ -404,10 +404,11 @@ fn build_tray(app: &tauri::AppHandle) -> Result<(), tauri::Error> {
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| {
             if event.id().as_ref() == "settings" {
-                if let Some(win) = app.get_webview_window("main") {
-                    let _ = win.show();
-                    let _ = win.set_focus();
-                    let _ = app.emit("tray://open-settings", ());
+                // Open (or focus) the dedicated Settings window instead of
+                // navigating the main popover. The main window cannot call
+                // `load_app_key` — that capability is gated to "settings".
+                if let Err(e) = open_settings_window_impl(app) {
+                    eprintln!("[tubbie] failed to open settings from tray: {e}");
                 }
             }
         })
@@ -637,14 +638,14 @@ pub fn run() {
             // Read saved API key, if any. The client is constructed once at
             // startup. Changing the key requires a restart (Settings UI shows
             // "restart to apply" after save_app_key).
-            let store =
+            let plugin_store =
                 StorePluginConfigStore::open(app.handle()).expect("failed to open config store");
 
             // Resolve display mode early. We pass it to
             // `apply_display_mode_effects` below — the single seam that owns
             // activation policy, tray, and window chrome both at startup and
             // at runtime when the user toggles via Settings.
-            let initial_display_mode: String = store
+            let initial_display_mode: String = plugin_store
                 .raw_get("display_mode")
                 .and_then(|v| serde_json::from_value::<String>(v).ok())
                 .unwrap_or_else(|| state::DEFAULT_DISPLAY_MODE.to_string());
@@ -656,13 +657,17 @@ pub fn run() {
             let display_mode_lock: Arc<StdRwLock<String>> =
                 Arc::new(StdRwLock::new(initial_display_mode.clone()));
 
-            let saved_key: Option<String> = store.raw_get("tfl_app_key").and_then(|v| {
-                if v.is_null() {
+            // Load the API key from the macOS Keychain (MEDIUM-1 fix).
+            // Falls back to a legacy JSON value if one exists so users
+            // upgrading from the old plaintext-JSON implementation are not
+            // locked out. The KeychainBackedConfigStore::load_app_key will
+            // migrate the legacy value on the next async call; here we do a
+            // direct synchronous read for the startup HTTP client.
+            let saved_key: Option<String> =
+                store_impl::keychain_load_with_legacy_fallback(&plugin_store).unwrap_or_else(|e| {
+                    eprintln!("[tubbie] Failed to load API key from Keychain at startup: {e}");
                     None
-                } else {
-                    serde_json::from_value(v).ok()
-                }
-            });
+                });
 
             // Clone before consuming in the AppState HTTP client so we can also
             // thread the key into spawn_stream_task (and the watcher restarts).
@@ -676,7 +681,11 @@ pub fn run() {
             let client = Arc::new(TflClient::new(http));
             let board_service = Arc::new(BoardService::new(Arc::clone(&client), SystemClock))
                 as Arc<dyn AnyBoardService>;
-            let config_store = Arc::new(store) as Arc<dyn state::ConfigStore>;
+            // Wrap the plugin store in a KeychainBackedConfigStore so that
+            // subsequent save_app_key / load_app_key calls go through the
+            // macOS Keychain rather than the plaintext JSON file (MEDIUM-1).
+            let config_store = Arc::new(KeychainBackedConfigStore::new(plugin_store))
+                as Arc<dyn state::ConfigStore>;
 
             // Favorites store: separate `"favorites"` key, same config.json file.
             // Opened lazily-idempotent by the plugin — re-opening the same
@@ -899,6 +908,7 @@ pub fn run() {
             save_app_key,
             load_app_key,
             has_app_key,
+            open_settings_window,
             get_line_status,
             save_display_mode,
             load_display_mode,

@@ -2,7 +2,7 @@
   import { board, boardError, isLoading } from '$lib/stores/board.js';
   import { config, configError } from '$lib/stores/config.js';
   import Board from '$lib/components/Board.svelte';
-  import { getLineStatus } from '$lib/ipc/commands.js';
+  import { getLineStatus, openSettingsWindow } from '$lib/ipc/commands.js';
   import type { Board as BoardT, LineStatus } from '$lib/ipc/types.js';
 
   let statuses = $state<LineStatus[]>([]);
@@ -53,7 +53,11 @@
   <div class="config-error" role="alert">
     <p class="config-error__message">{$configError}</p>
     <p class="config-error__hint">
-      <a href="/settings" class="config-error__link">Open Settings</a> to fix the configuration.
+      <button
+        type="button"
+        class="config-error__link"
+        onclick={() => void openSettingsWindow()}
+      >Open Settings</button> to fix the configuration.
     </p>
   </div>
 {/if}
@@ -68,7 +72,11 @@
     <p class="error__hint">
       Check your connection and open Settings to verify the station configuration.
     </p>
-    <a href="/settings" class="error__settings-link">Open Settings</a>
+    <button
+      type="button"
+      class="error__settings-link"
+      onclick={() => void openSettingsWindow()}
+    >Open Settings</button>
   </div>
 {:else if $board !== null}
   <Board
@@ -150,9 +158,10 @@
     font-family: var(--font-board);
     font-size: 1rem;
     color: var(--fg);
+    background: transparent;
     border: 1px solid var(--fg);
     padding: 0.4rem 1rem;
-    text-decoration: none;
+    cursor: pointer;
     letter-spacing: 0.1em;
   }
 
@@ -193,6 +202,13 @@
   }
 
   .config-error__link {
+    background: none;
+    border: none;
+    padding: 0;
     color: var(--fg);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: inherit;
+    text-decoration: underline;
   }
 </style>

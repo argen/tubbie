@@ -7,7 +7,7 @@
   import { initDisplayMode, displayMode } from '$lib/stores/displayMode.js';
   import { initDisplayPrefs } from '$lib/stores/displayPrefs.js';
   import Attribution from '$lib/components/Attribution.svelte';
-  import { goto } from '$app/navigation';
+  import { openSettingsWindow } from '$lib/ipc/commands.js';
 
   interface Props {
     children: Snippet;
@@ -19,6 +19,31 @@
   let cleanupTrayMenu: (() => void) | null = null;
 
   onMount(async () => {
+    // Detect which webview window this layout is mounted in.
+    // When the settings window loads `/settings` via SPA routing the same
+    // +layout.svelte wraps it. We must skip all board-window bootstrap
+    // (subscription, config init, display-mode init, tray listener) in that
+    // context to avoid:
+    //   • a double board://updated subscription that fights the main window
+    //   • initConfig() / initDisplayMode() running from the settings renderer
+    //   • a recursive tray://open-settings → openSettingsWindow() loop
+    // The settings page owns its own onMount and manages its own lifecycle.
+    let windowLabel = 'main';
+    try {
+      const { getCurrentWindow } = await import('@tauri-apps/api/window');
+      windowLabel = getCurrentWindow().label;
+    } catch {
+      // Not running under Tauri (vitest / plain `vite dev`) — assume main.
+    }
+
+    if (windowLabel === 'settings') {
+      // Settings window: skip all main-window bootstrap. The settings page
+      // component handles its own initialization.
+      return;
+    }
+
+    // --- Main window bootstrap only below this point ---
+
     // Load the active display mode first so the popover-root has the
     // correct chrome class on first paint. This avoids a flash of
     // popover styling inside a regular floating window.
@@ -38,13 +63,17 @@
     // Start listening to board://updated events from Rust stream
     cleanupSubscription = await startBoardSubscription();
 
-    // Tray right-click menu "Settings…" → navigate the popover to /settings.
-    // Tauri event listener is only available in the Tauri runtime, so we
-    // feature-detect by importing dynamically.
+    // Tray right-click menu "Settings…" → open the dedicated Settings window.
+    // The main window cannot navigate to /settings in-place because
+    // `load_app_key` is gated to the "settings" webview window only
+    // (MEDIUM-2 / M7 TODO fix). The Rust side now calls
+    // `open_settings_window_impl` directly from the tray event handler,
+    // so this frontend listener is kept only as a fallback for any
+    // in-page triggers that still emit `tray://open-settings`.
     try {
       const { listen } = await import('@tauri-apps/api/event');
       const unlisten = await listen('tray://open-settings', () => {
-        void goto('/settings');
+        void openSettingsWindow();
       });
       cleanupTrayMenu = unlisten;
     } catch {

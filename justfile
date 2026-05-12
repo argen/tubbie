@@ -49,6 +49,13 @@ verify-live:
 record-fixtures:
     cargo run -p fixture-recorder --release
 
+# Nuke all regenerable build output. Run when disk is tight — next build is cold.
+# Reclaims: target/ (Rust), web/node_modules/.vite + web/build + web/.svelte-kit (web).
+# Does NOT delete node_modules itself (that's a slower reinstall) or .git.
+clean-deep:
+    cargo clean
+    rm -rf web/build web/.svelte-kit web/node_modules/.vite web/node_modules/.cache
+
 # Build the release .app bundle (macOS).
 # Prerequisites: Node 24, Rust stable, cargo-tauri v2 (cargo install tauri-cli@^2),
 #                Xcode Command Line Tools (xcode-select --install).
