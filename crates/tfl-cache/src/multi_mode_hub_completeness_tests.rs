@@ -826,4 +826,96 @@ mod tests {
              then bump SCENARIO_COUNT here.",
         );
     }
+
+    // -------------------------------------------------------------------------
+    // JSON fixture consistency — hub-vectors.json is the single source of truth
+    // -------------------------------------------------------------------------
+    //
+    // `tests/fixtures/hub-vectors.json` is the canonical, language-agnostic
+    // encoding of the (station_id, expected_lines) contract. This test asserts
+    // that `CANONICAL_MULTI_MODE_HUBS` agrees with the JSON exactly — so the
+    // JSON is never silently out of sync with the Rust const that the live
+    // tests and `warn_incomplete_hub_coverage` both read.
+    //
+    // If this test fails you need to update BOTH the JSON and the const (or
+    // just the const if you changed the JSON first).
+
+    /// Minimal deserialisation target — we only care about positive scenarios.
+    #[derive(serde::Deserialize)]
+    struct HubVectorFile {
+        scenarios: Vec<HubVectorScenario>,
+    }
+
+    #[derive(serde::Deserialize)]
+    struct HubVectorScenario {
+        station_id: String,
+        expected_lines: Vec<String>,
+        negative: bool,
+    }
+
+    #[test]
+    fn hub_vectors_json_agrees_with_canonical_multi_mode_hubs_const() {
+        // Resolve relative to the workspace root. `CARGO_MANIFEST_DIR` is the
+        // crate root (`crates/tfl-cache/`); walk up two levels to the workspace.
+        let manifest = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+        let json_path = manifest
+            .join("..") // crates/
+            .join("..") // workspace root
+            .join("tests")
+            .join("fixtures")
+            .join("hub-vectors.json");
+        let json_path = json_path.canonicalize().unwrap_or_else(|e| {
+            panic!(
+                "hub-vectors.json not found at {}: {}. \
+                 Run this from the workspace root or ensure the file exists.",
+                json_path.display(),
+                e
+            )
+        });
+        let raw = std::fs::read_to_string(&json_path)
+            .unwrap_or_else(|e| panic!("failed to read {}: {}", json_path.display(), e));
+        let file: HubVectorFile = serde_json::from_str(&raw)
+            .unwrap_or_else(|e| panic!("failed to parse {}: {}", json_path.display(), e));
+
+        // Positive scenarios (negative == false) must agree 1-for-1 with the
+        // const in the same order — order matters because the live tests index
+        // by position.
+        let positive: Vec<&HubVectorScenario> =
+            file.scenarios.iter().filter(|s| !s.negative).collect();
+
+        assert_eq!(
+            positive.len(),
+            CANONICAL_MULTI_MODE_HUBS.len(),
+            "hub-vectors.json has {} positive scenarios but CANONICAL_MULTI_MODE_HUBS \
+             has {} entries — update one or the other to agree.",
+            positive.len(),
+            CANONICAL_MULTI_MODE_HUBS.len(),
+        );
+
+        for (i, (json_scenario, &(const_id, const_lines))) in
+            positive.iter().zip(CANONICAL_MULTI_MODE_HUBS.iter()).enumerate()
+        {
+            assert_eq!(
+                json_scenario.station_id, const_id,
+                "scenario[{i}] station_id mismatch: JSON has {:?}, const has {:?}. \
+                 Keep hub-vectors.json and CANONICAL_MULTI_MODE_HUBS in the same order.",
+                json_scenario.station_id, const_id,
+            );
+
+            let mut json_lines = json_scenario.expected_lines.clone();
+            json_lines.sort();
+            let mut const_lines_sorted: Vec<&str> = const_lines.to_vec();
+            const_lines_sorted.sort();
+
+            assert_eq!(
+                json_lines,
+                const_lines_sorted
+                    .iter()
+                    .map(|s| s.to_string())
+                    .collect::<Vec<_>>(),
+                "scenario[{i}] ({const_id}) expected_lines mismatch: \
+                 JSON={json_lines:?} const={const_lines_sorted:?}",
+            );
+        }
+    }
 }

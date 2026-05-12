@@ -26,17 +26,73 @@
 //!
 //! ## Adding a new interchange
 //!
-//! Append to `tfl_cache::CANONICAL_MULTI_MODE_HUBS`. The
-//! generated test name pattern in this file iterates the const, so a
-//! new entry produces a new `#[tokio::test]` automatically — but the
-//! per-test `#[tokio::test]` attribute can't be applied dynamically, so
-//! one fn per hub is hand-written below. Keep them in sync with the
-//! const.
+//! Add a new positive scenario to `tests/fixtures/hub-vectors.json` (the
+//! single source of truth) AND to `CANONICAL_MULTI_MODE_HUBS` in `cache.rs`,
+//! then add a matching hand-written `#[tokio::test]` fn below loading
+//! `scenario_from_json(N)` at the new index. The consistency test in
+//! `multi_mode_hub_completeness_tests.rs` will catch any ordering drift.
 
 #![cfg(feature = "live")]
 
-use tfl_cache::{TflClient, CANONICAL_MULTI_MODE_HUBS};
+use tfl_cache::TflClient;
 use tfl_client::http::ReqwestTflHttp;
+
+// ---------------------------------------------------------------------------
+// JSON loading — hub-vectors.json is the single source of truth
+// ---------------------------------------------------------------------------
+
+#[derive(serde::Deserialize)]
+struct HubVectorFile {
+    scenarios: Vec<HubVectorScenario>,
+}
+
+#[derive(serde::Deserialize)]
+struct HubVectorScenario {
+    id: String,
+    station_id: String,
+    expected_lines: Vec<String>,
+    negative: bool,
+}
+
+/// Load the positive scenarios from `tests/fixtures/hub-vectors.json` at the
+/// workspace root. Panics if the file is missing or malformed — a missing
+/// fixture is a bug, not a skip.
+fn load_positive_scenarios() -> Vec<HubVectorScenario> {
+    let manifest = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    let json_path = manifest
+        .join("..") // crates/
+        .join("..") // workspace root
+        .join("tests")
+        .join("fixtures")
+        .join("hub-vectors.json");
+    let json_path = json_path.canonicalize().unwrap_or_else(|e| {
+        panic!(
+            "hub-vectors.json not found at {}: {}",
+            json_path.display(),
+            e
+        )
+    });
+    let raw = std::fs::read_to_string(&json_path)
+        .unwrap_or_else(|e| panic!("failed to read {}: {}", json_path.display(), e));
+    let file: HubVectorFile = serde_json::from_str(&raw)
+        .unwrap_or_else(|e| panic!("failed to parse {}: {}", json_path.display(), e));
+    file.scenarios.into_iter().filter(|s| !s.negative).collect()
+}
+
+/// Load one positive scenario by 0-based index. Panics on out-of-bounds.
+fn scenario_from_json(index: usize) -> HubVectorScenario {
+    let mut scenarios = load_positive_scenarios();
+    assert!(
+        index < scenarios.len(),
+        "scenario index {index} out of bounds (only {} positive scenarios in hub-vectors.json)",
+        scenarios.len()
+    );
+    scenarios.remove(index)
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 /// Returns true if `api.tfl.gov.uk` is reachable. Mirrors the helper in
 /// `live_tfl.rs` so this file is self-contained — copy is intentional;
@@ -53,7 +109,7 @@ async fn tfl_api_reachable() -> bool {
 /// `station_id`'s allowed-line set is a superset of `expected`. Skips
 /// silently if the network is unreachable (matches the live_tfl.rs
 /// convention; CI without internet must not turn this red).
-async fn assert_live_hub_serves(case: &str, station_id: &str, expected: &[&str]) {
+async fn assert_live_hub_serves(case: &str, station_id: &str, expected: &[String]) {
     if !tfl_api_reachable().await {
         eprintln!("SKIP [{case}]: api.tfl.gov.uk unreachable");
         return;
@@ -72,12 +128,11 @@ async fn assert_live_hub_serves(case: &str, station_id: &str, expected: &[&str])
         .await
         .unwrap_or_else(|e| panic!("[{case}] allowed_line_ids_for should succeed: {e}"));
 
-    let mut missing: Vec<&str> = Vec::new();
-    for line in expected {
-        if !allowed.contains(*line) {
-            missing.push(line);
-        }
-    }
+    let missing: Vec<&str> = expected
+        .iter()
+        .filter(|l| !allowed.contains(*l))
+        .map(String::as_str)
+        .collect();
     let mut got: Vec<&str> = allowed.iter().map(String::as_str).collect();
     got.sort();
     assert!(
@@ -92,96 +147,61 @@ async fn assert_live_hub_serves(case: &str, station_id: &str, expected: &[&str])
     );
 }
 
-// One #[tokio::test] per canonical hub, so a CI failure names the
-// offender. The const comment in `cache.rs` documents what each id
-// corresponds to.
+// ---------------------------------------------------------------------------
+// One #[tokio::test] per canonical hub — scenario loaded from hub-vectors.json
+// at the matching index. CI failure names the offender.
+// ---------------------------------------------------------------------------
 
 #[tokio::test(flavor = "multi_thread")]
 async fn live_tcr_serves_central_northern_elizabeth() {
-    assert_live_hub_serves(
-        "TCR",
-        CANONICAL_MULTI_MODE_HUBS[0].0,
-        CANONICAL_MULTI_MODE_HUBS[0].1,
-    )
-    .await;
+    let s = scenario_from_json(0);
+    assert_live_hub_serves(&s.id, &s.station_id, &s.expected_lines).await;
 }
 
 #[tokio::test(flavor = "multi_thread")]
 async fn live_bank_serves_tube_and_dlr() {
-    assert_live_hub_serves(
-        "Bank",
-        CANONICAL_MULTI_MODE_HUBS[1].0,
-        CANONICAL_MULTI_MODE_HUBS[1].1,
-    )
-    .await;
+    let s = scenario_from_json(1);
+    assert_live_hub_serves(&s.id, &s.station_id, &s.expected_lines).await;
 }
 
 #[tokio::test(flavor = "multi_thread")]
 async fn live_liverpool_street_serves_tube_elizabeth_weaver() {
-    assert_live_hub_serves(
-        "Liverpool Street",
-        CANONICAL_MULTI_MODE_HUBS[2].0,
-        CANONICAL_MULTI_MODE_HUBS[2].1,
-    )
-    .await;
+    let s = scenario_from_json(2);
+    assert_live_hub_serves(&s.id, &s.station_id, &s.expected_lines).await;
 }
 
 #[tokio::test(flavor = "multi_thread")]
 async fn live_stratford_serves_tube_dlr_elizabeth_mildmay() {
-    assert_live_hub_serves(
-        "Stratford",
-        CANONICAL_MULTI_MODE_HUBS[3].0,
-        CANONICAL_MULTI_MODE_HUBS[3].1,
-    )
-    .await;
+    let s = scenario_from_json(3);
+    assert_live_hub_serves(&s.id, &s.station_id, &s.expected_lines).await;
 }
 
 #[tokio::test(flavor = "multi_thread")]
 async fn live_canary_wharf_serves_jubilee_dlr_elizabeth() {
-    assert_live_hub_serves(
-        "Canary Wharf",
-        CANONICAL_MULTI_MODE_HUBS[4].0,
-        CANONICAL_MULTI_MODE_HUBS[4].1,
-    )
-    .await;
+    let s = scenario_from_json(4);
+    assert_live_hub_serves(&s.id, &s.station_id, &s.expected_lines).await;
 }
 
 #[tokio::test(flavor = "multi_thread")]
 async fn live_whitechapel_serves_tube_elizabeth_mildmay_windrush() {
-    assert_live_hub_serves(
-        "Whitechapel",
-        CANONICAL_MULTI_MODE_HUBS[5].0,
-        CANONICAL_MULTI_MODE_HUBS[5].1,
-    )
-    .await;
+    let s = scenario_from_json(5);
+    assert_live_hub_serves(&s.id, &s.station_id, &s.expected_lines).await;
 }
 
 #[tokio::test(flavor = "multi_thread")]
 async fn live_paddington_serves_tube_and_elizabeth() {
-    assert_live_hub_serves(
-        "Paddington",
-        CANONICAL_MULTI_MODE_HUBS[6].0,
-        CANONICAL_MULTI_MODE_HUBS[6].1,
-    )
-    .await;
+    let s = scenario_from_json(6);
+    assert_live_hub_serves(&s.id, &s.station_id, &s.expected_lines).await;
 }
 
 #[tokio::test(flavor = "multi_thread")]
 async fn live_farringdon_serves_tube_and_elizabeth() {
-    assert_live_hub_serves(
-        "Farringdon",
-        CANONICAL_MULTI_MODE_HUBS[7].0,
-        CANONICAL_MULTI_MODE_HUBS[7].1,
-    )
-    .await;
+    let s = scenario_from_json(7);
+    assert_live_hub_serves(&s.id, &s.station_id, &s.expected_lines).await;
 }
 
 #[tokio::test(flavor = "multi_thread")]
 async fn live_bond_street_serves_central_jubilee_elizabeth() {
-    assert_live_hub_serves(
-        "Bond Street",
-        CANONICAL_MULTI_MODE_HUBS[8].0,
-        CANONICAL_MULTI_MODE_HUBS[8].1,
-    )
-    .await;
+    let s = scenario_from_json(8);
+    assert_live_hub_serves(&s.id, &s.station_id, &s.expected_lines).await;
 }
