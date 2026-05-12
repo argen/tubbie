@@ -1,7 +1,7 @@
 //! Multi-mode hub completeness — the permanent regression harness.
 //!
 //! Pins the `(station_id, expected_lines_superset)` contract for every
-//! interchange in [`crate::client::CANONICAL_MULTI_MODE_HUBS`]: Tottenham
+//! interchange in [`crate::cache::CANONICAL_MULTI_MODE_HUBS`]: Tottenham
 //! Court Road, Bank, Liverpool Street, Stratford, Canary Wharf, Whitechapel,
 //! Paddington, Farringdon. Each scenario builds hermetic synthetic fixtures
 //! (per-mode stop-points feeds + the hub detail JSON), warms the cache, and
@@ -10,7 +10,7 @@
 //!
 //! **Why this file exists.** Every few weeks since 2026-04-29 someone has
 //! had to fix "Elizabeth missing at TCR" or "DLR missing at Bank" or a
-//! variant. The fixes have been single-station patches in `client.rs`,
+//! variant. The fixes have been single-station patches in `cache.rs`,
 //! `direction.rs`, the chip migration, the canonicalisation rules — each
 //! one defensible in isolation but easy to undo because the contract has
 //! lived implicitly in three or four places. This harness makes the
@@ -20,11 +20,11 @@
 //!
 //! **What this file does NOT cover.** Live TfL data drift (e.g. TfL
 //! genuinely returning 404 for a hub for a few hours). That belongs in the
-//! Layer 2 live test (`crates/tfl-client/tests/live_hub_completeness.rs`)
+//! Layer 2 live test (`crates/tfl-cache/tests/live_hub_completeness.rs`)
 //! which hits the real API and is wired into the iOS bump-core recipe.
 //!
 //! **Adding a new interchange.** Append one entry to
-//! `CANONICAL_MULTI_MODE_HUBS` in `client.rs`. The test scenario itself
+//! `CANONICAL_MULTI_MODE_HUBS` in `cache.rs`. The test scenario itself
 //! does have to be added by hand here — synthetic fixture shapes vary
 //! per-station — but the constant is the contract everyone references.
 
@@ -32,8 +32,8 @@
 mod tests {
     use std::path::Path;
 
-    use crate::client::{TflClient, CANONICAL_MULTI_MODE_HUBS};
-    use crate::fixture::FixtureTflHttp;
+    use crate::cache::{TflClient, CANONICAL_MULTI_MODE_HUBS};
+    use tfl_client::fixture::FixtureTflHttp;
 
     // -------------------------------------------------------------------------
     // Fixture-writing helpers
@@ -59,7 +59,7 @@ mod tests {
         // Empty-array stubs for any mode not explicitly populated.
         let provided: std::collections::HashSet<&str> =
             stops_per_mode.iter().map(|(m, _)| *m).collect();
-        for mode in crate::client::SUPPORTED_MODES {
+        for mode in crate::cache::SUPPORTED_MODES {
             if !provided.contains(*mode) {
                 let path = sp_dir.join(format!("{mode}.json"));
                 std::fs::write(
@@ -821,7 +821,7 @@ mod tests {
             SCENARIO_COUNT,
             "If you added a hub to CANONICAL_MULTI_MODE_HUBS, also add a \
              matching #[tokio::test] in this file (and its mirror in \
-             crates/tfl-client/tests/live_hub_completeness.rs + \
+             crates/tfl-cache/tests/live_hub_completeness.rs + \
              tubbie-ios/crates/tfl-ffi/tests/live_hub_completeness.rs), \
              then bump SCENARIO_COUNT here.",
         );

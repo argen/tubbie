@@ -6,7 +6,7 @@
 //! ```sh
 //! just verify-live
 //! # or
-//! cargo test -p tfl-client --features live
+//! cargo test -p tfl-cache --features live
 //! ```
 //!
 //! If `TFL_APP_KEY` is set in the environment, the client will use it
@@ -19,7 +19,7 @@
 
 #![cfg(feature = "live")]
 
-use tfl_client::client::TflClient;
+use tfl_cache::TflClient;
 use tfl_client::http::ReqwestTflHttp;
 
 // ---------------------------------------------------------------------------

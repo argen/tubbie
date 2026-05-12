@@ -8,11 +8,11 @@ use std::sync::Arc;
 
 use futures::StreamExt;
 use tfl_board::{BoardConfig, BoardError, BoardService, LifecyclePhase};
+use tfl_cache::TflClient;
 use tfl_client::clock::FakeClock;
 use tfl_client::error::TflError;
 use tfl_client::fixture::FixtureTflHttp;
 use tfl_client::http::TflHttp;
-use tfl_client::TflClient;
 use tfl_domain::Direction;
 use tokio::sync::watch;
 
@@ -243,7 +243,7 @@ async fn every_fixture_arrival_carries_a_line_id_known_to_the_station() {
         .await
         .expect("warm stop-points cache for integrity test");
 
-    let client_for_lookup = std::sync::Arc::new(tfl_client::TflClient::new(
+    let client_for_lookup = std::sync::Arc::new(tfl_cache::TflClient::new(
         tfl_client::fixture::FixtureTflHttp::new(fixtures_dir()),
     ));
     client_for_lookup
@@ -305,8 +305,8 @@ async fn every_fixture_arrival_carries_a_line_id_known_to_the_station() {
 /// constructs the bug shape and asserts it gets neutralised.
 #[tokio::test]
 async fn refresh_drops_arrivals_for_lines_not_serving_the_station() {
+    use tfl_cache::TflClient;
     use tfl_client::fixture::FixtureTflHttp;
-    use tfl_client::TflClient;
 
     // Belsize Park serves only the Northern line. Build a custom http
     // layer that returns a synthetic arrival list including a phantom

@@ -30,7 +30,8 @@ use std::time::Duration;
 use futures::stream::{self, Stream};
 use tokio::time::{interval, MissedTickBehavior};
 
-use tfl_client::{clock::Clock, http::TflHttp, TflClient};
+use tfl_cache::TflClient;
+use tfl_client::{clock::Clock, http::TflHttp};
 use tfl_domain::{
     line_compass_axis, Arrival, Board, Direction, LineStatus, NearbyStation, Platform, Station,
 };
@@ -762,7 +763,8 @@ mod tests {
 
     use futures::StreamExt;
     use serde_json::Value;
-    use tfl_client::{clock::FakeClock, error::TflError, http::TflHttp, TflClient};
+    use tfl_cache::TflClient;
+    use tfl_client::{clock::FakeClock, error::TflError, http::TflHttp};
     use tfl_domain::Direction;
     use tokio::sync::watch;
 

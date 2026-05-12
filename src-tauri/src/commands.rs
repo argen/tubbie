@@ -876,7 +876,8 @@ mod tests {
     use crate::state::{MemoryConfigStore, MemoryFavoritesStore};
     use std::sync::Arc;
     use tfl_board::{BoardService, LifecyclePhase};
-    use tfl_client::{clock::FakeClock, fixture::FixtureTflHttp, TflClient};
+    use tfl_cache::TflClient;
+    use tfl_client::{clock::FakeClock, fixture::FixtureTflHttp};
     use tokio::sync::{watch, RwLock};
 
     /// Path to the workspace fixtures directory (relative to this crate's manifest).

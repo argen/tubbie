@@ -2,6 +2,7 @@
 members = [
     "crates/tfl-domain",
     "crates/tfl-client",
+    "crates/tfl-cache",
     "crates/tfl-board",
     "crates/fixture-recorder",
     "src-tauri",

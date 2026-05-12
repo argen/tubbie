@@ -5,14 +5,14 @@
 //! shape; this live layer pins that the *real* world also satisfies the
 //! contract today. Together they catch:
 //!
-//! - Layer 1 RED → fixture-shaped regression in `client.rs` / hub-merge.
+//! - Layer 1 RED → fixture-shaped regression in `cache.rs` / hub-merge.
 //! - Layer 2 RED → live TfL drift (a hub temporarily 404'ing, a feed
 //!   dropping a line) — the case Layer 1 cannot see.
 //!
 //! ## How to run
 //!
 //! ```sh
-//! cargo test -p tfl-client --features live --test live_hub_completeness
+//! cargo test -p tfl-cache --features live --test live_hub_completeness
 //! ```
 //!
 //! With `TFL_APP_KEY` set, the anonymous-bucket 50 req/min ceiling
@@ -21,12 +21,12 @@
 //! ## CI gating
 //!
 //! Wired into `tubbie-ios/Justfile`'s `bump-core` recipe with the
-//! `live=1` parameter — bumps that touch `tfl-client` / `tfl-domain` /
-//! `tfl-board` MUST run this. See `tubbie-ios/CLAUDE.md`.
+//! `live=1` parameter — bumps that touch `tfl-cache` / `tfl-client` /
+//! `tfl-domain` / `tfl-board` MUST run this. See `tubbie-ios/CLAUDE.md`.
 //!
 //! ## Adding a new interchange
 //!
-//! Append to `tfl_client::client::CANONICAL_MULTI_MODE_HUBS`. The
+//! Append to `tfl_cache::CANONICAL_MULTI_MODE_HUBS`. The
 //! generated test name pattern in this file iterates the const, so a
 //! new entry produces a new `#[tokio::test]` automatically — but the
 //! per-test `#[tokio::test]` attribute can't be applied dynamically, so
@@ -35,7 +35,7 @@
 
 #![cfg(feature = "live")]
 
-use tfl_client::client::{TflClient, CANONICAL_MULTI_MODE_HUBS};
+use tfl_cache::{TflClient, CANONICAL_MULTI_MODE_HUBS};
 use tfl_client::http::ReqwestTflHttp;
 
 /// Returns true if `api.tfl.gov.uk` is reachable. Mirrors the helper in
@@ -93,7 +93,7 @@ async fn assert_live_hub_serves(case: &str, station_id: &str, expected: &[&str])
 }
 
 // One #[tokio::test] per canonical hub, so a CI failure names the
-// offender. The const comment in `client.rs` documents what each id
+// offender. The const comment in `cache.rs` documents what each id
 // corresponds to.
 
 #[tokio::test(flavor = "multi_thread")]

@@ -1,8 +1,20 @@
-//! Typed TfL API client.
+//! Typed TfL API client with integrated caches.
 //!
 //! `TflClient<H>` is generic over any `TflHttp` implementation, enabling
 //! fully offline, deterministic testing via `FixtureTflHttp` and live
 //! network calls via `ReqwestTflHttp`.
+//!
+//! ## Crate responsibility
+//!
+//! This crate owns the **caching layer**: stop-points cache (multi-mode merged
+//! `Vec<Station>` with hub-dedup logic), hub-detail cache (`hub_lines_cache`,
+//! `hub_children_cache`) with `NotFound` sentinel, line-status cache, 15-min
+//! TTL + stale-while-revalidate, single-flighted refresh via
+//! `tokio::sync::Mutex`, per-mode retry with exponential backoff, and hub
+//! fan-out dedupe by `hub_naptan_code` before parallel fetch.
+//!
+//! The underlying HTTP transport is provided by `tfl-client` via the `TflHttp`
+//! trait. `TflClient<H>` delegates all wire calls to `H`.
 //!
 //! ## Multi-mode model
 //!
@@ -17,48 +29,13 @@
 //! See [`docs/ADR/multi-mode-stop-points-cache.md`](../../../docs/ADR/multi-mode-stop-points-cache.md)
 //! for the rationale and the trade-offs (single-flight refresh, hub-fetch
 //! dedupe, stale-but-usable lookups, search dedupe at interchanges).
-//!
-//! ## Design decisions
-//!
-//! ### `get_arrivals` — NotFound propagation
-//! When the fixture (or live API) returns `TflError::NotFound`, we propagate
-//! it directly. No re-wrapping; the `FixtureTflHttp` already includes the
-//! path in the message and `ReqwestTflHttp` will include the station id.
-//!
-//! ### `get_arrivals` — multi-mode hub merge
-//! At hub interchanges (Bank / Whitechapel / Stratford / Highbury &
-//! Islington / …) the queried stop-point id only returns its own
-//! mode's arrivals — `940GZZLUBNK` returns Tube only, `940GZZDLBNK`
-//! returns DLR only. `resolve_arrival_ids` reads the cached station's
-//! `hub_naptan_code` (via `read_cache_any`, so this still works past
-//! the stop-points TTL), looks up the hub's children once via
-//! `hub_children_cached`, and fans out parallel arrivals fetches to
-//! every sibling. Failures on individual siblings are dropped rather
-//! than nuking the whole board.
-//!
-//! ### `get_line_status` — disruption text strategy
-//! TfL's `lineStatuses` may contain multiple entries (e.g. "Severe Delays"
-//! on one segment + "Part Suspended" on another). We collect the non-empty,
-//! unique `reason` fields and join them with `" | "`. If all reasons are
-//! absent or blank, `disruption_text` is `None`. Using `reason` rather than
-//! `disruption.description` because `reason` is always a top-level string
-//! (no nesting) and the two fields are typically identical in content.
-//!
-//! ### `search_stations` — relevance ordering + result cap
-//! Relevance: exact-match (case-insensitive) first, then `starts_with`, then
-//! `contains`, with alphabetical `common_name` as the tiebreaker within each
-//! tier. Capped at 20 results (autocomplete UX: dumping thousands of rows is
-//! worse than useless). Empty query returns empty (not all stations).
-//! Filters by NaPTAN canonical-prefix whitelist (`940GZZLU` Tube,
-//! `940GZZDL` DLR, `910G` filtered to `overground`/`elizabeth-line` to
-//! drop NR-only operators) and dedupes by `hub_naptan_code` so multi-
-//! mode interchanges show one canonical row each.
 
-use crate::error::TflError;
-use crate::http::TflHttp;
 use std::collections::HashMap;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
+
+use tfl_client::error::TflError;
+use tfl_client::http::TflHttp;
 use tfl_domain::types::{
     is_supported_line_id, pretty_line_name, severity_bucket, Arrival, LineRef, LineStatus,
     SeverityBucket, Station, StatusEntry, TflLine, ValidityPeriod,
@@ -81,7 +58,7 @@ pub const SUPPORTED_MODES: &[&str] = &["tube", "overground", "dlr", "elizabeth-l
 /// from time to time).
 ///
 /// **This list is the regression contract.** Both the in-process
-/// [`Self::warn_incomplete_hub_coverage`] runtime check and the
+/// [`warn_incomplete_hub_coverage`] runtime check and the
 /// `multi_mode_hub_completeness_tests` harness iterate this constant. Adding
 /// a hub here is one line; the matching scenario in the test harness is
 /// auto-discovered.
@@ -204,10 +181,16 @@ struct StopPointsCacheEntry {
 
 /// Typed TfL API client, generic over any `TflHttp` transport.
 ///
+/// Holds three independent caches (stop-points, hub-detail, line-status)
+/// and delegates all wire calls to the `TflHttp` implementation `H`.
+///
 /// Instantiate with a `FixtureTflHttp` for offline/test use, or a
-/// `ReqwestTflHttp` for live network calls (M3+).
+/// `ReqwestTflHttp` for live network calls.
 ///
 /// ```rust,ignore
+/// use tfl_client::{http::ReqwestTflHttp, fixture::FixtureTflHttp};
+/// use tfl_cache::TflClient;
+///
 /// let client = TflClient::new(FixtureTflHttp::new("fixtures/"));
 /// let arrivals = client.get_arrivals("940GZZLUBZP").await?;
 /// ```
@@ -420,14 +403,14 @@ impl<H: TflHttp> TflClient<H> {
                         let is_last = backoff.is_none();
                         if is_last {
                             eprintln!(
-                                "[tfl-client] hub-children/{hub_id} fetch failed (attempt {}/{}): {err}",
+                                "[tfl-cache] hub-children/{hub_id} fetch failed (attempt {}/{}): {err}",
                                 attempt + 1,
                                 STOP_POINTS_FETCH_ATTEMPTS,
                             );
                             return Err(err);
                         }
                         eprintln!(
-                            "[tfl-client] hub-children/{hub_id} attempt {} failed (will retry): {err}",
+                            "[tfl-cache] hub-children/{hub_id} attempt {} failed (will retry): {err}",
                             attempt + 1,
                         );
                         last_err = Some(err);
@@ -540,7 +523,7 @@ impl<H: TflHttp> TflClient<H> {
                         let is_last = backoff.is_none();
                         if is_last {
                             eprintln!(
-                                "[tfl-client] hub-lines/{hub_id} fetch failed (attempt {}/{}): {err}",
+                                "[tfl-cache] hub-lines/{hub_id} fetch failed (attempt {}/{}): {err}",
                                 attempt + 1,
                                 STOP_POINTS_FETCH_ATTEMPTS,
                             );
@@ -550,7 +533,7 @@ impl<H: TflHttp> TflClient<H> {
                             return vec![];
                         }
                         eprintln!(
-                            "[tfl-client] hub-lines/{hub_id} attempt {} failed (will retry): {err}",
+                            "[tfl-cache] hub-lines/{hub_id} attempt {} failed (will retry): {err}",
                             attempt + 1,
                         );
                         if let Some(wait) = backoff {
@@ -710,7 +693,7 @@ impl<H: TflHttp> TflClient<H> {
     async fn cache_or_fetch_lines(&self) -> Result<Vec<TflLine>, TflError> {
         let cached_lines = {
             let guard = self.line_status_cache.lock().unwrap_or_else(|p| {
-                eprintln!("[tfl-client] line_status_cache mutex poisoned; recovering");
+                eprintln!("[tfl-cache] line_status_cache mutex poisoned; recovering");
                 p.into_inner()
             });
             guard.as_ref().and_then(|(fetched_at, lines)| {
@@ -732,7 +715,7 @@ impl<H: TflHttp> TflClient<H> {
                 *guard = Some((Instant::now(), fresh.clone()));
             }
             Err(poison) => {
-                eprintln!("[tfl-client] line_status_cache mutex poisoned on write; recovering");
+                eprintln!("[tfl-cache] line_status_cache mutex poisoned on write; recovering");
                 let mut guard = poison.into_inner();
                 *guard = Some((Instant::now(), fresh.clone()));
             }
@@ -749,16 +732,12 @@ impl<H: TflHttp> TflClient<H> {
                 Ok(value) => match serde_json::from_value::<Vec<TflLine>>(value) {
                     Ok(lines) => Some(lines),
                     Err(e) => {
-                        eprintln!("[tfl-client] line-status/{mode} parse failed: {e}");
+                        eprintln!("[tfl-cache] line-status/{mode} parse failed: {e}");
                         None
                     }
                 },
                 Err(e) => {
-                    // Single-mode fetch failure is non-fatal — log and continue.
-                    // Cold-cache start-up regularly hits a 404 here when a fixture
-                    // is missing in dev; production logs a transport error once
-                    // per failed mode per TTL window (60 s).
-                    eprintln!("[tfl-client] line-status/{mode} fetch failed: {e}");
+                    eprintln!("[tfl-cache] line-status/{mode} fetch failed: {e}");
                     None
                 }
             }
@@ -767,10 +746,6 @@ impl<H: TflHttp> TflClient<H> {
 
         let merged: Vec<TflLine> = per_mode.into_iter().flatten().flatten().collect();
         if merged.is_empty() {
-            // Every mode fetch failed — propagate as a Transport error so the
-            // caller can surface the outage. Use `NotFound` with a crisp
-            // message because we don't have a single underlying error to
-            // report and the caller's fallback path treats this the same way.
             return Err(TflError::NotFound(
                 "line-status: all modes failed".to_string(),
             ));
@@ -807,12 +782,6 @@ impl<H: TflHttp> TflClient<H> {
         let stations = self.stop_points_cached().await?;
         let q = trimmed.to_lowercase();
 
-        // Whitelist canonical NaPTAN-prefix entries, then narrow to
-        // common-name substring matches. Substring filtering happens
-        // before hub dedupe so that a hub child whose
-        // `commonName` happens to differ from its sibling (rare, but
-        // observed historically with Bank/Monument before TfL aligned
-        // them) is given a fair chance to appear before being collapsed.
         let prefiltered: Vec<Station> = stations
             .into_iter()
             .filter(is_canonical_station_id)
@@ -821,7 +790,6 @@ impl<H: TflHttp> TflClient<H> {
 
         let mut matches = dedupe_by_hub_naptan(prefiltered);
 
-        // Sort by relevance tier, then alphabetically within each tier.
         matches.sort_by(|a, b| {
             let a_lower = a.common_name.to_lowercase();
             let b_lower = b.common_name.to_lowercase();
@@ -837,7 +805,7 @@ impl<H: TflHttp> TflClient<H> {
     }
 
     /// Find stations sorted by haversine distance from `(lat, lon)`,
-    /// dropping any farther than [`crate::nearest::MAX_RADIUS_M`] and
+    /// dropping any farther than [`tfl_client::nearest::MAX_RADIUS_M`] and
     /// returning at most `limit` results.
     ///
     /// Reuses the same NaPTAN canonical-prefix whitelist + hub dedupe
@@ -863,7 +831,7 @@ impl<H: TflHttp> TflClient<H> {
             .filter(is_canonical_station_id)
             .collect();
         let candidates = dedupe_by_hub_naptan(candidates);
-        Ok(crate::nearest::rank_nearest(candidates, lat, lon, limit))
+        Ok(tfl_client::nearest::rank_nearest(candidates, lat, lon, limit))
     }
 
     /// Pre-fetch and cache the stop-points list. Fire-and-forget from app
@@ -929,14 +897,6 @@ impl<H: TflHttp> TflClient<H> {
     ) -> Result<std::collections::HashSet<String>, TflError> {
         // Uses `read_cache_any` (not `read_fresh_cache`) so a TTL-stale
         // cache entry still serves the per-station allowed line set.
-        // Without this, the first stream tick after a 15-min TTL expiry
-        // returns the empty set and the defensive filter would
-        // (correctly) fail-open and skip itself — but at hub stations,
-        // `resolve_arrival_ids` ALSO needs `read_cache_any`, and the
-        // combination preserves the full multi-mode chip-filter
-        // behaviour through the TTL boundary instead of dropping every
-        // legitimate Overground/DLR arrival when a user has them
-        // selected at a hub.
         let Some(stations) = self.read_cache_any() else {
             return Ok(std::collections::HashSet::new());
         };
@@ -955,54 +915,23 @@ impl<H: TflHttp> TflClient<H> {
     /// via `futures::future::join_all` and merges the results — keyed by
     /// `Station.id`, with line-list union on collision (a tube hub like
     /// Stratford appears under multiple mode endpoints).
-    ///
-    /// Per-mode fetch failures are logged once per stale fixture and the
-    /// mode is skipped — a missing or stale fixture must not poison the
-    /// whole cache. The cache is still stamped on partial success so
-    /// search results stay responsive while a transient mode is recovering.
-    ///
-    /// The lock is held only for a synchronous read/write around the Mutex —
-    /// the network calls happen outside the critical section, so two concurrent
-    /// callers may briefly both fetch on a cold cache. That is acceptable:
-    /// the duplicate work is paid once per process start, not per keystroke.
     async fn stop_points_cached(&self) -> Result<Vec<Station>, TflError> {
         // Stale-while-revalidate: if anything is cached (fresh OR stale),
-        // return it immediately — search must never block on a refresh
-        // past the initial warm. The periodic background task in
-        // `lib.rs::run` calls `refresh_stop_points_cache` before each TTL
-        // boundary so the cache stays fresh out-of-band; if that misses
-        // (laptop sleep, transient TfL outage) the user just sees
-        // slightly older station metadata until the next periodic tick,
-        // which is fine because TfL station metadata is stable for
-        // months.
+        // return it immediately.
         if let Some(cached) = self.read_cache_any() {
             return Ok(cached);
         }
 
         // Cold cache (first call, never warmed). Block on a refresh.
-        // `force = false` so a concurrent caller that already finished
-        // refreshing while we were waiting on the lock short-circuits us.
         self.refresh_stop_points_inner(false).await
     }
 
     /// Fetch one mode's stop-points list with bounded retries on
-    /// transient errors. Retries on `RateLimited`, `Transport`, and
-    /// `Http` (5xx) per [`STOP_POINTS_FETCH_BACKOFF`]; gives up
-    /// immediately on `NotFound` (the mode genuinely doesn't exist as a
-    /// fixture / endpoint), `Parse`, and `ParseAt` (bad data, retrying
-    /// won't help). Returns `(Some(stations), None)` on success,
-    /// `(None, Some(err))` on terminal failure (logged so the dev log
-    /// shows which mode dropped out).
+    /// transient errors.
     async fn fetch_stop_points_for_mode_with_retry(
         &self,
         mode: &str,
     ) -> (Option<Vec<Station>>, Option<TflError>) {
-        // Build an iterator of (attempt_idx, optional backoff to wait
-        // BEFORE the next attempt). The last entry's backoff is `None`,
-        // signalling "this is the final attempt — don't sleep, just
-        // give up if it fails". Using `Option` here drives the
-        // give-up decision off the schedule itself rather than a
-        // separate index check.
         let schedule = STOP_POINTS_FETCH_BACKOFF
             .iter()
             .copied()
@@ -1018,8 +947,7 @@ impl<H: TflHttp> TflClient<H> {
                     match serde_json::from_value::<Vec<Station>>(arr) {
                         Ok(s) => return (Some(s), None),
                         Err(e) => {
-                            // Parse failures are deterministic — don't retry.
-                            eprintln!("[tfl-client] stop-points/{mode} parse failed: {e}");
+                            eprintln!("[tfl-cache] stop-points/{mode} parse failed: {e}");
                             return (None, None);
                         }
                     }
@@ -1032,14 +960,14 @@ impl<H: TflHttp> TflClient<H> {
                     let is_last = backoff.is_none();
                     if is_terminal || is_last {
                         eprintln!(
-                            "[tfl-client] stop-points/{mode} fetch failed (attempt {}/{}): {err}",
+                            "[tfl-cache] stop-points/{mode} fetch failed (attempt {}/{}): {err}",
                             attempt + 1,
                             STOP_POINTS_FETCH_ATTEMPTS,
                         );
                         return (None, Some(err));
                     }
                     eprintln!(
-                        "[tfl-client] stop-points/{mode} attempt {} failed (will retry): {err}",
+                        "[tfl-cache] stop-points/{mode} attempt {} failed (will retry): {err}",
                         attempt + 1,
                     );
                     last_err = Some(err);
@@ -1049,27 +977,14 @@ impl<H: TflHttp> TflClient<H> {
                 }
             }
         }
-        // Unreachable in practice (the loop returns on either success or
-        // last-attempt failure) but keeps the type system happy.
         (None, last_err)
     }
 
     /// Single-flighted refresh: acquires the async lock, optionally
     /// short-circuits if a prior holder already produced fresh data,
     /// then runs the per-mode + hub fan-out and writes the result back
-    /// into the cache. Used by both the cold-cache path in
-    /// `stop_points_cached` (force=false) and the public
-    /// `refresh_stop_points_cache` method (force=true).
+    /// into the cache.
     async fn refresh_stop_points_inner(&self, force: bool) -> Result<Vec<Station>, TflError> {
-        // Single-flight: serialise concurrent refreshes so a burst of
-        // debounced search keystrokes during a cold-cache window doesn't
-        // each fire a full per-mode + hub fan-out. Acquire the async
-        // refresh lock; once we have it, re-check the cache — a previous
-        // holder may have just stamped it while we were waiting. The
-        // periodic background refresh path passes `force = true` so it
-        // always runs the fan-out even when the cache is already fresh
-        // — that's what keeps "stale-while-revalidate" actually
-        // revalidating.
         let _refresh_guard = self.stop_points_refresh.lock().await;
         if !force {
             if let Some(cached) = self.read_fresh_cache() {
@@ -1077,31 +992,12 @@ impl<H: TflHttp> TflClient<H> {
             }
         }
 
-        // Parallel fan-out across surfaced modes. Each per-mode fetch is
-        // independent; failures are isolated. Each fetch retries on
-        // transient errors (rate-limit / transport) up to
-        // [`STOP_POINTS_FETCH_RETRIES`] times with exponential backoff so a
-        // single 429 during the first warm doesn't leave a whole mode
-        // missing from the cache for the full 14-minute periodic-refresh
-        // window. `Parse` errors don't retry — bad JSON is bad JSON; the
-        // fixture or upstream data shape needs fixing, not retrying.
-        //
-        // This matters most for users without an `app_key` who hit TfL's
-        // 50 req/min anonymous gate during the burst: we send 4 mode
-        // fetches in parallel; one of them losing the race and getting a
-        // 429 is common, and the user's symptom is "tube doesn't appear
-        // in search but DLR does" until the next periodic refresh
-        // ~14 minutes later.
         let fetches = self
             .modes
             .iter()
             .map(|mode| async move { self.fetch_stop_points_for_mode_with_retry(mode).await });
         let per_mode = futures::future::join_all(fetches).await;
 
-        // Merge by id (tube hubs like Stratford appear in multiple mode
-        // feeds); union line lists when ids collide. First-seen wins for
-        // metadata other than `lines` — modes/hubNaptanCode/lat/lon are
-        // typically identical across mode feeds for a given canonical id.
         let mut by_id: HashMap<String, Station> = HashMap::new();
         let mut last_err: Option<TflError> = None;
         for (per, err) in per_mode {
@@ -1117,7 +1013,6 @@ impl<H: TflHttp> TflClient<H> {
                                 existing.lines.push(line);
                             }
                         }
-                        // Backfill hub_naptan_code if the first feed didn't carry it.
                         if existing.hub_naptan_code.is_none() && s.hub_naptan_code.is_some() {
                             existing.hub_naptan_code = s.hub_naptan_code;
                         }
@@ -1130,9 +1025,6 @@ impl<H: TflHttp> TflClient<H> {
         }
 
         if by_id.is_empty() {
-            // Every mode failed to load — propagate the last underlying error
-            // so the caller (warm task / search command) can log a meaningful
-            // outage signal instead of a silent empty cache.
             return Err(last_err.unwrap_or_else(|| {
                 TflError::NotFound("stop-points: all modes failed".to_string())
             }));
@@ -1141,17 +1033,9 @@ impl<H: TflHttp> TflClient<H> {
         let mut stations: Vec<Station> = by_id.into_values().collect();
 
         // For multi-mode stations that carry a hub NaPTAN code, merge lines
-        // from sibling stop-points (DLR, Elizabeth, Overground) so the
-        // Settings chip UI shows all lines, not just the tube parent's lines.
+        // from sibling stop-points so the Settings chip UI shows all lines.
         //
-        // **Dedupe by hub_id before fan-out.** The naive `iter().enumerate()`
-        // approach fires one fetch per station with a hub code — but a single
-        // hub like `HUBKGX` is referenced by ~23 stations (multi-mode hubs
-        // appear under tube + DLR + Elizabeth + Overground feeds). Without
-        // deduping, that's 757 simultaneous TfL requests for 90 unique hubs
-        // (8.4× redundancy). All 23 racers see an empty `hub_lines_cache` and
-        // each fires its own HTTP request before any of them populate it.
-        // Deduping first cuts the warm-time burst to one fetch per hub.
+        // **Dedupe by hub_id before fan-out.** (CLAUDE.md invariant #17)
         let stations_per_hub: HashMap<String, Vec<usize>> = {
             let mut map: HashMap<String, Vec<usize>> = HashMap::new();
             for (i, s) in stations.iter().enumerate() {
@@ -1191,9 +1075,7 @@ impl<H: TflHttp> TflClient<H> {
                 });
             }
             Err(poison) => {
-                // A previous panic poisoned the mutex. Surface it so the bug
-                // is observable rather than silently refetching 16 MB forever.
-                eprintln!("[tfl-client] stop-points cache mutex poisoned; recovering: {poison}");
+                eprintln!("[tfl-cache] stop-points cache mutex poisoned; recovering: {poison}");
                 let mut guard = poison.into_inner();
                 *guard = Some(StopPointsCacheEntry {
                     fetched_at: Instant::now(),
@@ -1203,26 +1085,19 @@ impl<H: TflHttp> TflClient<H> {
         }
 
         // Coverage check: every canonical multi-mode interchange must have
-        // its expected lines after warm. A miss here is the live signal of
-        // the "Elizabeth missing at TCR / DLR missing at Bank" bug class —
-        // either a hub fetch failed silently, the hub doc came back
-        // degraded, or TfL is having a moment. Emitting one stderr line per
-        // (station, line) miss surfaces it in TestFlight logs without
-        // panicking — fail-soft, matching the pattern in
-        // `drop_arrivals_for_lines_not_serving` (invariant #10).
+        // its expected lines after warm.
         warn_incomplete_hub_coverage(&stations);
 
         Ok(stations)
     }
 
     /// Returns the cached station list only if it's still within
-    /// [`STOP_POINTS_TTL`]. Used by `stop_points_cached` to decide whether
-    /// to refresh — stale entries return `None` so a refresh fires.
+    /// [`STOP_POINTS_TTL`].
     fn read_fresh_cache(&self) -> Option<Vec<Station>> {
         let guard = match self.stop_points_cache.lock() {
             Ok(g) => g,
             Err(poison) => {
-                eprintln!("[tfl-client] stop-points cache mutex poisoned on read; recovering");
+                eprintln!("[tfl-cache] stop-points cache mutex poisoned on read; recovering");
                 poison.into_inner()
             }
         };
@@ -1237,23 +1112,12 @@ impl<H: TflHttp> TflClient<H> {
     /// Returns the cached station list whenever any cached data exists,
     /// regardless of TTL freshness. Used by `resolve_arrival_ids` and
     /// `allowed_line_ids_for` — both need a station's `hub_naptan_code`
-    /// or `lines` field to continue working past the 15-min TTL boundary,
-    /// otherwise the next stream tick after expiry loses hub-merge for
-    /// arrivals (Bank/Euston/Whitechapel sibling fetch) and the
-    /// defensive filter silently drops legitimate Overground/DLR
-    /// arrivals at hub stations because their line ids fall out of the
-    /// per-station allowed set.
-    ///
-    /// TfL station metadata changes infrequently (new stations are rare;
-    /// the `lines` and `hubNaptanCode` fields are essentially stable for
-    /// months), so serving "stale but usable" data here is safe. The
-    /// next caller of `stop_points_cached` (typically `search_stations`
-    /// or `warm_stop_points_cache`) will refresh on its own schedule.
+    /// or `lines` field to continue working past the 15-min TTL boundary.
     fn read_cache_any(&self) -> Option<Vec<Station>> {
         let guard = match self.stop_points_cache.lock() {
             Ok(g) => g,
             Err(poison) => {
-                eprintln!("[tfl-client] stop-points cache mutex poisoned on read; recovering");
+                eprintln!("[tfl-cache] stop-points cache mutex poisoned on read; recovering");
                 poison.into_inner()
             }
         };
@@ -1272,9 +1136,7 @@ impl<H: TflHttp> TflClient<H> {
 
     /// Push the cached entry's `fetched_at` far enough into the past that
     /// `read_fresh_cache` will return `None` while `read_cache_any` still
-    /// returns the entry. Used to test that stale-but-usable lookups
-    /// (`resolve_arrival_ids`, `allowed_line_ids_for`) survive the TTL
-    /// boundary. Test-only.
+    /// returns the entry. Used to test stale-but-usable lookups. Test-only.
     #[cfg(test)]
     pub fn __test_force_stale_stop_points_cache(&self) -> Result<(), &'static str> {
         let mut guard = self
@@ -1299,62 +1161,7 @@ impl<H: TflHttp> TflClient<H> {
 /// - `940GZZLU*` — London Underground canonical
 /// - `940GZZDL*` — DLR canonical
 /// - `910G*` — National Rail group; admit only those whose modes
-///   include `overground` or `elizabeth-line` (the 910G NaPTAN range
-///   overlaps with NR-only operators like Gatwick Express and
-///   Thameslink, which we don't surface).
-///
-/// Excluded by absence (callers see `false`):
-/// - `9400ZZLU*`, `4900*`, `2100*` — platform-level children that
-///   would duplicate rows in any results list
-/// - `HUB*` — multi-mode aggregators with no stable arrivals id
-///
-/// Walk [`CANONICAL_MULTI_MODE_HUBS`] against the freshly-warmed station
-/// list and emit one stderr warning per (station_id, missing_line) pair
-/// that the contract expects but the warm didn't produce.
-///
-/// **Why this exists.** The compile-time fixture harness in
-/// `multi_mode_hub_completeness_tests.rs` pins the contract for hermetic
-/// inputs, but it can't catch live failures (TfL temporarily 404'ing a
-/// hub, an unfortunate burst of 429s during cellular cold-launch, etc.).
-/// This runtime check fires after each warm and surfaces a structured log
-/// line — same pattern as `[tfl-board] arrival dropped because line not
-/// served` (invariant #10). One line per miss, fail-soft, never panics.
-///
-/// Visibility on iOS: `eprintln!` is captured by the standard iOS
-/// log subsystem when the app runs under TestFlight or Xcode. Grep for
-/// `[tfl-client] expected line` in the device console.
-///
-/// Output cap: only emit for stations that are actually in the warm
-/// result. A station id that was filtered out entirely (because no mode
-/// feed surfaced it) would otherwise produce a noisy "missing every
-/// line" report that obscures the real signal.
-pub(crate) fn warn_incomplete_hub_coverage(stations: &[Station]) {
-    for (station_id, expected_lines) in CANONICAL_MULTI_MODE_HUBS {
-        let Some(station) = stations.iter().find(|s| s.id == *station_id) else {
-            // Station absent from the warm — likely a per-mode fetch
-            // failure or fixture gap. Single line; the per-mode warm
-            // path already logs its own retries on stderr.
-            eprintln!(
-                "[tfl-client] canonical multi-mode hub {station_id} \
-                 absent from warm result entirely (no mode surfaced it)",
-            );
-            continue;
-        };
-        for expected in *expected_lines {
-            let present = station.lines.iter().any(|l| l.id == *expected);
-            if !present {
-                eprintln!(
-                    "[tfl-client] expected line `{expected}` missing from \
-                     station `{station_id}` after warm — possible TfL data \
-                     drift, hub fetch failure, or regression in hub-merge",
-                );
-            }
-        }
-    }
-}
-
-/// Used by both `search_stations` and `find_nearest_stations`. See
-/// invariant #13 in `tubbie/CLAUDE.md`.
+///   include `overground` or `elizabeth-line`
 pub(crate) fn is_canonical_station_id(s: &Station) -> bool {
     if s.id.starts_with("940GZZLU") || s.id.starts_with("940GZZDL") {
         true
@@ -1371,19 +1178,7 @@ pub(crate) fn is_canonical_station_id(s: &Station) -> bool {
 /// entry per hub, preferring `940GZZLU` (Tube) over `940GZZDL` (DLR) over
 /// `910G` (Overground / Elizabeth).
 ///
-/// At multi-mode interchanges (Bank, Farringdon, Stratford, …) the
-/// per-mode `/StopPoint/Mode/{mode}` feeds each return their own
-/// canonical entry — `940GZZLUBNK` and `940GZZDLBNK` both have
-/// `hubNaptanCode: HUBBAN`. After hub-merge in `stop_points_cached`,
-/// both entries also carry the same union of lines, so consumers
-/// (search dropdown, "near me" listbox) would otherwise see two
-/// near-identical rows that route to the same arrivals via the
-/// hub-merge fan-out in `get_arrivals`.
-///
-/// Stations whose `hub_naptan_code` is `None` (Hampstead Heath,
-/// Belsize Park, single-mode stops) are passed through unchanged —
-/// no hub partner to dedupe against. See invariant #18 in
-/// `tubbie/CLAUDE.md`.
+/// See invariant #18 in `tubbie/CLAUDE.md`.
 pub(crate) fn dedupe_by_hub_naptan(stations: Vec<Station>) -> Vec<Station> {
     let prefix_priority = |id: &str| -> u8 {
         if id.starts_with("940GZZLU") {
@@ -1399,9 +1194,7 @@ pub(crate) fn dedupe_by_hub_naptan(stations: Vec<Station>) -> Vec<Station> {
     for s in stations {
         match s.hub_naptan_code.clone() {
             Some(hub_id) => match by_hub.get(&hub_id) {
-                Some(existing) if prefix_priority(&existing.id) <= prefix_priority(&s.id) => {
-                    // Existing entry is higher- or equal-priority; drop the new one.
-                }
+                Some(existing) if prefix_priority(&existing.id) <= prefix_priority(&s.id) => {}
                 _ => {
                     by_hub.insert(hub_id, s);
                 }
@@ -1413,10 +1206,6 @@ pub(crate) fn dedupe_by_hub_naptan(stations: Vec<Station>) -> Vec<Station> {
 }
 
 /// Assign a sort key (lower = more relevant) to a lowercased station name.
-///
-/// Tier 0: exact match.
-/// Tier 1: starts with query.
-/// Tier 2: contains query (catch-all, already pre-filtered upstream).
 fn relevance_tier(name_lower: &str, query_lower: &str) -> u8 {
     if name_lower == query_lower {
         0
@@ -1428,13 +1217,6 @@ fn relevance_tier(name_lower: &str, query_lower: &str) -> u8 {
 }
 
 /// Convert a TfL wire-format `TflLine` into a domain `LineStatus`.
-///
-/// Status entries are derived from `lineStatuses`. Each entry's `bucket`
-/// is computed via [`severity_bucket`] so UI consumers never re-map raw
-/// codes (per CLAUDE.md invariant #25).
-/// Disruption text is assembled from unique, non-empty `reason` fields.
-/// Validity periods are projected from every entry's `validityPeriods[]`
-/// in TfL declaration order (the `isNow` window typically appears first).
 fn tfl_line_to_line_status(line: TflLine) -> LineStatus {
     let status: Vec<StatusEntry> = line
         .line_statuses
@@ -1446,7 +1228,6 @@ fn tfl_line_to_line_status(line: TflLine) -> LineStatus {
         })
         .collect();
 
-    // Collect unique non-empty reason strings.
     let mut seen = std::collections::HashSet::new();
     let disruption_parts: Vec<String> = line
         .line_statuses
@@ -1487,8 +1268,6 @@ fn tfl_line_to_line_status(line: TflLine) -> LineStatus {
 }
 
 /// The worst (lowest-rank) `SeverityBucket` across a `LineStatus`'s entries.
-/// Drives the worst-first sort in `get_all_line_statuses`. Empty status →
-/// `GoodService` so the line still sorts after disrupted entries.
 fn worst_bucket_for(s: &LineStatus) -> SeverityBucket {
     s.status
         .iter()
@@ -1496,3 +1275,30 @@ fn worst_bucket_for(s: &LineStatus) -> SeverityBucket {
         .min_by_key(|b| b.sort_rank())
         .unwrap_or(SeverityBucket::GoodService)
 }
+
+/// Walk [`CANONICAL_MULTI_MODE_HUBS`] against the freshly-warmed station
+/// list and emit one stderr warning per (station_id, missing_line) pair
+/// that the contract expects but the warm didn't produce.
+pub(crate) fn warn_incomplete_hub_coverage(stations: &[Station]) {
+    for (station_id, expected_lines) in CANONICAL_MULTI_MODE_HUBS {
+        let Some(station) = stations.iter().find(|s| s.id == *station_id) else {
+            eprintln!(
+                "[tfl-cache] canonical multi-mode hub {station_id} \
+                 absent from warm result entirely (no mode surfaced it)",
+            );
+            continue;
+        };
+        for expected in *expected_lines {
+            let present = station.lines.iter().any(|l| l.id == *expected);
+            if !present {
+                eprintln!(
+                    "[tfl-cache] expected line `{expected}` missing from \
+                     station `{station_id}` after warm — possible TfL data \
+                     drift, hub fetch failure, or regression in hub-merge",
+                );
+            }
+        }
+    }
+}
+
+// (tests are declared in lib.rs so Rust resolves them from src/)

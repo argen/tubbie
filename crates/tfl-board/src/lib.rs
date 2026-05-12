@@ -6,7 +6,8 @@
 //!
 //! ```rust,ignore
 //! use tfl_board::{BoardService, BoardConfig};
-//! use tfl_client::{TflClient, fixture::FixtureTflHttp, clock::SystemClock};
+//! use tfl_cache::TflClient;
+//! use tfl_client::fixture::FixtureTflHttp;
 //!
 //! let client = TflClient::new(FixtureTflHttp::new("fixtures/"));
 //! let service = BoardService::new(client, SystemClock);
