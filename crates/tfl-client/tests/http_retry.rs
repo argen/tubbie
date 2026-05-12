@@ -29,7 +29,6 @@ use std::time::Duration;
 use tfl_client::error::TflError;
 use tfl_client::http::ReqwestTflHttp;
 use tfl_client::http::TflHttp;
-use tfl_client::TflClient;
 use wiremock::matchers::{method, path, query_param};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
@@ -397,70 +396,9 @@ async fn fetch_404_is_not_retried() {
     server.verify().await;
 }
 
-// ---------------------------------------------------------------------------
-// Item 3 — get_line_status 60s TTL cache
-// ---------------------------------------------------------------------------
-
-/// A minimal TfL line-status payload containing two lines.
-fn two_line_status_body() -> serde_json::Value {
-    serde_json::json!([
-        {
-            "id": "northern",
-            "name": "Northern",
-            "lineStatuses": [
-                {"statusSeverity": 10, "statusSeverityDescription": "Good Service"}
-            ]
-        },
-        {
-            "id": "victoria",
-            "name": "Victoria",
-            "lineStatuses": [
-                {"statusSeverity": 10, "statusSeverityDescription": "Good Service"}
-            ]
-        }
-    ])
-}
-
-/// Two `get_line_status` calls for different lines should share one wire
-/// request when the cache is hot. The mock is configured with `.expect(1)`;
-/// if each call hits the wire independently (pre-fix behaviour) the second
-/// request makes the mock fire twice and `server.verify()` fails.
-#[tokio::test]
-async fn get_line_status_serves_repeat_calls_from_cache() {
-    let server = MockServer::start().await;
-
-    Mock::given(method("GET"))
-        .and(path("/Line/Mode/tube/Status"))
-        .respond_with(ResponseTemplate::new(200).set_body_json(two_line_status_body()))
-        .expect(1) // exactly ONE wire hit for both calls
-        .mount(&server)
-        .await;
-
-    let http = ReqwestTflHttp::with_config(None, server.uri(), Duration::from_secs(5));
-    let client = TflClient::new(http);
-
-    // Two calls for different line_ids — both should be served from the same
-    // cached response after the first fetch.
-    client
-        .get_line_status("northern")
-        .await
-        .expect("first call should succeed");
-    client
-        .get_line_status("victoria")
-        .await
-        .expect("second call should hit cache");
-
-    // If the cache is missing, this assertion fires: the mock saw 2 requests,
-    // but we declared expect(1).
-    server.verify().await;
-}
-
-// TTL invalidation: tokio::time::advance does not move std::time::Instant on
-// real-socket tests, so the TTL expiry test is deferred to a dedicated
-// unit-level test in client.rs that uses no I/O. This avoids introducing
-// flaky timing dependencies in the wiremock suite.
-// TODO: add get_line_status_refetches_after_ttl in client.rs once a
-// test-only `invalidate_line_status_cache` helper is available.
+// Note: get_line_status_serves_repeat_calls_from_cache has moved to
+// crates/tfl-cache/tests/line_status_cache_wire_test.rs, since the 60s TTL
+// cache now lives in tfl-cache rather than tfl-client.
 
 // ---------------------------------------------------------------------------
 // Item 6 — process-wide 429 cooldown gate
