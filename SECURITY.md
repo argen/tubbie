@@ -160,7 +160,9 @@ public or when the first non-developer user installs the app.
 ## Repo settings checklist (manual, post-OSS flip)
 
 These are GitHub repo-settings toggles, not file-tracked. The repo
-maintainer must enable them when flipping the repo to public:
+maintainer must enable them when flipping the repo to public (most
+require either public visibility or a Pro / GitHub Advanced Security
+plan on private repos):
 
 - [ ] **Settings → Code security → Private vulnerability reporting** — on.
 - [ ] **Settings → Code security → Secret scanning + push protection** — on.
@@ -190,6 +192,22 @@ gh api -X PUT /repos/argen/tubbie/branches/main/protection \
 
 `enforce_admins=false` keeps an admin bypass while the project is
 solo-maintained; flip to `true` once there's a second maintainer.
+
+#### Why `Live TfL gate` and `Fixture freshness` are NOT in the required-checks list
+
+Both Phase 4 workflows (`live-tfl-gate.yml` and `fixture-freshness.yml`)
+register status checks but neither belongs in `required_status_checks`:
+
+- **`Live TfL gate / live-tested tag present`** is path-conditional —
+  it only runs on PRs touching `crates/tfl-*/**`, `crates/fixture-recorder/**`,
+  or `Cargo.lock`. Adding it to required checks would block every
+  unrelated PR ("expected status check not found"). The discipline it
+  enforces is for reviewers to read the PR description and confirm
+  `[live-tested]` is present — equivalent to a manual review gate.
+
+- **`Fixture freshness`** is `schedule: cron` + `workflow_dispatch` only;
+  it never runs on `pull_request`, so it can never produce a status
+  for a PR. Making it required is a category error.
 
 ## CI secrets
 
