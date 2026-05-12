@@ -23,7 +23,7 @@ Tubbie replicates the classic amber LED dot-matrix boards found on Underground p
 - Line and direction filters across all surfaced modes
 - Four visual themes (classic-amber, classic-orange, modern-white, high-contrast)
 - Dot-matrix typography with animated row entry, character-reveal, marquee ticker, and "Due" flash
-- Settings persisted across restarts via Tauri's secure store
+- Non-sensitive settings (station, filters, display mode) persisted across restarts in `config.json`
 - Anonymous TfL API access by default (50 req/min); optionally supply your own app key (500 req/min)
 - Stale-data fallback: last-known arrivals shown when offline, with a visible badge
 
@@ -71,11 +71,11 @@ User preferences are stored by Tauri in the platform app-data directory:
 
 - **macOS:** `~/Library/Application Support/app.tubbie/`
 
-The `config.json` inside that directory holds the current station, line filters, direction filters, and poll interval. You can inspect it, but editing it manually is not necessary — the Settings screen in the app covers all fields.
+The `config.json` inside that directory holds the current station, line filters, direction filters, and poll interval. You can inspect it, but editing it manually is not necessary — the Settings screen in the app covers all fields. The TfL API key is **not** stored in this file; it lives in the macOS Keychain.
 
 ### TfL API key (optional)
 
-Anonymous access works out of the box (TfL allows 50 requests/minute without a key). If you plan to poll frequently or share a network with other anonymous callers, register a free key at [api-portal.tfl.gov.uk](https://api-portal.tfl.gov.uk) and enter it in the app's Settings screen. It is stored securely via `tauri-plugin-store` and never committed or logged.
+Anonymous access works out of the box (TfL allows 50 requests/minute without a key). If you plan to poll frequently or share a network with other anonymous callers, register a free key at [api-portal.tfl.gov.uk](https://api-portal.tfl.gov.uk) and enter it in the app's Settings screen. The key is stored in the **macOS Keychain** (system credential storage) and never written to disk in plaintext. Other config lives in `tauri-plugin-store` JSON on disk. The key is never committed or logged.
 
 Alternatively, set `TFL_APP_KEY=<key>` in your shell environment before launching.
 

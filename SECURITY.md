@@ -26,6 +26,16 @@ There is no server, no auth, no user-controlled HTML or cookies. The
 only network egress is to the public TfL Unified API (read-only). The
 shipped frontend is a SvelteKit static-adapter build (no SSR).
 
+### Credential storage
+
+The TfL API key is stored in the **macOS Keychain** (system credential
+storage) via `security-framework`'s `set_generic_password` /
+`get_generic_password`. Service identifier: `app.tubbie`. It is never
+written to `config.json` or any other file on disk. The on-disk store
+(`~/Library/Application Support/app.tubbie/config.json`) contains only
+non-sensitive config: current station, line filters, direction filters,
+display mode, and poll interval.
+
 The non-trivial attack surfaces we track are:
 
 1. **TfL response parsing** — a hostile or compromised upstream
