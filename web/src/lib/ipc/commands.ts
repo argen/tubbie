@@ -169,6 +169,20 @@ export async function hasAppKey(): Promise<boolean> {
   return raw;
 }
 
+/**
+ * Open (or focus) the Settings webview window.
+ *
+ * The Settings window is a separate OS window; the main board window cannot
+ * navigate to /settings in-place because `load_app_key` is gated to the
+ * "settings" window only (MEDIUM-2 / M7 TODO fix).
+ *
+ * Subsequent calls focus the already-open window rather than stacking a
+ * second instance. Closing the Settings window does not close the app.
+ */
+export async function openSettingsWindow(): Promise<void> {
+  await invoke<undefined>('open_settings_window');
+}
+
 /** Fetch the current status for a single TfL line. */
 export async function getLineStatus(lineId: string): Promise<LineStatus> {
   const raw = await invoke<unknown>('get_line_status', { lineId });

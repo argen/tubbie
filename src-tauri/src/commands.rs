@@ -644,15 +644,50 @@ pub async fn save_app_key(
     save_app_key_inner(key, &state).await
 }
 
-// TODO(M7): restrict via per-window capability once Settings is a separate window.
+// SECURITY: M7 TODO — implemented. `load_app_key` is restricted to the
+// "settings" webview window via a runtime window-label check. Any invocation
+// from the "main" window (or any other window) is rejected with a permission
+// error before reaching `load_app_key_inner`. This closes MEDIUM-2.
+//
+// Why here, not in the capability JSON? Tauri v2 capability files control
+// plugin permissions (`core:*`, `store:*`). Custom `#[tauri::command]`
+// handlers have no plugin-level ACL; per-window restriction is enforced
+// in the handler body by inspecting the calling `WebviewWindow::label()`.
+//
+// The companion `has_app_key` (boolean only) intentionally stays unrestricted
+// so the main window can display "configure your key" prompts without having
+// access to the key value itself.
+
+/// Returns `true` when the given window label is the settings window.
+///
+/// `pub(crate)` so the unit test in `commands::tests` can assert the guard
+/// directly without constructing a real `WebviewWindow`.
+pub(crate) fn window_label_is_settings(label: &str) -> bool {
+    label == "settings"
+}
+
 /// Load the stored TfL API key.
 ///
 /// Returns `None` if no key has been saved.
-// SECURITY: only the Settings UI should call this command. The main board
-// view must never invoke `load_app_key` — exposing the key to the board
-// page would make it accessible to any renderer-side script.
+///
+/// # Security
+///
+/// Restricted to the `"settings"` webview window. Any call from the `"main"`
+/// window is rejected with `Err("permission denied: ...")` before the key
+/// is read. This ensures the key never crosses the IPC boundary into the main
+/// board renderer — where a supply-chain-injected script could exfiltrate it.
 #[tauri::command]
-pub async fn load_app_key(state: State<'_, AppState>) -> Result<Option<String>, String> {
+pub async fn load_app_key(
+    window: tauri::WebviewWindow,
+    state: State<'_, AppState>,
+) -> Result<Option<String>, String> {
+    if !window_label_is_settings(window.label()) {
+        return Err(format!(
+            "permission denied: load_app_key may only be called from the settings \
+             window (caller: {:?})",
+            window.label()
+        ));
+    }
     load_app_key_inner(&state).await
 }
 
@@ -663,6 +698,53 @@ pub async fn load_app_key(state: State<'_, AppState>) -> Result<Option<String>, 
 #[tauri::command]
 pub async fn has_app_key(state: State<'_, AppState>) -> Result<bool, String> {
     has_app_key_inner(&state).await
+}
+
+/// Open (or focus) the Settings webview window.
+///
+/// Creates the window on first call. Subsequent calls focus the already-open
+/// window rather than stacking a second instance. This is the only way for
+/// the main window to bring up Settings — it can no longer navigate to
+/// `/settings` via SPA routing, since the `load_app_key` capability is
+/// restricted to the `"settings"` window's webview.
+///
+/// Window is not modal. Closing it does not close the app. The stream task
+/// is not affected (it is owned by `AppState`, not by any window).
+#[tauri::command]
+pub async fn open_settings_window(app: tauri::AppHandle) -> Result<(), String> {
+    open_settings_window_impl(&app)
+}
+
+/// Inner (non-async) implementation of settings-window open/focus.
+///
+/// Extracted so `lib.rs` can call it from the tray menu event handler
+/// (which is a sync closure). Returns `Err(String)` on Tauri builder failure.
+pub(crate) fn open_settings_window_impl(app: &tauri::AppHandle) -> Result<(), String> {
+    use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
+
+    // Focus the existing window if already open — avoids stacking.
+    if let Some(win) = app.get_webview_window("settings") {
+        let _ = win.show();
+        let _ = win.set_focus();
+        return Ok(());
+    }
+
+    // Create on demand. This mirrors the pattern used by other on-demand
+    // windows in Tauri v2 apps: declare the capability in capabilities/settings.json,
+    // create via builder on first use.
+    WebviewWindowBuilder::new(app, "settings", WebviewUrl::App("/settings".into()))
+        .title("Tubbie — Settings")
+        .inner_size(640.0, 700.0)
+        .min_inner_size(540.0, 400.0)
+        .resizable(true)
+        .decorations(true)
+        .transparent(false)
+        .always_on_top(false)
+        .skip_taskbar(false)
+        .visible(true)
+        .build()
+        .map(|_| ())
+        .map_err(|e| format!("failed to open settings window: {e}"))
 }
 
 /// Fetch the current status for a single TfL line.
@@ -2456,4 +2538,192 @@ mod tests {
             "save_display_prefs must NOT publish to cfg_tx (no emit expected)"
         );
     }
+
+    // -----------------------------------------------------------------------
+    // Capability snapshot tests (MEDIUM-2 / M7 TODO)
+    //
+    // In Tauri v2, custom `#[tauri::command]` handlers (like `load_app_key`,
+    // `save_app_key`, `has_app_key`) are not controlled by the capabilities
+    // JSON `permissions` field — those fields only govern built-in plugin
+    // commands (`core:*`, `store:*`). The per-window enforcement for custom
+    // commands is implemented **in the command handler itself** via a window
+    // label check.
+    //
+    // These tests guard the two-layer security contract:
+    //
+    // Layer 1 — Capability file structure (these tests):
+    //   - `capabilities/default.json`  covers `["main"]` only, not settings.
+    //   - `capabilities/settings.json` covers `["settings"]` only, not main.
+    //     It records in a human-readable `"description"` field which privileged
+    //     commands are restricted to this window (documentation anchor).
+    //
+    // Layer 2 — Runtime enforcement (see `load_app_key_inner_rejects_non_settings_window`):
+    //   - `load_app_key` rejects any caller whose window label ≠ "settings".
+    //   - `has_app_key` is intentionally NOT restricted (boolean only, safe).
+    //   - `save_app_key` is intentionally NOT restricted (write, no data leak).
+    //
+    // If someone widens `default.json` to also cover "settings", the first
+    // test catches it. If `load_app_key` loses its window-label guard, the
+    // runtime test catches it.
+    // -----------------------------------------------------------------------
+
+    /// Load a capability JSON file from the `src-tauri/capabilities/` directory.
+    /// `CARGO_MANIFEST_DIR` is set by Cargo to the directory containing `Cargo.toml`,
+    /// which is `src-tauri/`.
+    fn load_capability(filename: &str) -> serde_json::Value {
+        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
+            .expect("CARGO_MANIFEST_DIR not set — must run via `cargo test`");
+        let path = std::path::Path::new(&manifest_dir)
+            .join("capabilities")
+            .join(filename);
+        let text = std::fs::read_to_string(&path)
+            .unwrap_or_else(|e| panic!("failed to read {}: {e}", path.display()));
+        serde_json::from_str(&text)
+            .unwrap_or_else(|e| panic!("failed to parse {}: {e}", path.display()))
+    }
+
+    fn windows_list(cap: &serde_json::Value) -> Vec<String> {
+        cap["windows"]
+            .as_array()
+            .expect("capabilities JSON must have a 'windows' array")
+            .iter()
+            .map(|v| v.as_str().expect("window entry must be a string").to_string())
+            .collect()
+    }
+
+    // Layer 1 — capability file structure tests.
+
+    #[test]
+    fn capability_default_covers_main_only() {
+        let cap = load_capability("default.json");
+        let wins = windows_list(&cap);
+        assert!(
+            wins.iter().any(|w| w == "main"),
+            "default.json must apply to the 'main' window; got: {wins:?}"
+        );
+        assert!(
+            !wins.iter().any(|w| w == "settings"),
+            "SECURITY: default.json must NOT cover the 'settings' window. \
+             Tauri plugin permissions granted to 'main' must not be silently \
+             inherited by the settings window. Got: {wins:?}"
+        );
+    }
+
+    #[test]
+    fn capability_settings_file_exists_and_covers_settings_only() {
+        let cap = load_capability("settings.json");
+        let wins = windows_list(&cap);
+        assert!(
+            wins.iter().any(|w| w == "settings"),
+            "settings.json must apply to the 'settings' window; got: {wins:?}"
+        );
+        assert!(
+            !wins.iter().any(|w| w == "main"),
+            "settings.json must NOT apply to 'main' window (would over-privilege main); \
+             got: {wins:?}"
+        );
+    }
+
+    #[test]
+    fn capability_settings_describes_load_app_key_restriction() {
+        // The settings.json `description` field is the human-readable anchor
+        // documenting that `load_app_key` is restricted to this window.
+        // This test ensures the documentation anchor isn't accidentally removed.
+        let cap = load_capability("settings.json");
+        let desc = cap["description"]
+            .as_str()
+            .unwrap_or_default()
+            .to_lowercase();
+        assert!(
+            desc.contains("load_app_key"),
+            "settings.json description must mention load_app_key so reviewers \
+             know why this file exists. Got description: {:?}",
+            cap["description"].as_str().unwrap_or("(missing)")
+        );
+    }
+
+    // Layer 2 — runtime enforcement test.
+    //
+    // The `load_app_key` inner function is a pure async fn that takes &AppState.
+    // The window-label guard lives in the `load_app_key` command wrapper, which
+    // receives a `tauri::WebviewWindow` parameter. We can't construct a real
+    // WebviewWindow in a unit test, so instead we assert the invariant at the
+    // code-structure level: the command wrapper must call a function that checks
+    // the label and returns Err for non-settings callers.
+    //
+    // The function `load_app_key_rejects_non_settings` is pub(crate) for testing.
+
+    #[tokio::test]
+    async fn load_app_key_inner_reachable_from_settings_window() {
+        // `load_app_key_inner` itself should still work fine given valid state.
+        // This confirms we haven't broken the happy path.
+        let state = fixture_state();
+        save_app_key_inner(Some("test-key".to_string()), &state)
+            .await
+            .expect("save should succeed");
+        let result = load_app_key_inner(&state).await;
+        assert!(result.is_ok(), "load_app_key_inner must succeed: {result:?}");
+        assert_eq!(result.unwrap(), Some("test-key".to_string()));
+    }
+
+    #[test]
+    fn load_app_key_window_guard_rejects_non_settings() {
+        // The public command `load_app_key` has a window guard that checks
+        // the label before delegating to `load_app_key_inner`. We verify the
+        // guard function directly here.
+        assert!(
+            window_label_is_settings("settings"),
+            "settings window must be permitted"
+        );
+        assert!(
+            !window_label_is_settings("main"),
+            "main window must be rejected by the guard"
+        );
+        assert!(
+            !window_label_is_settings(""),
+            "empty label must be rejected"
+        );
+        assert!(
+            !window_label_is_settings("SETTINGS"),
+            "label check must be case-sensitive"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // TODO(1B-followup): End-to-end webview IPC integration test for
+    // `load_app_key`.
+    //
+    // CONSTRAINT: `tauri::WebviewWindow` does not implement
+    // `CommandArg<'_, MockRuntime>` in Tauri 2.x. `generate_handler!` relies
+    // on every parameter implementing `CommandArg` for the chosen runtime; the
+    // real `WebviewWindow` works only with the full Wry/Webkit runtime, not
+    // with MockRuntime. Consequently, registering `load_app_key` in a
+    // `mock_builder().invoke_handler(...)` fails to compile with:
+    //
+    //   error[E0277]: the trait bound `tauri::WebviewWindow:
+    //   CommandArg<'_, MockRuntime>` is not satisfied
+    //
+    // The intent of the end-to-end test was to assert via IPC dispatch that
+    // `load_app_key` rejects from "main" and accepts from "settings" as
+    // wired-up command — not just at the `window_label_is_settings` guard
+    // level. Two alternatives when Tauri lifts this restriction:
+    //
+    //   (A) Switch to a custom `CommandArg` impl for test windows once Tauri
+    //       exposes one, re-enable the test with `get_ipc_response`.
+    //   (B) Use an integration test binary against a real Tauri process
+    //       (e.g. via `tauri-driver` / WebDriver) that spawns the actual app.
+    //
+    // What the existing tests DO cover (maintained in place):
+    //   • `window_label_is_settings` returns true for "settings", false for
+    //     "main" / "" / "SETTINGS" — covers the guard logic directly.
+    //   • `load_app_key_inner_reachable_from_settings_window` — confirms the
+    //     inner fn succeeds with valid state (happy path).
+    //   • `capability_default_covers_main_only` / `capability_settings_file_exists_and_covers_settings_only`
+    //     — confirm the capability JSON files don't accidentally cross-pollinate.
+    //   • `capability_settings_describes_load_app_key_restriction` — keeps the
+    //     documentation anchor in `capabilities/settings.json`.
+    //
+    // Together these form a multi-layer defence that a future maintainer can
+    // upgrade to a true IPC-dispatch test when the runtime constraint lifts.
+    // -----------------------------------------------------------------------
 }

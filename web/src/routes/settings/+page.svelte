@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { goto } from '$app/navigation';
   import { configError } from '$lib/stores/config.js';
   import StationSection from '$lib/components/StationSection.svelte';
   import FavoritesSection from '$lib/components/FavoritesSection.svelte';
@@ -48,8 +47,18 @@
     }
   });
 
+  // Settings now runs in its own webview window. "Back" closes this window
+  // rather than SPA-navigating — the main board window stays open independently.
   async function handleBack(): Promise<void> {
-    await goto('/');
+    try {
+      const { getCurrentWindow } = await import('@tauri-apps/api/window');
+      await getCurrentWindow().close();
+    } catch {
+      // Fallback for non-Tauri contexts (vitest, plain vite dev).
+      // In a real browser `window.close()` only works if the window was
+      // opened by script; in Tauri it always works.
+      window.close();
+    }
   }
 </script>
 

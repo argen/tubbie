@@ -60,8 +60,8 @@ use commands::request_current_location;
 use commands::{
     add_favorite, apply_board_size, find_nearest_stations, get_board, get_line_status, has_app_key,
     list_favorites, load_app_key, load_config, load_display_mode, load_display_prefs,
-    remove_favorite, save_app_key, save_config, save_display_mode, save_display_prefs,
-    search_stations,
+    open_settings_window, open_settings_window_impl, remove_favorite, save_app_key, save_config,
+    save_display_mode, save_display_prefs, search_stations,
 };
 use state::{AnyBoardService, AppState};
 use store_impl::{KeychainBackedConfigStore, StorePluginConfigStore, StorePluginFavoritesStore};
@@ -404,10 +404,11 @@ fn build_tray(app: &tauri::AppHandle) -> Result<(), tauri::Error> {
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| {
             if event.id().as_ref() == "settings" {
-                if let Some(win) = app.get_webview_window("main") {
-                    let _ = win.show();
-                    let _ = win.set_focus();
-                    let _ = app.emit("tray://open-settings", ());
+                // Open (or focus) the dedicated Settings window instead of
+                // navigating the main popover. The main window cannot call
+                // `load_app_key` — that capability is gated to "settings".
+                if let Err(e) = open_settings_window_impl(app) {
+                    eprintln!("[tubbie] failed to open settings from tray: {e}");
                 }
             }
         })
@@ -907,6 +908,7 @@ pub fn run() {
             save_app_key,
             load_app_key,
             has_app_key,
+            open_settings_window,
             get_line_status,
             save_display_mode,
             load_display_mode,
