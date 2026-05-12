@@ -1,0 +1,82 @@
+name: Live TfL gate
+
+# Discipline gate: any PR touching tfl-* crates or Cargo.lock must carry
+# evidence that it was manually live-tested against api.tfl.gov.uk before
+# it can merge.
+#
+# Signal: the string [live-tested] (case-insensitive) in either:
+#   (a) the PR body/description, OR
+#   (b) any commit message on the PR branch.
+#
+# Choice: tag-only (no manual-approval environment step).
+# Rationale: GitHub Environments / required-reviewers can't express a
+# per-PR-path condition without a separate reusable workflow and the YAML
+# surface doubles with no practical benefit.  The tag approach is
+# equally enforceable via branch-protection required-status-checks and
+# keeps the signal in the PR body / commit history where reviewers see it.
+#
+# How to satisfy the gate:
+#   Add "[live-tested]" to your PR description or to one of the branch's
+#   commit messages, then push.  The check re-runs automatically.
+#
+# See: justfile `verify-live` recipe and docs/ADR/crates-as-public-contract.md
+
+on:
+  pull_request:
+    paths:
+      - 'crates/tfl-*/**'
+      - 'Cargo.lock'
+
+permissions:
+  pull-requests: read
+
+jobs:
+  live-tested-check:
+    name: live-tested tag present
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          # Fetch enough history to read all commit messages on the PR branch.
+          fetch-depth: 0
+
+      - name: Check for [live-tested] tag
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo  = context.repo.repo;
+            const pr    = context.payload.pull_request;
+
+            // ── 1. Check PR body ─────────────────────────────────────────────
+            const body = pr.body ?? '';
+            if (/\[live-tested\]/i.test(body)) {
+              core.info('Found [live-tested] in PR description. Gate passed.');
+              return;
+            }
+
+            // ── 2. Check all commit messages on the PR branch ─────────────────
+            const commits = await github.paginate(
+              github.rest.pulls.listCommits,
+              { owner, repo, pull_number: pr.number, per_page: 100 }
+            );
+            const tagged = commits.some(c =>
+              /\[live-tested\]/i.test(c.commit.message)
+            );
+            if (tagged) {
+              core.info('Found [live-tested] in a commit message. Gate passed.');
+              return;
+            }
+
+            // ── 3. Neither found — fail with a clear remediation message ──────
+            core.setFailed(
+              'This PR touches tfl-* crates or Cargo.lock but does not carry ' +
+              'a [live-tested] signal.\n\n' +
+              'Before merging, run:\n' +
+              '  just verify-live\n' +
+              'against api.tfl.gov.uk (set TFL_APP_KEY in your shell), confirm ' +
+              'the live tests are green, then add "[live-tested]" to the PR ' +
+              'description or to a commit message and push.\n\n' +
+              'See justfile `verify-live` and ' +
+              'docs/ADR/crates-as-public-contract.md for details.'
+            );
