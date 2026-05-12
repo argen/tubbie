@@ -2308,6 +2308,20 @@ mod tests {
         assert!(err.contains("validation:"), "error: {err}");
     }
 
+    #[test]
+    fn common_name_with_null_byte_is_rejected() {
+        let result = validate_common_name("Belsize\0Park");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("validation:"));
+    }
+
+    #[test]
+    fn line_name_with_null_byte_is_rejected() {
+        let result = validate_line_name("North\0ern");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("validation:"));
+    }
+
     /// `remove_favorite` reduces the list by one.
     #[tokio::test]
     async fn remove_favorite_removes_entry() {
