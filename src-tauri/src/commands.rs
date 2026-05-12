@@ -149,6 +149,44 @@ pub(crate) fn validate_app_key(key: &Option<String>) -> Result<(), String> {
     Ok(())
 }
 
+/// Validate a `common_name` string for a favorite station.
+///
+/// 200-char cap: generous relative to the longest real TfL station name
+/// (~52 chars — "London Heathrow Terminals 2 & 3 Underground Station"), but
+/// tight enough to bound JSON storage and UI render allocation (LOW-2).
+/// No null bytes; no other character restriction — station names include
+/// `&`, `(`, `)`, `,`, and accented characters.
+pub(crate) fn validate_common_name(name: &str) -> Result<(), String> {
+    if name.len() > 200 {
+        return Err(format!(
+            "validation: common_name must be ≤200 characters, got {}",
+            name.len()
+        ));
+    }
+    if name.contains('\0') {
+        return Err("validation: common_name must not contain null bytes".to_string());
+    }
+    Ok(())
+}
+
+/// Validate a `LineRef.name` string stored in a favorite.
+///
+/// Same 200-char cap and null-byte restriction as `validate_common_name`
+/// — both fields live in the same favorites JSON and share the same risk
+/// profile (LOW-2).
+pub(crate) fn validate_line_name(name: &str) -> Result<(), String> {
+    if name.len() > 200 {
+        return Err(format!(
+            "validation: LineRef.name must be ≤200 characters, got {}",
+            name.len()
+        ));
+    }
+    if name.contains('\0') {
+        return Err("validation: LineRef.name must not contain null bytes".to_string());
+    }
+    Ok(())
+}
+
 /// Validate a `BoardConfig`'s fields.
 ///
 /// Checks `station_id`, each `line_id`, collection length caps, and rejects
@@ -391,9 +429,12 @@ pub(crate) async fn add_favorite_inner(
 ) -> Result<Vec<Favorite>, String> {
     // Validate station_id.
     validate_station_id(&station_id)?;
-    // Validate each line id.
+    // Validate common_name length (LOW-2: unbounded strings → JSON bloat).
+    validate_common_name(&common_name)?;
+    // Validate each line id and name.
     for line in &lines {
         validate_line_id(&line.id)?;
+        validate_line_name(&line.name)?;
         if !is_supported_line_id(&line.id) {
             return Err(format!(
                 "validation: line_id {:?} is not a supported TfL line",
@@ -2226,6 +2267,44 @@ mod tests {
         )
         .await
         .expect_err("unsupported line_id should be rejected");
+        assert!(err.contains("validation:"), "error: {err}");
+    }
+
+    /// `add_favorite` must reject a `common_name` longer than 200 characters
+    /// (LOW-2: unbounded string → JSON bloat / UI render bug). The 200-char cap
+    /// is generous — the longest legit TfL station name is ~52 chars.
+    #[tokio::test]
+    async fn add_favorite_rejects_overlong_common_name() {
+        let state = fixture_state();
+        let long_name = "A".repeat(201);
+        let lines = vec![LineRef {
+            id: "northern".to_string(),
+            name: "Northern".to_string(),
+        }];
+        let err = add_favorite_inner("940GZZLUBZP".to_string(), long_name, lines, &state)
+            .await
+            .expect_err("201-char common_name should be rejected");
+        assert!(err.contains("validation:"), "error: {err}");
+    }
+
+    /// `add_favorite` must reject a `LineRef.name` longer than 200 characters.
+    /// Same cap as `common_name` to bound stored JSON size.
+    #[tokio::test]
+    async fn add_favorite_rejects_overlong_line_name() {
+        let state = fixture_state();
+        let long_line_name = "B".repeat(201);
+        let lines = vec![LineRef {
+            id: "northern".to_string(),
+            name: long_line_name,
+        }];
+        let err = add_favorite_inner(
+            "940GZZLUBZP".to_string(),
+            "Belsize Park".to_string(),
+            lines,
+            &state,
+        )
+        .await
+        .expect_err("201-char LineRef.name should be rejected");
         assert!(err.contains("validation:"), "error: {err}");
     }
 
