@@ -38,7 +38,7 @@ jobs:
             echo "The fixture-recorder binary reads TFL_APP_KEY from the environment."
             exit 1
           fi
-          echo "TFL_APP_KEY is present (length ${#TFL_APP_KEY})."
+          echo "TFL_APP_KEY is set."
 
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
@@ -104,7 +104,7 @@ jobs:
             ### Changed files
 
             ```
-            ${{ steps.diff.outputs.changed == 'true' && 'See the Files changed tab above.' || '' }}
+            See the Files changed tab above.
             ```
 
             > **DO NOT auto-merge** — eyeball the shape diff first.

@@ -25,6 +25,7 @@ on:
   pull_request:
     paths:
       - 'crates/tfl-*/**'
+      - 'crates/fixture-recorder/**'
       - 'Cargo.lock'
 
 permissions:
@@ -56,6 +57,7 @@ jobs:
             }
 
             // ── 2. Check all commit messages on the PR branch ─────────────────
+            // Note: zero-commit draft PRs hit (3) and require the tag in the body.
             const commits = await github.paginate(
               github.rest.pulls.listCommits,
               { owner, repo, pull_number: pr.number, per_page: 100 }
