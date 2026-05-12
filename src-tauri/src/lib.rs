@@ -50,7 +50,7 @@ use tauri::{
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     Emitter, Listener, LogicalSize, Manager, PhysicalPosition, WindowEvent,
 };
-use tfl_board::{BoardConfig, BoardService, LifecyclePhase};
+use tfl_board::{BoardConfig, BoardService, LifecyclePhase, TokioSleepTimer, WarmFallback};
 use tfl_cache::TflClient;
 use tfl_client::{clock::SystemClock, http::ReqwestTflHttp};
 use tokio::sync::RwLock;
@@ -95,6 +95,11 @@ impl Drop for ListenerGuard {
 /// The fallback is a safety net: if the stream is permanently broken we
 /// still want the warm to fire (best-effort), rather than leave the
 /// settings cache cold forever.
+///
+/// Uses [`WarmFallback<TokioSleepTimer>`] — wall-clock deadline measured by
+/// `tokio::time::sleep`. The iOS counterpart swaps in an active-only timer
+/// via `ActiveTimeTimer` so the deadline does not count down while the app
+/// is backgrounded (invariant 8).
 async fn wait_for_first_board_emit(app: &tauri::AppHandle, fallback: Duration) {
     let (tx, rx) = tokio::sync::oneshot::channel::<()>();
     let tx_slot: Arc<Mutex<Option<tokio::sync::oneshot::Sender<()>>>> =
@@ -115,10 +120,7 @@ async fn wait_for_first_board_emit(app: &tauri::AppHandle, fallback: Duration) {
         id: listener_id,
     };
 
-    tokio::select! {
-        _ = rx => {}
-        _ = tokio::time::sleep(fallback) => {}
-    }
+    WarmFallback::new(TokioSleepTimer, fallback).wait(rx).await;
     // _guard drops here, calling app.unlisten(listener_id).
 }
 
