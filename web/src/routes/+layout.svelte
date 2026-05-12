@@ -60,7 +60,10 @@
     // Apply persisted theme immediately
     applyTheme($config.theme);
 
-    // Start listening to board://updated events from Rust stream
+    // Start listening to board://updated events from the Rust stream. Called
+    // after initConfig() so the seed fetch and the first stream tick can race
+    // safely: board.ts's generated_at latest-wins discipline (invariant #7)
+    // ensures whichever payload arrives second is the one the UI keeps.
     cleanupSubscription = await startBoardSubscription();
 
     // Tray right-click menu "Settings…" → open the dedicated Settings window.
