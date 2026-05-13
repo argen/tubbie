@@ -154,8 +154,16 @@ pub(crate) fn validate_app_key(key: &Option<String>) -> Result<(), String> {
 /// 200-char cap: generous relative to the longest real TfL station name
 /// (~52 chars — "London Heathrow Terminals 2 & 3 Underground Station"), but
 /// tight enough to bound JSON storage and UI render allocation (LOW-2).
-/// No null bytes; no other character restriction — station names include
-/// `&`, `(`, `)`, `,`, and accented characters.
+///
+/// Character allowlist (P4.3): Unicode letters, digits, ASCII spaces,
+/// and the punctuation set audited from every name in
+/// `fixtures/stop-points/*.json` — `& ' ( ) - . /`. Anything else
+/// (control characters, angle brackets, semicolons, emoji, zero-width
+/// spaces, tabs, etc.) is rejected so favorites JSON cannot smuggle
+/// arbitrary content into the disk store or back through the renderer.
+/// The cap is enforced over byte length to bound disk usage; the
+/// allowlist iterates `chars()` so multi-byte UTF-8 sequences pass
+/// when they decode to a `char::is_alphabetic()` code point.
 pub(crate) fn validate_common_name(name: &str) -> Result<(), String> {
     if name.len() > 200 {
         return Err(format!(
@@ -166,7 +174,24 @@ pub(crate) fn validate_common_name(name: &str) -> Result<(), String> {
     if name.contains('\0') {
         return Err("validation: common_name must not contain null bytes".to_string());
     }
+    if let Some(bad) = name.chars().find(|c| !is_allowed_station_name_char(*c)) {
+        return Err(format!(
+            "validation: common_name contains disallowed character {:?} (U+{:04X})",
+            bad, bad as u32
+        ));
+    }
     Ok(())
+}
+
+/// Allowed-character predicate for `common_name`.
+///
+/// Accepts Unicode letters and digits, ASCII space, and the punctuation
+/// set found in real TfL station names.
+fn is_allowed_station_name_char(c: char) -> bool {
+    c.is_alphabetic()
+        || c.is_ascii_digit()
+        || c == ' '
+        || matches!(c, '&' | '\'' | '(' | ')' | '-' | '.' | '/')
 }
 
 /// Validate a `LineRef.name` string stored in a favorite.
@@ -2313,6 +2338,62 @@ mod tests {
         let result = validate_common_name("Belsize\0Park");
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("validation:"));
+    }
+
+    /// Allowlist: real TfL station names use letters (incl. accented),
+    /// digits, spaces, `-`, `'`, `(`, `)`, `&`, `.`, `/`. Any other character
+    /// (control chars, `<`, `>`, `;`, emoji, etc.) must be rejected so the
+    /// favorites JSON cannot smuggle arbitrary content into the disk store
+    /// or the renderer.
+    #[test]
+    fn common_name_rejects_disallowed_chars() {
+        for bad in [
+            "Belsize<script>",
+            "Belsize;Park",
+            "Belsize\tPark",
+            "Belsize=Park",
+            "Belsize[Park]",
+            "Belsize\"Park\"",
+            "Belsize\u{200B}Park",
+        ] {
+            let result = validate_common_name(bad);
+            assert!(
+                result.is_err(),
+                "expected {bad:?} to be rejected by allowlist"
+            );
+            assert!(
+                result.unwrap_err().contains("validation:"),
+                "error must use the validation: prefix for {bad:?}"
+            );
+        }
+    }
+
+    /// The allowlist MUST accept every character class that appears in
+    /// `fixtures/stop-points/*.json`. Audit of real fixture data found:
+    /// `&`, `'`, `(`, `)`, `-`, `.`, `/`. Plus spaces, ASCII letters,
+    /// digits, and Unicode letters (none in current fixtures, but the
+    /// London naming standard does not preclude them). If this test ever
+    /// fails, the allowlist has dropped a real station name on the floor.
+    #[test]
+    fn common_name_accepts_real_station_punctuation() {
+        for ok in [
+            "Belsize Park",
+            "King's Cross St. Pancras",
+            "Hammersmith (H&C Line)",
+            "Edgware Road (Bakerloo)",
+            "Heathrow Terminals 2 & 3",
+            "Harrow-on-the-Hill",
+            "Shepherd's Bush",
+            "Totteridge & Whetstone",
+            "Liberté",         // Unicode letter — defensive, future-proof.
+            "A/B Junction",    // forward slash appears in raw fixture names.
+            "St. James's Park",
+        ] {
+            assert!(
+                validate_common_name(ok).is_ok(),
+                "real-shape name {ok:?} must pass"
+            );
+        }
     }
 
     #[test]
