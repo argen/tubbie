@@ -362,6 +362,32 @@ git submodule. Their public surface is a contract — see
 `docs/ADR/crates-as-public-contract.md`. Breaking changes need a paired PR
 + submodule bump in tubbie-ios. Internal refactors are unaffected.
 
+## Known documentation debt
+
+**`ActivityThrottle` parameter rationale (`tubbie-ios/src-tauri/src/activity.rs`)**
+The 60 s interval floor, 30 s delta threshold, and the bucket thresholds
+inside `arrival_bucket` (used to detect "Due" / "1 min" / "N mins"
+boundary crossings) have no surrounding comment explaining where these
+numbers came from — empirical testing, Apple's ActivityKit budget
+documentation, or both. A future iOS update or a change in TfL's arrival
+cadence would leave a maintainer guessing whether the parameters are still
+appropriate. This is tracked as item 4.1 in the refactor plan. **Before
+touching `ActivityThrottle::new()` or `arrival_bucket`, add a block
+comment explaining the rationale.** The 9-scenario test suite is correct
+but tests the contract, not the reasoning behind the constants.
+
+**Seed-fetch race ordering in `web/src/lib/+layout.svelte`**
+`startBoardSubscription()` (which registers the `board://updated` and
+`board://error` listeners) is called *before* `getBoard()`. This ordering
+is deliberate: it prevents the race where a `board://updated` event fires
+in the window between seed completion and listener registration. The race
+is resolved by the "latest-wins by `generated_at`" check in `applyBoard`
+— any event that arrives before the seed, or concurrently with it, is
+discarded if its timestamp is not newer. This is correct but non-obvious.
+If `applyBoard`'s timestamp logic is ever changed, the registration
+ordering becomes a silent footgun. A one-line comment at the callsite
+would prevent a future refactor from breaking this invariant.
+
 ## Things that look correct in isolation but break the integration
 
 - A passing `BoardService::stream` test does NOT prove `save_config`

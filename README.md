@@ -71,11 +71,11 @@ User preferences are stored by Tauri in the platform app-data directory:
 
 - **macOS:** `~/Library/Application Support/app.tubbie/`
 
-The `config.json` inside that directory holds the current station, line filters, direction filters, and poll interval. You can inspect it, but editing it manually is not necessary — the Settings screen in the app covers all fields. The TfL API key is **not** stored in this file; it lives in the macOS Keychain.
+The `config.json` inside that directory holds the current station, line filters, direction filters, poll interval, and TfL API key. You can inspect it, but editing it manually is not necessary — the Settings screen in the app covers all fields.
 
 ### TfL API key (optional)
 
-Anonymous access works out of the box (TfL allows 50 requests/minute without a key). If you plan to poll frequently or share a network with other anonymous callers, register a free key at [api-portal.tfl.gov.uk](https://api-portal.tfl.gov.uk) and enter it in the app's Settings screen. The key is stored in the **macOS Keychain** (system credential storage) and never written to disk in plaintext. Other config lives in `tauri-plugin-store` JSON on disk. The key is never committed or logged.
+Anonymous access works out of the box (TfL allows 50 requests/minute without a key). If you plan to poll frequently or share a network with other anonymous callers, register a free key at [api-portal.tfl.gov.uk](https://api-portal.tfl.gov.uk) and enter it in the app's Settings screen. The key is stored via `tauri-plugin-store` alongside other config in `config.json` (plaintext JSON on disk). It is never committed or logged. A move to the macOS Keychain for proper credential isolation is planned — see SECURITY.md for details.
 
 Alternatively, set `TFL_APP_KEY=<key>` in your shell environment before launching.
 
