@@ -261,6 +261,29 @@ referenced from tests and PRs — don't renumber.
     leaves a whole mode missing for the full 14-minute window. User
     symptom: "tube doesn't appear in search but DLR does".
 
+26. **Partial-warm stop-points entries use a short retry window, not the
+    full TTL.** When the per-mode fan-out's retry budget for one mode is
+    exhausted (invariant #21 didn't recover it) but other modes
+    succeeded, `refresh_stop_points_inner` stamps the cache entry with
+    `failed_modes` populated. Such entries are served by
+    `stop_points_cached`'s SWR path only for `PARTIAL_WARM_RETRY_AFTER`
+    (60 s) before the next call re-fans the failed mode. Without this,
+    a TestFlight user on cellular whose cold warm tripped a 429 was
+    stuck with `940GZZDLBNK` (Bank DLR) as the only "bank" search hit
+    for the entire 14-min `STOP_POINTS_TTL` — `940GZZLUBNK` (Bank Tube
+    hub, the multi-mode canonical) never made it into the cache.
+    Additionally, if a **prior cache exists** when the partial warm
+    happens (e.g. the periodic refresh running 14 min after a healthy
+    cold start), the failed mode's stations are backfilled from the
+    prior cache before stamping — a single failed mode MUST NOT shrink
+    the cache below what the user already had. The 60 s window is
+    short enough to heal during a single search session but long
+    enough to let the 429 cooldown clear before we hammer TfL again.
+    Tests in `crates/tfl-cache/src/client_tests.rs`:
+    `search_stations_returns_bank_tube_hub_when_tube_mode_was_rate_limited`,
+    `partial_warm_serves_cached_result_within_retry_after_window`,
+    `partial_warm_backfills_failed_mode_from_prior_cache`.
+
 ### Network status
 
 25. **`severity_bucket` in `tfl-domain` is the single canonical mapping
@@ -361,6 +384,32 @@ Quick reference, in order:
 git submodule. Their public surface is a contract — see
 `docs/ADR/crates-as-public-contract.md`. Breaking changes need a paired PR
 + submodule bump in tubbie-ios. Internal refactors are unaffected.
+
+## Known documentation debt
+
+**`ActivityThrottle` parameter rationale (`tubbie-ios/src-tauri/src/activity.rs`)**
+The 60 s interval floor, 30 s delta threshold, and the bucket thresholds
+inside `arrival_bucket` (used to detect "Due" / "1 min" / "N mins"
+boundary crossings) have no surrounding comment explaining where these
+numbers came from — empirical testing, Apple's ActivityKit budget
+documentation, or both. A future iOS update or a change in TfL's arrival
+cadence would leave a maintainer guessing whether the parameters are still
+appropriate. This is tracked as item 4.1 in the refactor plan. **Before
+touching `ActivityThrottle::new()` or `arrival_bucket`, add a block
+comment explaining the rationale.** The 9-scenario test suite is correct
+but tests the contract, not the reasoning behind the constants.
+
+**Seed-fetch race ordering in `web/src/lib/+layout.svelte`**
+`startBoardSubscription()` (which registers the `board://updated` and
+`board://error` listeners) is called *before* `getBoard()`. This ordering
+is deliberate: it prevents the race where a `board://updated` event fires
+in the window between seed completion and listener registration. The race
+is resolved by the "latest-wins by `generated_at`" check in `applyBoard`
+— any event that arrives before the seed, or concurrently with it, is
+discarded if its timestamp is not newer. This is correct but non-obvious.
+If `applyBoard`'s timestamp logic is ever changed, the registration
+ordering becomes a silent footgun. A one-line comment at the callsite
+would prevent a future refactor from breaking this invariant.
 
 ## Things that look correct in isolation but break the integration
 

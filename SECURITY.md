@@ -28,13 +28,21 @@ shipped frontend is a SvelteKit static-adapter build (no SSR).
 
 ### Credential storage
 
-The TfL API key is stored in the **macOS Keychain** (system credential
-storage) via `security-framework`'s `set_generic_password` /
-`get_generic_password`. Service identifier: `app.tubbie`. It is never
-written to `config.json` or any other file on disk. The on-disk store
-(`~/Library/Application Support/app.tubbie/config.json`) contains only
-non-sensitive config: current station, line filters, direction filters,
-display mode, and poll interval.
+The TfL API key is stored via **`tauri-plugin-store`** as plaintext JSON
+under the key `"tfl_app_key"` in
+`~/Library/Application Support/app.tubbie/config.json`. The
+`tauri-plugin-store` crate does **not** encrypt its backing file; the key
+sits alongside non-sensitive config (current station, line filters,
+direction filters, display mode, poll interval) in a JSON file readable
+by any process running as the same macOS user.
+
+This is a known gap documented as MEDIUM-1 in the security review. A fix
+to route `save_app_key` / `load_app_key` through the macOS Keychain (via
+`security-framework`, already a transitive dependency) is planned. Until
+then, treat the `app_key` as a low-value but rotatable credential rather
+than a long-lived secret, and note that the key is a public rate-limit
+token (not a financial or account credential). The iOS app already
+handles storage correctly — see below.
 
 ### `TFL_APP_KEY` environment-variable fallback (INFO-1)
 
