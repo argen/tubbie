@@ -143,6 +143,29 @@ pub const CANONICAL_MULTI_MODE_HUBS: &[(&str, &[&str])] = &[
 /// station-metadata edits within a lunchbreak.
 const STOP_POINTS_TTL: Duration = Duration::from_secs(15 * 60);
 
+/// How long a **partial-warm** stop-points entry stays cached before the
+/// next call retries the failed mode(s).
+///
+/// A partial warm happens when one mode's per-mode fan-out exhausts its
+/// retry budget (typically because the anonymous 50 req/min cooldown is
+/// active) while the other modes succeed. Without this short window, the
+/// partial result would be stamped at the full [`STOP_POINTS_TTL`] and
+/// every search for the next 14 minutes would silently miss every station
+/// the failed mode would have surfaced — the TestFlight regression where
+/// "Bank Underground Station" disappeared from search but "Bank DLR
+/// Station" remained.
+///
+/// 60 seconds balances:
+/// - Giving TfL's rate-limit cooldown (typically 30-60 s after a 429
+///   burst) time to clear before we hammer it again.
+/// - Healing the cache fast enough that a user who waits a beat and
+///   retypes their search sees the missing hub appear.
+///
+/// Callers still get the partial result for the **current** call so
+/// nothing is rendered emptier than before — the window only governs
+/// when the *next* call re-fans.
+const PARTIAL_WARM_RETRY_AFTER: Duration = Duration::from_secs(60);
+
 /// Number of retries per mode when `stop_points_cached` fans out across
 /// `SUPPORTED_MODES`. With 4 attempts and the backoff schedule below, a
 /// single 429 mid-burst (common on the anonymous 50 req/min budget) no
@@ -177,6 +200,13 @@ const LINE_STATUS_TTL: Duration = Duration::from_secs(60);
 struct StopPointsCacheEntry {
     fetched_at: Instant,
     stations: Vec<Station>,
+    /// Modes whose per-mode fetch failed during the warm that produced
+    /// this entry. Empty when every mode succeeded. Non-empty entries
+    /// expire from [`read_fresh_cache`] after
+    /// [`PARTIAL_WARM_RETRY_AFTER`] (not the full [`STOP_POINTS_TTL`]),
+    /// so the failed mode gets another chance on the next call instead
+    /// of poisoning the cache for 14 minutes.
+    failed_modes: Vec<&'static str>,
 }
 
 /// Typed TfL API client, generic over any `TflHttp` transport.
@@ -916,13 +946,38 @@ impl<H: TflHttp> TflClient<H> {
     /// `Station.id`, with line-list union on collision (a tube hub like
     /// Stratford appears under multiple mode endpoints).
     async fn stop_points_cached(&self) -> Result<Vec<Station>, TflError> {
-        // Stale-while-revalidate: if anything is cached (fresh OR stale),
-        // return it immediately.
-        if let Some(cached) = self.read_cache_any() {
-            return Ok(cached);
+        // Stale-while-revalidate for complete entries: if anything was
+        // cached from a fully-successful warm, return it immediately
+        // regardless of TTL — `refresh_stop_points_cache` (in
+        // `lib.rs::run`) handles the periodic refresh out of band.
+        //
+        // Partial entries (one or more modes failed during the warm)
+        // serve SWR for `PARTIAL_WARM_RETRY_AFTER` only. Past that
+        // window, fall through to `refresh_stop_points_inner` so the
+        // failed mode is retried — otherwise the user is stuck with
+        // (e.g.) "Bank DLR Station" only for the whole 14-min TTL,
+        // which is the TestFlight regression this guards against.
+        {
+            let guard = match self.stop_points_cache.lock() {
+                Ok(g) => g,
+                Err(poison) => {
+                    eprintln!(
+                        "[tfl-cache] stop-points cache mutex poisoned on read; recovering"
+                    );
+                    poison.into_inner()
+                }
+            };
+            if let Some(entry) = guard.as_ref() {
+                let is_stale_partial = !entry.failed_modes.is_empty()
+                    && entry.fetched_at.elapsed() >= PARTIAL_WARM_RETRY_AFTER;
+                if !is_stale_partial {
+                    return Ok(entry.stations.clone());
+                }
+            }
         }
 
-        // Cold cache (first call, never warmed). Block on a refresh.
+        // Cold cache, or partial cache past its short retry window.
+        // Block on a refresh.
         self.refresh_stop_points_inner(false).await
     }
 
@@ -995,14 +1050,16 @@ impl<H: TflHttp> TflClient<H> {
         let fetches = self
             .modes
             .iter()
-            .map(|mode| async move { self.fetch_stop_points_for_mode_with_retry(mode).await });
+            .map(|mode| async move { (*mode, self.fetch_stop_points_for_mode_with_retry(mode).await) });
         let per_mode = futures::future::join_all(fetches).await;
 
         let mut by_id: HashMap<String, Station> = HashMap::new();
         let mut last_err: Option<TflError> = None;
-        for (per, err) in per_mode {
+        let mut failed_modes: Vec<&'static str> = Vec::new();
+        for (mode, (per, err)) in per_mode {
             if let Some(err) = err {
                 last_err = Some(err);
+                failed_modes.push(mode);
             }
             let Some(list) = per else { continue };
             for s in list {
@@ -1028,6 +1085,31 @@ impl<H: TflHttp> TflClient<H> {
             return Err(last_err.unwrap_or_else(|| {
                 TflError::NotFound("stop-points: all modes failed".to_string())
             }));
+        }
+
+        // Partial warm — at least one mode succeeded, at least one failed.
+        // Preserve SWR semantics by backfilling any station from the prior
+        // cache that isn't represented in the new result; a single failed
+        // mode must not shrink the cache below what the user already had.
+        // The cache entry is stamped with `failed_modes` populated so
+        // `read_fresh_cache` expires it after `PARTIAL_WARM_RETRY_AFTER`
+        // rather than the full `STOP_POINTS_TTL` — the failed mode gets
+        // another chance on the next call.
+        if !failed_modes.is_empty() {
+            eprintln!(
+                "[tfl-cache] partial warm: succeeded={:?} failed={:?}",
+                self.modes
+                    .iter()
+                    .filter(|m| !failed_modes.contains(m))
+                    .copied()
+                    .collect::<Vec<_>>(),
+                failed_modes,
+            );
+            if let Some(prior) = self.read_cache_any() {
+                for prior_station in prior {
+                    by_id.entry(prior_station.id.clone()).or_insert(prior_station);
+                }
+            }
         }
 
         let mut stations: Vec<Station> = by_id.into_values().collect();
@@ -1067,20 +1149,19 @@ impl<H: TflHttp> TflClient<H> {
             }
         }
 
+        let new_entry = StopPointsCacheEntry {
+            fetched_at: Instant::now(),
+            stations: stations.clone(),
+            failed_modes: failed_modes.clone(),
+        };
         match self.stop_points_cache.lock() {
             Ok(mut guard) => {
-                *guard = Some(StopPointsCacheEntry {
-                    fetched_at: Instant::now(),
-                    stations: stations.clone(),
-                });
+                *guard = Some(new_entry);
             }
             Err(poison) => {
                 eprintln!("[tfl-cache] stop-points cache mutex poisoned; recovering: {poison}");
                 let mut guard = poison.into_inner();
-                *guard = Some(StopPointsCacheEntry {
-                    fetched_at: Instant::now(),
-                    stations: stations.clone(),
-                });
+                *guard = Some(new_entry);
             }
         }
 
@@ -1091,8 +1172,15 @@ impl<H: TflHttp> TflClient<H> {
         Ok(stations)
     }
 
-    /// Returns the cached station list only if it's still within
-    /// [`STOP_POINTS_TTL`].
+    /// Returns the cached station list only if it's still within its
+    /// freshness window.
+    ///
+    /// Full-warm entries (every mode succeeded) use the full
+    /// [`STOP_POINTS_TTL`]. Partial-warm entries (one or more modes failed
+    /// during the warm that produced this entry) use the shorter
+    /// [`PARTIAL_WARM_RETRY_AFTER`] window so the failed mode gets another
+    /// chance soon. Callers reading past either window fall through to
+    /// the SWR path in `stop_points_cached` via [`read_cache_any`].
     fn read_fresh_cache(&self) -> Option<Vec<Station>> {
         let guard = match self.stop_points_cache.lock() {
             Ok(g) => g,
@@ -1102,7 +1190,12 @@ impl<H: TflHttp> TflClient<H> {
             }
         };
         let entry = guard.as_ref()?;
-        if entry.fetched_at.elapsed() < STOP_POINTS_TTL {
+        let ttl = if entry.failed_modes.is_empty() {
+            STOP_POINTS_TTL
+        } else {
+            PARTIAL_WARM_RETRY_AFTER
+        };
+        if entry.fetched_at.elapsed() < ttl {
             Some(entry.stations.clone())
         } else {
             None

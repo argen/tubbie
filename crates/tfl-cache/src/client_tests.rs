@@ -1827,4 +1827,298 @@ mod tests {
              {N} concurrent callers would each fan out {SUPPORTED_MODES_COUNT} mode fetches"
         );
     }
+
+    // -------------------------------------------------------------------------
+    // Partial-warm cache policy (TestFlight regression, 2026-05-19)
+    //
+    // A user with no app_key on cellular cold-launched the iOS app at
+    // Belsize Park. The /StopPoint/Mode/tube fetch tripped the anonymous
+    // 50 req/min cooldown and failed all 4 retries, while DLR / Overground /
+    // Elizabeth succeeded. The cache was stamped with a partial result and
+    // held for the full STOP_POINTS_TTL — every subsequent search returned
+    // only the non-tube canonicals. User symptom: searching "bank" returned
+    // only "Bank DLR Station"; the multi-mode Tube hub (940GZZLUBNK) was
+    // absent.
+    //
+    // Fix contract: when at least one mode's fetch failed AND no prior
+    // cache exists to merge with, the stamped entry MUST be treated as
+    // expired by `read_fresh_cache` after a short retry window (so the
+    // next call re-fans the failed mode instead of waiting 14 min). Callers
+    // still get the partial result for the current call so the immediate
+    // search has something to render.
+    // -------------------------------------------------------------------------
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn search_stations_returns_bank_tube_hub_when_tube_mode_was_rate_limited() {
+        use serde_json::Value;
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use std::sync::Arc;
+
+        // First /stop-points/tube call returns `NotFound` (terminal — no
+        // retry within the same warm; mirrors the production RateLimited
+        // path with the retry budget exhausted, but completes
+        // synchronously so the test stays fast). Subsequent tube calls
+        // succeed via the inner fixture. All other modes always succeed.
+        struct FlakyTubeHttp<H: TflHttp> {
+            inner: H,
+            tube_calls: Arc<AtomicUsize>,
+        }
+        impl<H: TflHttp> TflHttp for FlakyTubeHttp<H> {
+            fn fetch(
+                &self,
+                endpoint: &str,
+                id: &str,
+            ) -> impl std::future::Future<Output = Result<Value, TflError>> + Send {
+                let is_first_tube_warm = endpoint == "stop-points"
+                    && id == "tube"
+                    && self.tube_calls.fetch_add(1, Ordering::SeqCst) == 0;
+                let inner_fut = self.inner.fetch(endpoint, id);
+                async move {
+                    if is_first_tube_warm {
+                        Err(TflError::NotFound("simulated tube outage".to_string()))
+                    } else {
+                        inner_fut.await
+                    }
+                }
+            }
+        }
+
+        let tube_calls = Arc::new(AtomicUsize::new(0));
+        let http = FlakyTubeHttp {
+            inner: FixtureTflHttp::new(workspace_fixtures_dir()),
+            tube_calls: tube_calls.clone(),
+        };
+        let client = TflClient::new(http);
+
+        // Precondition: the first search triggers the cold warm. Tube
+        // fails terminally, the other modes succeed, the cache is
+        // stamped partial. The search result for "bank" therefore lacks
+        // the Tube canonical (940GZZLUBNK).
+        let first = client
+            .search_stations("bank")
+            .await
+            .expect("partial warm still returns the available stations");
+        assert!(
+            !first.iter().any(|s| s.id == "940GZZLUBNK"),
+            "precondition: tube fetch was supposed to fail on the cold warm, so the \
+             Tube Bank canonical should be absent from the first search; got {:?}",
+            first.iter().map(|s| &s.id).collect::<Vec<_>>(),
+        );
+
+        // The bug: pre-fix, the partial cache is stamped for the full
+        // STOP_POINTS_TTL (~14 min). The second search reads it back as
+        // fresh and never retries the tube fetch — so the user is stuck
+        // with "Bank DLR Station" only until the TTL elapses.
+        //
+        // Post-fix: a partial-warm entry uses a much shorter
+        // `PARTIAL_WARM_RETRY_AFTER` window. Once that elapses, the
+        // failed mode is re-fanned. We simulate the elapsed window with
+        // the existing `__test_force_stale_stop_points_cache` helper
+        // (it backdates `fetched_at` past every TTL, partial included)
+        // rather than sleeping 60 s in the test.
+        client
+            .__test_force_stale_stop_points_cache()
+            .expect("test helper must work");
+
+        let second = client
+            .search_stations("bank")
+            .await
+            .expect("second search should re-warm and succeed");
+        assert!(
+            second.iter().any(|s| s.id == "940GZZLUBNK"),
+            "partial warm must not be cached at the full TTL; second search should \
+             re-fan and surface the Tube Bank canonical, but got {:?}",
+            second.iter().map(|s| &s.id).collect::<Vec<_>>(),
+        );
+
+        // Dedupe-by-hub kicked in: now that the Tube canonical is in the
+        // cache, the DLR sibling for HUBBAN is collapsed and the user
+        // sees one row (the Tube one). Defends the per-fix dedupe
+        // contract against a regression where partial-warm SWR leaves
+        // both rows in place.
+        let bank_rows: Vec<&Station> = second
+            .iter()
+            .filter(|s| s.hub_naptan_code.as_deref() == Some("HUBBAN"))
+            .collect();
+        assert_eq!(
+            bank_rows.len(),
+            1,
+            "Bank/HUBBAN must dedupe to exactly one row after the retry; got {:?}",
+            bank_rows.iter().map(|s| &s.id).collect::<Vec<_>>(),
+        );
+        assert!(
+            bank_rows[0].id.starts_with("940GZZLU"),
+            "Tube canonical should win the dedupe; got {}",
+            bank_rows[0].id,
+        );
+
+        // Sanity: tube was actually retried — at least one successful
+        // call followed the failed one. Without this we could be
+        // accidentally green via stale cache or some other shortcut.
+        assert!(
+            tube_calls.load(Ordering::SeqCst) >= 2,
+            "tube fetch must have been retried after the partial warm; got {} calls",
+            tube_calls.load(Ordering::SeqCst),
+        );
+    }
+
+    /// Within `PARTIAL_WARM_RETRY_AFTER` of a partial warm, the cache
+    /// continues to serve the partial result — the next search call
+    /// MUST NOT re-fan because that would hammer TfL during the very
+    /// rate-limit window the partial warm just discovered.
+    #[tokio::test(flavor = "current_thread")]
+    async fn partial_warm_serves_cached_result_within_retry_after_window() {
+        use serde_json::Value;
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use std::sync::Arc;
+
+        struct CountingFlakyTubeHttp<H: TflHttp> {
+            inner: H,
+            tube_calls: Arc<AtomicUsize>,
+        }
+        impl<H: TflHttp> TflHttp for CountingFlakyTubeHttp<H> {
+            fn fetch(
+                &self,
+                endpoint: &str,
+                id: &str,
+            ) -> impl std::future::Future<Output = Result<Value, TflError>> + Send {
+                let is_tube_warm = endpoint == "stop-points" && id == "tube";
+                let is_first_tube_warm = is_tube_warm
+                    && self.tube_calls.fetch_add(1, Ordering::SeqCst) == 0;
+                let inner_fut = self.inner.fetch(endpoint, id);
+                async move {
+                    if is_first_tube_warm {
+                        Err(TflError::NotFound("simulated tube outage".to_string()))
+                    } else {
+                        inner_fut.await
+                    }
+                }
+            }
+        }
+
+        let tube_calls = Arc::new(AtomicUsize::new(0));
+        let http = CountingFlakyTubeHttp {
+            inner: FixtureTflHttp::new(workspace_fixtures_dir()),
+            tube_calls: tube_calls.clone(),
+        };
+        let client = TflClient::new(http);
+
+        let _ = client
+            .search_stations("bank")
+            .await
+            .expect("first search should succeed via partial warm");
+        let tube_after_first = tube_calls.load(Ordering::SeqCst);
+        assert_eq!(
+            tube_after_first, 1,
+            "precondition: tube was fetched exactly once on the cold warm",
+        );
+
+        // No time-advance — we're still well inside the
+        // PARTIAL_WARM_RETRY_AFTER window. The next search MUST be
+        // served from the partial cache, with no additional tube
+        // fetch. This is the "don't hammer TfL during the cooldown"
+        // contract.
+        let _ = client
+            .search_stations("bank")
+            .await
+            .expect("second search should use the cached partial");
+        let tube_after_second = tube_calls.load(Ordering::SeqCst);
+        assert_eq!(
+            tube_after_second, 1,
+            "second search inside the partial-warm retry window must NOT re-fetch tube; \
+             got {tube_after_second} tube calls (expected 1)",
+        );
+    }
+
+    /// When a partial warm happens but a prior (full) cache exists, the
+    /// failed mode's prior stations are backfilled into the new entry —
+    /// the user MUST NOT lose Tube Bank from search just because the
+    /// periodic refresh's tube fetch failed. SWR semantics:
+    /// freshness is best-effort; coverage is not negotiable.
+    #[tokio::test(flavor = "current_thread")]
+    async fn partial_warm_backfills_failed_mode_from_prior_cache() {
+        use serde_json::Value;
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use std::sync::Arc;
+
+        struct LaterFailingTubeHttp<H: TflHttp> {
+            inner: H,
+            tube_calls: Arc<AtomicUsize>,
+        }
+        impl<H: TflHttp> TflHttp for LaterFailingTubeHttp<H> {
+            fn fetch(
+                &self,
+                endpoint: &str,
+                id: &str,
+            ) -> impl std::future::Future<Output = Result<Value, TflError>> + Send {
+                let is_tube_warm = endpoint == "stop-points" && id == "tube";
+                // First tube call (the cold warm) succeeds via fixture;
+                // every subsequent tube call fails. Simulates a healthy
+                // app that has been running long enough to populate a
+                // full cache, then encounters a TfL outage on the
+                // periodic refresh.
+                let call_idx = if is_tube_warm {
+                    Some(self.tube_calls.fetch_add(1, Ordering::SeqCst))
+                } else {
+                    None
+                };
+                let inner_fut = self.inner.fetch(endpoint, id);
+                async move {
+                    match call_idx {
+                        Some(n) if n >= 1 => {
+                            Err(TflError::NotFound("simulated later tube outage".to_string()))
+                        }
+                        _ => inner_fut.await,
+                    }
+                }
+            }
+        }
+
+        let tube_calls = Arc::new(AtomicUsize::new(0));
+        let http = LaterFailingTubeHttp {
+            inner: FixtureTflHttp::new(workspace_fixtures_dir()),
+            tube_calls: tube_calls.clone(),
+        };
+        let client = TflClient::new(http);
+
+        // First warm — every mode succeeds. Full cache stamped with
+        // empty `failed_modes`. Tube Bank canonical present.
+        client
+            .warm_stop_points_cache()
+            .await
+            .expect("initial warm should succeed completely");
+        let initial = client
+            .search_stations("bank")
+            .await
+            .expect("initial search succeeds against full cache");
+        assert!(
+            initial.iter().any(|s| s.id == "940GZZLUBNK"),
+            "precondition: initial warm must have surfaced the Tube Bank canonical; \
+             got {:?}",
+            initial.iter().map(|s| &s.id).collect::<Vec<_>>(),
+        );
+
+        // Now simulate the periodic refresh firing — force a refresh
+        // with `force = true`. This time tube fails. Without the
+        // backfill, the new partial cache would no longer contain
+        // 940GZZLUBNK and the next search would lose Tube Bank.
+        client
+            .refresh_stop_points_cache()
+            .await
+            .expect("forced refresh succeeds via partial warm (other modes ok)");
+
+        let after_partial_refresh = client
+            .search_stations("bank")
+            .await
+            .expect("search after partial refresh succeeds via cache");
+        assert!(
+            after_partial_refresh.iter().any(|s| s.id == "940GZZLUBNK"),
+            "Tube Bank canonical must survive a partial periodic refresh — the failed \
+             mode's prior stations should be backfilled into the new cache entry. Got {:?}",
+            after_partial_refresh
+                .iter()
+                .map(|s| &s.id)
+                .collect::<Vec<_>>(),
+        );
+    }
 }

@@ -261,6 +261,29 @@ referenced from tests and PRs — don't renumber.
     leaves a whole mode missing for the full 14-minute window. User
     symptom: "tube doesn't appear in search but DLR does".
 
+26. **Partial-warm stop-points entries use a short retry window, not the
+    full TTL.** When the per-mode fan-out's retry budget for one mode is
+    exhausted (invariant #21 didn't recover it) but other modes
+    succeeded, `refresh_stop_points_inner` stamps the cache entry with
+    `failed_modes` populated. Such entries are served by
+    `stop_points_cached`'s SWR path only for `PARTIAL_WARM_RETRY_AFTER`
+    (60 s) before the next call re-fans the failed mode. Without this,
+    a TestFlight user on cellular whose cold warm tripped a 429 was
+    stuck with `940GZZDLBNK` (Bank DLR) as the only "bank" search hit
+    for the entire 14-min `STOP_POINTS_TTL` — `940GZZLUBNK` (Bank Tube
+    hub, the multi-mode canonical) never made it into the cache.
+    Additionally, if a **prior cache exists** when the partial warm
+    happens (e.g. the periodic refresh running 14 min after a healthy
+    cold start), the failed mode's stations are backfilled from the
+    prior cache before stamping — a single failed mode MUST NOT shrink
+    the cache below what the user already had. The 60 s window is
+    short enough to heal during a single search session but long
+    enough to let the 429 cooldown clear before we hammer TfL again.
+    Tests in `crates/tfl-cache/src/client_tests.rs`:
+    `search_stations_returns_bank_tube_hub_when_tube_mode_was_rate_limited`,
+    `partial_warm_serves_cached_result_within_retry_after_window`,
+    `partial_warm_backfills_failed_mode_from_prior_cache`.
+
 ### Network status
 
 25. **`severity_bucket` in `tfl-domain` is the single canonical mapping
