@@ -15,6 +15,7 @@ coverage/
 # Environment
 .env
 .env.*
+.envrc
 !.env.example
 
 # Tauri / Rust
