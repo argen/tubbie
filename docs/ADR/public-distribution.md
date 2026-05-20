@@ -152,15 +152,15 @@ those defaults shift.
 The original `distribution-roadmap.md` warned that `macOSPrivateApi:
 true` (used for the undecorated chrome) periodically breaks
 notarization when Apple updates its scanner. The Phase 3 local dry-run
-(`just release-local v0.1.0-dryrun`) confirmed the current Tauri
-2.11.1 + macOS notary combination accepts it.
+(`just release-local v0.1.0-dryrun`) is the verification mechanism;
+see "Rollout status" below for the live result.
 
-**If a future Apple scanner update rejects:** flip
-`macOSPrivateApi: false` in `tauri.conf.json` and accept a stock
-title bar for that release. The undecorated chrome is cosmetic — the
-dot-matrix board content is unaffected. A re-cut with this flip
-unblocks the release within minutes; restoring the undecorated chrome
-is a v0.X.Y+1 polish item once Tauri / Apple work it out upstream.
+**If notarization rejects:** flip `macOSPrivateApi: false` in
+`tauri.conf.json` and accept a stock title bar for that release. The
+undecorated chrome is cosmetic — the dot-matrix board content is
+unaffected. A re-cut with this flip unblocks the release within
+minutes; restoring the undecorated chrome is a v0.X.Y+1 polish item
+once Tauri / Apple work it out upstream.
 
 ### D8. Auto-update default ON
 
@@ -227,3 +227,39 @@ Gatekeeper interaction.
 - Updater key compromise has a manual recovery path (see D4) but no
   automatic one. Compensating control: the key never touches a cloud
   secret store.
+
+## Rollout status
+
+As of 2026-05-20 the M8 pipeline is **built but unproven end-to-end**:
+
+| Step | Status |
+|---|---|
+| PR-A — `tauri-plugin-updater` registered | merged to main |
+| PR-B — signing identity, entitlements, real pubkey in `tauri.conf.json` | merged to main |
+| PR-C — local Justfile release pipeline + pre-push hook + scripts | merged to main |
+| PR-D — updater IPC commands + frontend wrappers | merged to main |
+| PR-E — Settings "Updates" section (seven UI states) | merged to main |
+| PR-F — this ADR + README + CLAUDE.md note + PR-template checkbox | merged to main |
+| Phase 3 — `just release-local v0.1.0-dryrun` notarization | **submitted 2026-05-20 18:23 UTC, still `In Progress` after 2+ hours** (submission id `2762ef28-ac85-4110-816f-0327932dd423`); checked via `xcrun notarytool info ... --keychain-profile tubbie-notary` |
+| Phase 7 — cut v0.1.0 + fresh-account install smoke + v0.1.1 no-op auto-update smoke | blocked on Phase 3 |
+| Phase 8 — flip repo public + apply branch protection | blocked on Phase 7 |
+
+**What to check first on resumption:**
+
+1. Re-run `xcrun notarytool info 2762ef28-ac85-4110-816f-0327932dd423 --keychain-profile tubbie-notary`.
+2. If **Accepted:** continue the dry-run from the `notarize-staple`
+   recipe step that was running (it should auto-progress through
+   `stapler staple` → `stapler validate` → `sign-verify` →
+   `gen-update-manifest`). Confirm `spctl --assess --type execute
+   --verbose=4` returns `accepted source=Notarized Developer ID`.
+   Phase 3 closes; proceed to Phase 7.
+3. If **Invalid:** pull reasons with `xcrun notarytool log
+   2762ef28-ac85-4110-816f-0327932dd423 --keychain-profile
+   tubbie-notary`. If the rejection is `macOSPrivateApi`-related,
+   apply the D7 fallback (flip to `false` in `tauri.conf.json`),
+   re-run `just release-local v0.1.0-dryrun`, and amend D7's status
+   line above.
+4. If still **In Progress** past ~4 h: check
+   <https://developer.apple.com/system-status/> for a Notary Service
+   incident. The local `--wait` polling process is independent of
+   Apple's queue — killing it does not cancel the submission.
