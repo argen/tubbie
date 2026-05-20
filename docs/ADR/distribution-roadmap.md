@@ -1,6 +1,6 @@
 # Distribution Roadmap
 
-**Status:** Proposed
+**Status:** Accepted — M8 executed; see [`public-distribution.md`](./public-distribution.md) for the as-built record (signing identity, key custody, break-glass procedures).
 
 ## Context
 

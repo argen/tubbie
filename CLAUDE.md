@@ -377,6 +377,19 @@ Quick reference, in order:
 5. If `crates/tfl-*` public surface changed, flag iOS submodule
    impact in the PR per `docs/ADR/crates-as-public-contract.md`.
 
+## Releases are local-only
+
+Tagged releases run from the dev's Mac via `just release <tag>` —
+build, sign (Developer ID Application), notarize, staple, manifest,
+tag, push, draft GitHub Release. There is **no CI release workflow**:
+GitHub Free's Actions minute budget is constrained, and the dev's
+local Keychain already holds the signing identity. Do not add a
+`release.yml` (or any new CI job) without first flipping to a paid
+plan. The pre-push hook (`scripts/git-hooks/pre-push`) runs the
+gates locally instead — install via `just install-hooks`.
+
+Full background + break-glass procedures: [`docs/ADR/public-distribution.md`](docs/ADR/public-distribution.md).
+
 ## External consumers of `crates/tfl-*`
 
 `tfl-domain`, `tfl-client`, `tfl-board` are consumed by

@@ -39,13 +39,15 @@ Tubbie replicates the classic amber LED dot-matrix boards found on Underground p
 
 Install Rust via [rustup](https://rustup.rs/). Install `just` via `cargo install just` or `brew install just`.
 
-## Install
+## Clone (for local dev)
 
 ```sh
 git clone git@github.com:argen/tubbie.git
 cd tubbie
 cd web && npm install && cd ..
 ```
+
+End users don't need to clone — see the **Install** section below for the signed-DMG path.
 
 ## Local dev
 
@@ -79,32 +81,43 @@ Anonymous access works out of the box (TfL allows 50 requests/minute without a k
 
 Alternatively, set `TFL_APP_KEY=<key>` in your shell environment before launching.
 
-## Distribution (unsigned builds)
+## Install
 
-### Download a release
+### From a signed release
 
-Tagged builds are published to [GitHub Releases](../../releases) as unsigned `.dmg` installers for Apple Silicon. Mount the DMG, drag Tubbie to Applications, and on first launch right-click the app and choose **Open** to bypass Gatekeeper. Alternatively:
+Download the `.dmg` from [GitHub Releases](../../releases), mount, drag Tubbie to `/Applications`, and launch. Builds are signed with a Developer ID Application certificate and notarized by Apple, so Gatekeeper accepts them on first run — no right-click-Open dance.
 
-```sh
-xattr -dr com.apple.quarantine /Applications/Tubbie.app
-```
+In-app auto-update is on by default: Settings → Updates → **Check for updates**. Toggle off there if you'd rather control updates manually.
+
+#### Gatekeeper recovery
+
+If macOS ever says Tubbie is "damaged or malicious", it usually means the download was interrupted. **Re-download from the Releases page** — don't strip the quarantine attribute by hand. The signed binary's notarization ticket is the safety net; bypassing it loses that protection.
+
+#### Location permission
+
+Tubbie can find your nearest station with one tap. Location is requested **only when you tap "find nearest"**, used in that moment for a single fix, and never sent anywhere except `api.tfl.gov.uk`. macOS will show the system prompt the first time; choose "Allow While Using App".
 
 ### Build locally
 
-`just build` produces the same unsigned `.app` at `target/release/bundle/macos/Tubbie.app` for development use.
+```sh
+just build
+```
+
+Produces an unsigned `.app` at `target/release/bundle/macos/Tubbie.app` for development. Suitable for local use; not for distribution.
 
 ### Cutting a release
 
-Bump `version` in `src-tauri/tauri.conf.json` to match the tag, commit, then push the tag:
+Releases run **locally** from the dev's Mac — there is no CI release workflow. Prerequisites are documented in [`docs/ADR/public-distribution.md`](docs/ADR/public-distribution.md) (Developer ID cert in login Keychain, Ed25519 updater key, `tubbie-notary` notarytool profile, `.envrc`).
 
 ```sh
-git tag v0.1.0
-git push origin v0.1.0
+source .envrc                  # if you don't use direnv
+just bump 0.1.1                # bumps tauri.conf.json + Cargo.toml in lockstep
+# commit + merge the version bump on a PR to main
+just release v0.1.1            # preflight + build + sign + notarize + staple + manifest + tag + push + draft Release
+gh release edit v0.1.1 --draft=false   # publish after smoking from a clean macOS user account
 ```
 
-The `.github/workflows/release.yml` workflow builds the app on a `macos-14` runner and opens a **draft** release with the `.dmg` attached — review it on GitHub and click **Publish** when ready.
-
-Signed and notarized builds for one-click distribution are tracked as M8 in [`docs/ADR/distribution-roadmap.md`](docs/ADR/distribution-roadmap.md).
+`just release` chains the full pipeline. `scripts/preflight.sh` refuses to start if the tree is dirty, the branch isn't `main`, the version doesn't match the tag, or any signing prerequisite is missing.
 
 ## TfL attribution
 
