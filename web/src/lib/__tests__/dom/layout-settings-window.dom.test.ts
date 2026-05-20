@@ -38,10 +38,30 @@ vi.mock('$lib/stores/board.js', () => {
   return {
     startBoardSubscription: spy,
     __spy: spy,
-    board: { subscribe: (fn: (v: null) => void) => { fn(null); return () => undefined; } },
-    boardError: { subscribe: (fn: (v: null) => void) => { fn(null); return () => undefined; } },
-    isLoading: { subscribe: (fn: (v: boolean) => void) => { fn(false); return () => undefined; } },
-    lastUpdateTs: { subscribe: (fn: (v: number) => void) => { fn(0); return () => undefined; } },
+    board: {
+      subscribe: (fn: (v: null) => void) => {
+        fn(null);
+        return () => undefined;
+      },
+    },
+    boardError: {
+      subscribe: (fn: (v: null) => void) => {
+        fn(null);
+        return () => undefined;
+      },
+    },
+    isLoading: {
+      subscribe: (fn: (v: boolean) => void) => {
+        fn(false);
+        return () => undefined;
+      },
+    },
+    lastUpdateTs: {
+      subscribe: (fn: (v: number) => void) => {
+        fn(0);
+        return () => undefined;
+      },
+    },
   };
 });
 
@@ -54,7 +74,12 @@ vi.mock('$lib/stores/config.js', () => ({
     },
   },
   applyTheme: vi.fn(),
-  configError: { subscribe: (fn: (v: null) => void) => { fn(null); return () => undefined; } },
+  configError: {
+    subscribe: (fn: (v: null) => void) => {
+      fn(null);
+      return () => undefined;
+    },
+  },
 }));
 
 vi.mock('$lib/stores/displayMode.js', () => ({
@@ -105,7 +130,9 @@ describe('+layout.svelte — settings window short-circuit', () => {
   it('does NOT call startBoardSubscription when window label is "settings"', async () => {
     _windowLabel = 'settings';
 
-    const { __spy } = await import('$lib/stores/board.js') as unknown as { __spy: ReturnType<typeof vi.fn> };
+    const { __spy } = (await import('$lib/stores/board.js')) as unknown as {
+      __spy: ReturnType<typeof vi.fn>;
+    };
     __spy.mockClear();
 
     render(Layout, {
@@ -123,7 +150,9 @@ describe('+layout.svelte — settings window short-circuit', () => {
   it('DOES call startBoardSubscription when window label is "main"', async () => {
     _windowLabel = 'main';
 
-    const { __spy } = await import('$lib/stores/board.js') as unknown as { __spy: ReturnType<typeof vi.fn> };
+    const { __spy } = (await import('$lib/stores/board.js')) as unknown as {
+      __spy: ReturnType<typeof vi.fn>;
+    };
     __spy.mockClear();
 
     render(Layout, {

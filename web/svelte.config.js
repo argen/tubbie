@@ -21,7 +21,7 @@ const config = {
       // Suppress 404 for static assets that are not page routes (e.g.
       // /favicon.png is referenced from app.html but is not served in
       // development — Tauri bundles the icon separately via tauri.conf.json).
-      handleHttpError: ({ path, referrer, message }) => {
+      handleHttpError: ({ path, referrer: _referrer, message }) => {
         if (path === '/favicon.png') return;
         throw new Error(message);
       },

@@ -23,12 +23,7 @@
 import { describe, expect, it, beforeEach, vi } from 'vitest';
 import { render, fireEvent, waitFor } from '@testing-library/svelte';
 import UpdatesSection from '$lib/components/UpdatesSection.svelte';
-import {
-  mockInvoke,
-  setMockHandler,
-  resetMockHandlers,
-  sampleUpdateInfo,
-} from '$lib/ipc/mock.js';
+import { mockInvoke, setMockHandler, resetMockHandlers, sampleUpdateInfo } from '$lib/ipc/mock.js';
 
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: (cmd: string, args: Record<string, unknown>) => mockInvoke(cmd, args),
@@ -70,7 +65,9 @@ describe('Settings — Updates section', () => {
   it('renders the never-checked state on mount and pins the polite live region', async () => {
     render(UpdatesSection);
     // Wait for onMount's async work (loadUpdatePrefs + getVersion) to settle.
-    await waitFor(() => expect(statusText()).toMatch(/Tubbie 0\.1\.0/));
+    await waitFor(() => {
+      expect(statusText()).toMatch(/Tubbie 0\.1\.0/);
+    });
     expect(statusText()).not.toMatch(/up to date/i);
     expect(installBtn()).toBeNull();
     // aria-live="polite" — must NOT be aria-live="assertive" / role=alert.
@@ -83,7 +80,7 @@ describe('Settings — Updates section', () => {
     // Stall the IPC so the in-flight `checking` state is observable.
     // Without the stall, the resolution would land in the same micro-
     // task batch and the intermediate state would never be visible.
-    let resolveCheck: ((v: null) => void) | null = null;
+    let resolveCheck!: (v: null) => void;
     setMockHandler(
       'check_for_updates',
       () =>
@@ -94,11 +91,15 @@ describe('Settings — Updates section', () => {
     render(UpdatesSection);
     await waitFor(() => statusText());
     await fireEvent.click(checkBtn());
-    await waitFor(() => expect(statusText()).toMatch(/checking/i));
+    await waitFor(() => {
+      expect(statusText()).toMatch(/checking/i);
+    });
     expect(checkBtn().disabled).toBe(true);
     // Resolve so the stalled handler can finish.
-    resolveCheck?.(null);
-    await waitFor(() => expect(statusText()).toMatch(/up to date/i));
+    resolveCheck(null);
+    await waitFor(() => {
+      expect(statusText()).toMatch(/up to date/i);
+    });
   });
 
   it('transitions to up-to-date when the IPC returns null', async () => {
@@ -106,7 +107,9 @@ describe('Settings — Updates section', () => {
     render(UpdatesSection);
     await waitFor(() => statusText());
     await fireEvent.click(checkBtn());
-    await waitFor(() => expect(statusText()).toMatch(/up to date/i));
+    await waitFor(() => {
+      expect(statusText()).toMatch(/up to date/i);
+    });
     expect(statusText()).toMatch(/Tubbie 0\.1\.0/);
     expect(installBtn()).toBeNull();
   });
@@ -116,7 +119,9 @@ describe('Settings — Updates section', () => {
     render(UpdatesSection);
     await waitFor(() => statusText());
     await fireEvent.click(checkBtn());
-    await waitFor(() => expect(statusText()).toMatch(/update available/i));
+    await waitFor(() => {
+      expect(statusText()).toMatch(/update available/i);
+    });
     expect(statusText()).toMatch(/0\.1\.1/);
     const inst = installBtn();
     expect(inst).not.toBeNull();
@@ -126,19 +131,29 @@ describe('Settings — Updates section', () => {
 
   it('clicking Install transitions to installing and disables both buttons', async () => {
     setMockHandler('check_for_updates', () => sampleUpdateInfo);
-    let resolveInstall: (() => void) | null = null;
-    setMockHandler('install_update', () => new Promise<null>((resolve) => {
-      resolveInstall = () => resolve(null);
-    }));
+    let resolveInstall!: () => void;
+    setMockHandler(
+      'install_update',
+      () =>
+        new Promise<null>((resolve) => {
+          resolveInstall = () => {
+            resolve(null);
+          };
+        }),
+    );
     render(UpdatesSection);
     await waitFor(() => statusText());
     await fireEvent.click(checkBtn());
-    await waitFor(() => expect(installBtn()).not.toBeNull());
+    await waitFor(() => {
+      expect(installBtn()).not.toBeNull();
+    });
     await fireEvent.click(installBtn()!);
-    await waitFor(() => expect(statusText()).toMatch(/installing/i));
+    await waitFor(() => {
+      expect(statusText()).toMatch(/installing/i);
+    });
     expect(checkBtn().disabled).toBe(true);
     expect(installBtn()?.disabled).toBe(true);
-    resolveInstall?.();
+    resolveInstall();
   });
 
   it('shows a polite network-error message when check fails with a non-signature error', async () => {
@@ -148,7 +163,9 @@ describe('Settings — Updates section', () => {
     render(UpdatesSection);
     await waitFor(() => statusText());
     await fireEvent.click(checkBtn());
-    await waitFor(() => expect(statusText()).toMatch(/couldn.t reach/i));
+    await waitFor(() => {
+      expect(statusText()).toMatch(/couldn.t reach/i);
+    });
     expect(checkBtn().textContent?.toLowerCase()).toMatch(/try again/);
     // Network-error must NOT auto-retry — the button stays clickable but the
     // command isn't re-invoked until the user clicks.
@@ -164,7 +181,9 @@ describe('Settings — Updates section', () => {
     render(UpdatesSection);
     await waitFor(() => statusText());
     await fireEvent.click(checkBtn());
-    await waitFor(() => expect(statusText()).toMatch(/verification failed/i));
+    await waitFor(() => {
+      expect(statusText()).toMatch(/verification failed/i);
+    });
     expect(statusText()).toMatch(/installed version is safe/i);
     expect(statusText()).toMatch(/github\.com\/argen\/tubbie\/releases/i);
     // No auto-install path from this state.
@@ -179,9 +198,13 @@ describe('Settings — Updates section', () => {
     render(UpdatesSection);
     await waitFor(() => statusText());
     await fireEvent.click(checkBtn());
-    await waitFor(() => expect(installBtn()).not.toBeNull());
+    await waitFor(() => {
+      expect(installBtn()).not.toBeNull();
+    });
     await fireEvent.click(installBtn()!);
-    await waitFor(() => expect(statusText()).toMatch(/verification failed/i));
+    await waitFor(() => {
+      expect(statusText()).toMatch(/verification failed/i);
+    });
   });
 
   it('auto-check toggle defaults ON and persists via saveUpdatePrefs', async () => {
@@ -191,10 +214,14 @@ describe('Settings — Updates section', () => {
       return null;
     });
     render(UpdatesSection);
-    await waitFor(() => expect(autoCheckToggle().checked).toBe(true));
+    await waitFor(() => {
+      expect(autoCheckToggle().checked).toBe(true);
+    });
     // User opts out.
     await fireEvent.click(autoCheckToggle());
-    await waitFor(() => expect(saved.auto_check).toBe(false));
+    await waitFor(() => {
+      expect(saved.auto_check).toBe(false);
+    });
     expect(autoCheckToggle().checked).toBe(false);
   });
 
@@ -203,10 +230,14 @@ describe('Settings — Updates section', () => {
       throw new Error('save_update_prefs: store locked');
     });
     render(UpdatesSection);
-    await waitFor(() => expect(autoCheckToggle().checked).toBe(true));
+    await waitFor(() => {
+      expect(autoCheckToggle().checked).toBe(true);
+    });
     await fireEvent.click(autoCheckToggle());
     // The optimistic flip happens immediately, then the save throws and
     // we revert. Wait for the revert.
-    await waitFor(() => expect(autoCheckToggle().checked).toBe(true));
+    await waitFor(() => {
+      expect(autoCheckToggle().checked).toBe(true);
+    });
   });
 });

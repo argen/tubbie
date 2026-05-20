@@ -41,7 +41,7 @@
     | { kind: 'network-error'; message: string }
     | { kind: 'signature-error'; message: string };
 
-  let state = $state<UpdateState>({ kind: 'never-checked' });
+  let phase = $state<UpdateState>({ kind: 'never-checked' });
   let autoCheck = $state(true);
   let currentVersion = $state('—');
 
@@ -71,28 +71,28 @@
   }
 
   async function handleCheck(): Promise<void> {
-    state = { kind: 'checking' };
+    phase = { kind: 'checking' };
     try {
       const info = await checkForUpdates();
       if (info === null) {
-        state = { kind: 'up-to-date', lastCheckedAt: Date.now() };
+        phase = { kind: 'up-to-date', lastCheckedAt: Date.now() };
       } else {
-        state = { kind: 'available', info };
+        phase = { kind: 'available', info };
       }
     } catch (err: unknown) {
-      state = classifyError(err);
+      phase = classifyError(err);
     }
   }
 
   async function handleInstall(): Promise<void> {
-    state = { kind: 'installing' };
+    phase = { kind: 'installing' };
     try {
       await installUpdate();
       // `installUpdate` only resolves if Tauri couldn't relaunch;
       // normally the process exits + restarts before this line.
       // Stay in `installing` to avoid flashing a stale up-to-date.
     } catch (err: unknown) {
-      state = classifyError(err);
+      phase = classifyError(err);
     }
   }
 
@@ -107,10 +107,10 @@
     }
   }
 
-  // Human-readable copy keyed off `state.kind`. Plain text — no HTML —
+  // Human-readable copy keyed off `phase.kind`. Plain text — no HTML —
   // because `aria-live="polite"` reads textContent.
   let statusLine = $derived.by(() => {
-    switch (state.kind) {
+    switch (phase.kind) {
       case 'never-checked':
         return `Tubbie ${currentVersion}`;
       case 'checking':
@@ -118,7 +118,7 @@
       case 'up-to-date':
         return `You're up to date · Tubbie ${currentVersion}`;
       case 'available':
-        return `Update available — Tubbie ${state.info.version}`;
+        return `Update available — Tubbie ${phase.info.version}`;
       case 'installing':
         return 'Installing — please don’t close Tubbie';
       case 'network-error':
@@ -129,19 +129,19 @@
   });
 
   let checkButtonLabel = $derived.by(() => {
-    if (state.kind === 'checking') return 'Checking…';
-    if (state.kind === 'available' || state.kind === 'installing') return 'Check for updates';
-    if (state.kind === 'network-error' || state.kind === 'signature-error') return 'Try again';
+    if (phase.kind === 'checking') return 'Checking…';
+    if (phase.kind === 'available' || phase.kind === 'installing') return 'Check for updates';
+    if (phase.kind === 'network-error' || phase.kind === 'signature-error') return 'Try again';
     return 'Check for updates';
   });
 
   let checkButtonDisabled = $derived.by(
-    () => state.kind === 'checking' || state.kind === 'installing',
+    () => phase.kind === 'checking' || phase.kind === 'installing',
   );
 
-  let showInstallButton = $derived(state.kind === 'available' || state.kind === 'installing');
+  let showInstallButton = $derived(phase.kind === 'available' || phase.kind === 'installing');
 
-  let installButtonDisabled = $derived(state.kind === 'installing');
+  let installButtonDisabled = $derived(phase.kind === 'installing');
 </script>
 
 <section class="settings__section" aria-labelledby="section-updates">
@@ -152,9 +152,8 @@
   </p>
 
   <p class="settings__api-hint">
-    Tubbie checks the GitHub Releases feed for signed updates. The download is
-    verified against a public key bundled with this app — a third party can’t
-    push a replacement.
+    Tubbie checks the GitHub Releases feed for signed updates. The download is verified against a
+    public key bundled with this app — a third party can’t push a replacement.
   </p>
 
   <div class="settings__api-actions">
@@ -177,7 +176,7 @@
         data-testid="updates-install-btn"
         aria-label="Install update and restart Tubbie"
       >
-        {state.kind === 'installing' ? 'Installing…' : 'Install and restart'}
+        {phase.kind === 'installing' ? 'Installing…' : 'Install and restart'}
       </button>
     {/if}
   </div>
