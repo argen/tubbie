@@ -637,6 +637,12 @@ pub(crate) async fn apply_display_mode_effects(
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_store::Builder::default().build())
+        // Updater plugin. PR-A wiring; `active: false` in `tauri.conf.json`
+        // keeps it inert until PR-B lands the real pubkey + signing config.
+        // Registered here so the test harness (`updater_plugin_registered.rs`)
+        // can assert `updater_builder()` succeeds without needing to mirror
+        // the registration in `mock_builder()`.
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
             // Read saved API key, if any. The client is constructed once at
             // startup. Changing the key requires a restart (Settings UI shows

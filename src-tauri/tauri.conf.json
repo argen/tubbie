@@ -54,5 +54,15 @@
       "entitlements": null,
       "infoPlist": "Info.plist"
     }
+  },
+  "plugins": {
+    "updater": {
+      "active": false,
+      "dialog": false,
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEU0REEwOUJDOTc5QUJDQzMKUldURHZKcVh2QW5hNVBTSWhlUklIZllKODRNY25oV214UThPU25ZMDI2NFR4MFZrbTJtT1VEQ1AK",
+      "endpoints": [
+        "https://github.com/argen/tubbie/releases/latest/download/latest.json"
+      ]
+    }
   }
 }

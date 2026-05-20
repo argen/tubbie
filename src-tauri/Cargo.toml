@@ -17,6 +17,12 @@ tfl-board = { path = "../crates/tfl-board" }
 
 tauri = { version = "2", features = ["macos-private-api", "test", "tray-icon", "image-png"] }
 tauri-plugin-store = "2"
+# Pinned to the exact patch matched against the project's Tauri version.
+# Tauri 2.x's updater plugin has had migration churn between point releases;
+# floating on "2" risks a silent break on `cargo update`. Bump in lockstep
+# with the `tauri` crate after running the manifest-shape test
+# (`updater_manifest_shape.rs`, added in PR-B).
+tauri-plugin-updater = "=2.10.1"
 
 serde = { workspace = true }
 serde_json = { workspace = true }
@@ -51,3 +57,4 @@ objc2-core-location = { version = "0.3", features = [
 # that exercise `save_config_inner → cfg_tx → stream` will not compile.
 tokio = { workspace = true, features = ["test-util"] }
 tempfile = "3"
+url = { workspace = true }
