@@ -53,11 +53,9 @@
   <div class="config-error" role="alert">
     <p class="config-error__message">{$configError}</p>
     <p class="config-error__hint">
-      <button
-        type="button"
-        class="config-error__link"
-        onclick={() => void openSettingsWindow()}
-      >Open Settings</button> to fix the configuration.
+      <button type="button" class="config-error__link" onclick={() => void openSettingsWindow()}
+        >Open Settings</button
+      > to fix the configuration.
     </p>
   </div>
 {/if}
@@ -72,11 +70,9 @@
     <p class="error__hint">
       Check your connection and open Settings to verify the station configuration.
     </p>
-    <button
-      type="button"
-      class="error__settings-link"
-      onclick={() => void openSettingsWindow()}
-    >Open Settings</button>
+    <button type="button" class="error__settings-link" onclick={() => void openSettingsWindow()}
+      >Open Settings</button
+    >
   </div>
 {:else if $board !== null}
   <Board
