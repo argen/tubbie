@@ -15,6 +15,8 @@ import type {
   LocationFix,
   NearbyStation,
   Station,
+  UpdateInfo,
+  UpdatePrefs,
 } from './types.js';
 
 // ---------------------------------------------------------------------------
@@ -126,6 +128,18 @@ export const sampleDisruptedLineStatus: LineStatus = {
   disruption_text: 'NORTHERN LINE: Minor delays due to an earlier signal failure at London Bridge.',
 };
 
+/** Default update prefs as the Rust side returns when nothing has been saved. */
+export const sampleUpdatePrefsDefault: UpdatePrefs = {
+  auto_check: true,
+};
+
+/** Sample available-update info — used by Settings DOM tests in PR-E. */
+export const sampleUpdateInfo: UpdateInfo = {
+  version: '0.1.1',
+  current_version: '0.1.0',
+  body: '### Tubbie 0.1.1\n\n- Bug fixes\n',
+};
+
 // ---------------------------------------------------------------------------
 // Mock invoke / listen
 // ---------------------------------------------------------------------------
@@ -152,6 +166,13 @@ const defaultHandlers: Record<string, MockInvokeHandler> = {
   remove_favorite: () => [],
   find_nearest_stations: () => sampleNearbyStations,
   request_current_location: () => sampleLocationFix,
+  // Updater (M8 PR-D). Default: no update available; default prefs.
+  // DOM tests in PR-E override these via setMockHandler() to exercise
+  // the eight Settings states.
+  check_for_updates: () => null,
+  install_update: () => null,
+  load_update_prefs: () => sampleUpdatePrefsDefault,
+  save_update_prefs: () => null,
 };
 
 let handlers: Record<string, MockInvokeHandler> = { ...defaultHandlers };

@@ -263,3 +263,44 @@ export function isBoardErrorPayload(v: unknown): v is BoardErrorPayload {
   if (!isRecord(v)) return false;
   return typeof v.message === 'string';
 }
+
+// ---------------------------------------------------------------------------
+// UpdateInfo / UpdatePrefs — auto-update IPC (M8 PR-D)
+// ---------------------------------------------------------------------------
+
+/** Information about an available signed update. */
+export interface UpdateInfo {
+  /** New version, e.g. "0.1.1". */
+  version: string;
+  /** Currently-installed version at check time, e.g. "0.1.0". */
+  current_version: string;
+  /** Markdown release notes from the manifest. Empty when absent. */
+  body: string;
+}
+
+export function isUpdateInfo(v: unknown): v is UpdateInfo {
+  if (!isRecord(v)) return false;
+  return (
+    typeof v.version === 'string' &&
+    typeof v.current_version === 'string' &&
+    typeof v.body === 'string'
+  );
+}
+
+/**
+ * Auto-update preferences. `auto_check` defaults to `true` — opt-OUT,
+ * not opt-in. Stale binaries with old WKWebView CVEs is the wrong
+ * default for a live-data app.
+ *
+ * "Skip this version" / `deferred_version` is deliberately absent for
+ * v0.1.0 (the banner only surfaces in Settings, which is closed by
+ * default, so the user is never nagged).
+ */
+export interface UpdatePrefs {
+  auto_check: boolean;
+}
+
+export function isUpdatePrefs(v: unknown): v is UpdatePrefs {
+  if (!isRecord(v)) return false;
+  return typeof v.auto_check === 'boolean';
+}

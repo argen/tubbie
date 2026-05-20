@@ -51,7 +51,8 @@ use tauri::AppHandle;
 use tauri_plugin_store::{Store, StoreExt};
 
 use crate::state::{
-    default_board_config, ConfigStore, DisplayPrefs, FavoritesStore, DEFAULT_DISPLAY_MODE,
+    default_board_config, ConfigStore, DisplayPrefs, FavoritesStore, UpdatePrefs,
+    DEFAULT_DISPLAY_MODE,
 };
 use tfl_board::BoardConfig;
 use tfl_domain::Favorite;
@@ -200,6 +201,14 @@ impl ConfigStore for KeychainBackedConfigStore {
 
     async fn save_display_prefs(&self, prefs: &DisplayPrefs) -> Result<(), String> {
         self.inner().save_display_prefs(prefs).await
+    }
+
+    async fn load_update_prefs(&self) -> Result<UpdatePrefs, String> {
+        self.inner().load_update_prefs().await
+    }
+
+    async fn save_update_prefs(&self, prefs: &UpdatePrefs) -> Result<(), String> {
+        self.inner().save_update_prefs(prefs).await
     }
 
     // App key → Keychain.
@@ -488,6 +497,29 @@ impl ConfigStore for StorePluginConfigStore {
         let store = Arc::clone(&self.store);
         tokio::task::spawn_blocking(move || {
             store.set("display_prefs", value);
+            store
+                .save()
+                .map_err(|e| format!("failed to save config store: {e}"))
+        })
+        .await
+        .map_err(|e| format!("spawn_blocking panicked: {e}"))??;
+        Ok(())
+    }
+
+    async fn load_update_prefs(&self) -> Result<UpdatePrefs, String> {
+        let prefs = self
+            .store
+            .get("update_prefs")
+            .and_then(|v| serde_json::from_value::<UpdatePrefs>(v).ok())
+            .unwrap_or_default();
+        Ok(prefs)
+    }
+
+    async fn save_update_prefs(&self, prefs: &UpdatePrefs) -> Result<(), String> {
+        let value = serde_json::to_value(prefs).map_err(|e| format!("serialise error: {e}"))?;
+        let store = Arc::clone(&self.store);
+        tokio::task::spawn_blocking(move || {
+            store.set("update_prefs", value);
             store
                 .save()
                 .map_err(|e| format!("failed to save config store: {e}"))

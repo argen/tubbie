@@ -32,14 +32,16 @@
 //! cancellation token bound to `WindowEvent::Destroyed`. The stream should
 //! emit `Board` snapshots as `app.emit("board-update", board)` events.
 
+use serde::{Deserialize, Serialize};
 use tauri::State;
+use tauri_plugin_updater::UpdaterExt;
 
 use tfl_board::{BoardConfig, VALID_THEME_IDS};
 use tfl_domain::{
     is_supported_line_id, Board, Favorite, LineRef, LineStatus, NearbyStation, Station,
 };
 
-use crate::state::{AppState, DisplayPrefs};
+use crate::state::{AppState, DisplayPrefs, UpdatePrefs};
 
 // ---------------------------------------------------------------------------
 // Validation functions (pub within crate for tests)
@@ -930,6 +932,100 @@ pub async fn apply_board_size(
 ) -> Result<(), String> {
     let (w, h) = validate_board_size(width, height)?;
     crate::apply_board_size_effects(&app, w, h).await
+}
+
+// ---------------------------------------------------------------------------
+// Updater commands (M8 PR-D)
+// ---------------------------------------------------------------------------
+
+/// IPC-boundary DTO for an available update. Mirrors the subset of
+/// `tauri_plugin_updater::Update` fields the renderer actually displays.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct UpdateInfoDto {
+    /// New version (e.g. "0.1.1").
+    pub version: String,
+    /// Currently-installed version, captured at check time so the renderer
+    /// can show "0.1.0 -> 0.1.1" without a second IPC round-trip.
+    pub current_version: String,
+    /// Markdown release notes from the manifest. Empty string when absent.
+    pub body: String,
+}
+
+/// Check the updater endpoint for a newer version. Returns:
+///
+/// - `Ok(None)` when no update is available or `plugins.updater.active`
+///   is `false` (the plugin short-circuits in that case).
+/// - `Ok(Some(_))` when a newer signed version is available.
+/// - `Err(_)` for network or signature failures. The renderer distinguishes
+///   the two via the error message — a `signature` substring routes to the
+///   security-event copy in the Settings banner.
+#[tauri::command]
+pub async fn check_for_updates(
+    app: tauri::AppHandle,
+) -> Result<Option<UpdateInfoDto>, String> {
+    let updater = app
+        .updater_builder()
+        .build()
+        .map_err(|e| format!("updater build: {e}"))?;
+    match updater.check().await {
+        Ok(Some(update)) => Ok(Some(UpdateInfoDto {
+            version: update.version.clone(),
+            current_version: update.current_version.clone(),
+            body: update.body.clone().unwrap_or_default(),
+        })),
+        Ok(None) => Ok(None),
+        Err(e) => Err(format!("check_for_updates: {e}")),
+    }
+}
+
+/// Download and install the latest signed update, then restart the app.
+///
+/// Re-checks the endpoint inside the command so the install operates on
+/// whatever is currently signed-and-published — avoids state-management
+/// of a held `Update` handle across IPC calls. Worst case (publisher
+/// pulled the release between `check_for_updates` and `install_update`):
+/// the command returns `Err` and the renderer surfaces the failure.
+///
+/// `download_and_install` runs the install on success; on Tauri 2.x macOS
+/// the app process is then asked to exit and re-launch. The two no-op
+/// progress callbacks satisfy the API contract without piping bytes
+/// across IPC for v0.1.0 — release artifacts are ~10 MB over modern
+/// broadband, well under the 2 s threshold where a progress bar pays
+/// for itself (revisit in v0.2.0 if user feedback warrants).
+#[tauri::command]
+pub async fn install_update(app: tauri::AppHandle) -> Result<(), String> {
+    let updater = app
+        .updater_builder()
+        .build()
+        .map_err(|e| format!("updater build: {e}"))?;
+    let update = updater
+        .check()
+        .await
+        .map_err(|e| format!("install_update check: {e}"))?
+        .ok_or_else(|| "install_update: no update available".to_string())?;
+    update
+        .download_and_install(|_, _| {}, || {})
+        .await
+        .map_err(|e| format!("install_update: {e}"))
+}
+
+/// Load the persisted auto-update preferences. Returns the default
+/// (`auto_check: true`) when nothing has been saved.
+#[tauri::command]
+pub async fn load_update_prefs(state: State<'_, AppState>) -> Result<UpdatePrefs, String> {
+    state.config_store.load_update_prefs().await
+}
+
+/// Persist the auto-update preferences.
+///
+/// Does **not** publish through `cfg_tx` — these flags don't affect the
+/// arrivals-board pipeline. Mirrors the `display_prefs` precedent.
+#[tauri::command]
+pub async fn save_update_prefs(
+    prefs: UpdatePrefs,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    state.config_store.save_update_prefs(&prefs).await
 }
 
 // ---------------------------------------------------------------------------
@@ -2901,4 +2997,82 @@ mod tests {
     // Together these form a multi-layer defence that a future maintainer can
     // upgrade to a true IPC-dispatch test when the runtime constraint lifts.
     // -----------------------------------------------------------------------
+
+    // -----------------------------------------------------------------------
+    // Updater preferences round-trip (M8 PR-D)
+    // -----------------------------------------------------------------------
+
+    #[tokio::test]
+    async fn load_update_prefs_default_is_auto_check_true() {
+        // Pin the opt-OUT default. A live-data app shipping with stale
+        // binaries (because auto-check defaulted off) would leave users on
+        // unfixed WKWebView CVEs. Flipping this default is a security
+        // regression — must trip the test.
+        let state = fixture_state();
+        let loaded = state
+            .config_store
+            .load_update_prefs()
+            .await
+            .expect("load default prefs");
+        assert!(
+            loaded.auto_check,
+            "auto_check must default to true; got {loaded:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn save_update_prefs_round_trips() {
+        let state = fixture_state();
+        let prefs = UpdatePrefs { auto_check: false };
+        state
+            .config_store
+            .save_update_prefs(&prefs)
+            .await
+            .expect("save");
+        let loaded = state
+            .config_store
+            .load_update_prefs()
+            .await
+            .expect("load");
+        assert_eq!(loaded, prefs);
+    }
+
+    #[tokio::test]
+    async fn update_prefs_storage_does_not_affect_other_keys() {
+        // Saving update_prefs MUST NOT clobber adjacent store keys
+        // (board_config, display_mode, display_prefs). All four share the
+        // same underlying tauri-plugin-store file; a stray serialization
+        // mistake here could corrupt the saved station id and surface
+        // as "my home station reset itself overnight".
+        //
+        // BoardConfig doesn't implement PartialEq (it lives in
+        // `crates/tfl-board`, which is the iOS-pinned public contract —
+        // adding PartialEq would force a tfl-* edit this PR is forbidden
+        // from making). Inspect station_id + line_ids field-by-field
+        // instead; those are the surfaces a save-key collision would
+        // realistically corrupt.
+        let state = fixture_state();
+        let original_cfg = state
+            .config_store
+            .load_config()
+            .await
+            .expect("load original cfg");
+
+        state
+            .config_store
+            .save_update_prefs(&UpdatePrefs { auto_check: false })
+            .await
+            .expect("save update prefs");
+
+        let cfg_after = state
+            .config_store
+            .load_config()
+            .await
+            .expect("load cfg after");
+        assert_eq!(cfg_after.station_id, original_cfg.station_id);
+        assert_eq!(cfg_after.line_ids, original_cfg.line_ids);
+        assert_eq!(cfg_after.directions, original_cfg.directions);
+        assert_eq!(cfg_after.poll_seconds, original_cfg.poll_seconds);
+        assert_eq!(cfg_after.theme, original_cfg.theme);
+    }
 }

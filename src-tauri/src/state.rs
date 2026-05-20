@@ -72,6 +72,13 @@ pub trait ConfigStore: Send + Sync + 'static {
 
     /// Atomically set and persist the desktop display preferences.
     async fn save_display_prefs(&self, prefs: &DisplayPrefs) -> Result<(), String>;
+
+    /// Load the persisted auto-update preferences. Returns the default
+    /// (`auto_check: true`) when nothing has been saved.
+    async fn load_update_prefs(&self) -> Result<UpdatePrefs, String>;
+
+    /// Atomically set and persist the auto-update preferences.
+    async fn save_update_prefs(&self, prefs: &UpdatePrefs) -> Result<(), String>;
 }
 
 // ---------------------------------------------------------------------------
@@ -95,6 +102,34 @@ pub struct DisplayPrefs {
     /// (`apply_filters`) MUST NOT see this; toggling it must update the
     /// rendered board within a frame, not on the next stream tick.
     pub group_destinations: bool,
+}
+
+// ---------------------------------------------------------------------------
+// UpdatePrefs — desktop-only auto-update preferences
+// ---------------------------------------------------------------------------
+
+/// User preferences for the auto-update flow. Persisted under the
+/// `"update_prefs"` store key.
+///
+/// Default: `auto_check = true`. This is a live-data app whose users want
+/// current state; defaulting to off would ship stale binaries with old
+/// WKWebView CVEs. Opt-OUT, not opt-in.
+///
+/// `deferred_version` (the "Skip this version" affordance) is deliberately
+/// absent for v0.1.0 — the banner only surfaces in Settings (which is
+/// closed by default), so the user is never nagged.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct UpdatePrefs {
+    /// When `true`, the shell schedules a one-shot update check 30 s after
+    /// `setup()`. When `false`, only manual "Check now" triggers a check.
+    pub auto_check: bool,
+}
+
+impl Default for UpdatePrefs {
+    fn default() -> Self {
+        Self { auto_check: true }
+    }
 }
 
 /// Default display mode used when no value has been persisted.
@@ -267,6 +302,20 @@ impl ConfigStore for MemoryConfigStore {
     async fn save_display_prefs(&self, prefs: &DisplayPrefs) -> Result<(), String> {
         let value = serde_json::to_value(prefs).map_err(|e| format!("serialise error: {e}"))?;
         self.set_raw("display_prefs", value);
+        Ok(())
+    }
+
+    async fn load_update_prefs(&self) -> Result<UpdatePrefs, String> {
+        let prefs = self
+            .get_raw("update_prefs")
+            .and_then(|v| serde_json::from_value::<UpdatePrefs>(v).ok())
+            .unwrap_or_default();
+        Ok(prefs)
+    }
+
+    async fn save_update_prefs(&self, prefs: &UpdatePrefs) -> Result<(), String> {
+        let value = serde_json::to_value(prefs).map_err(|e| format!("serialise error: {e}"))?;
+        self.set_raw("update_prefs", value);
         Ok(())
     }
 }

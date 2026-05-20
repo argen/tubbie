@@ -18,6 +18,8 @@ import {
   type LocationFix,
   type NearbyStation,
   type Station,
+  type UpdateInfo,
+  type UpdatePrefs,
   isBoard,
   isBoardConfig,
   isBoardErrorPayload,
@@ -27,6 +29,8 @@ import {
   isLocationFix,
   isNearbyStation,
   isStation,
+  isUpdateInfo,
+  isUpdatePrefs,
 } from './types.js';
 
 // ---------------------------------------------------------------------------
@@ -334,4 +338,58 @@ export async function onBoardError(
       handler(event.payload);
     }
   });
+}
+
+// ---------------------------------------------------------------------------
+// Updater (M8 PR-D)
+// ---------------------------------------------------------------------------
+
+/**
+ * Check the configured updater endpoint for a newer signed version.
+ *
+ * Returns `null` when no update is available or when the plugin is
+ * `active: false`. Returns an `UpdateInfo` when one is available.
+ * Throws when the network or signature check fails — callers in
+ * Settings inspect the error message for the substring `"signature"`
+ * to route to the security-event copy (distinct from network-error).
+ */
+export async function checkForUpdates(): Promise<UpdateInfo | null> {
+  const raw = await invoke<unknown>('check_for_updates');
+  if (raw === null || raw === undefined) return null;
+  if (!isUpdateInfo(raw)) {
+    throw new TypeError('check_for_updates: unexpected response shape');
+  }
+  return raw;
+}
+
+/**
+ * Download and install the latest signed update, then restart the app.
+ *
+ * The Rust side re-checks the endpoint inside the command so the install
+ * operates on the currently-signed-and-published artifact — avoids
+ * state-management of a held `Update` handle across IPC calls. Worst case
+ * (publisher pulled the release between `checkForUpdates` and
+ * `installUpdate`): the wrapper rejects and the renderer surfaces it as
+ * a network-error state.
+ */
+export async function installUpdate(): Promise<void> {
+  await invoke<undefined>('install_update');
+}
+
+/**
+ * Load auto-update preferences. Defaults to `{ auto_check: true }` —
+ * opt-OUT, not opt-in. Stale binaries with old WKWebView CVEs is the
+ * wrong default for a live-data app.
+ */
+export async function loadUpdatePrefs(): Promise<UpdatePrefs> {
+  const raw = await invoke<unknown>('load_update_prefs');
+  if (!isUpdatePrefs(raw)) {
+    throw new TypeError('load_update_prefs: unexpected response shape');
+  }
+  return raw;
+}
+
+/** Persist auto-update preferences. */
+export async function saveUpdatePrefs(prefs: UpdatePrefs): Promise<void> {
+  await invoke<undefined>('save_update_prefs', { prefs });
 }

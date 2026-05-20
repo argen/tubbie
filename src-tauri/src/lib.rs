@@ -59,10 +59,11 @@ use tokio::task::AbortHandle;
 #[cfg(target_os = "macos")]
 use commands::request_current_location;
 use commands::{
-    add_favorite, apply_board_size, find_nearest_stations, get_board, get_line_status, has_app_key,
-    list_favorites, load_app_key, load_config, load_display_mode, load_display_prefs,
-    open_settings_window, open_settings_window_impl, remove_favorite, save_app_key, save_config,
-    save_display_mode, save_display_prefs, search_stations,
+    add_favorite, apply_board_size, check_for_updates, find_nearest_stations, get_board,
+    get_line_status, has_app_key, install_update, list_favorites, load_app_key, load_config,
+    load_display_mode, load_display_prefs, load_update_prefs, open_settings_window,
+    open_settings_window_impl, remove_favorite, save_app_key, save_config, save_display_mode,
+    save_display_prefs, save_update_prefs, search_stations,
 };
 use state::{AnyBoardService, AppState};
 use store_impl::{KeychainBackedConfigStore, StorePluginConfigStore, StorePluginFavoritesStore};
@@ -927,6 +928,10 @@ pub fn run() {
             list_favorites,
             add_favorite,
             remove_favorite,
+            check_for_updates,
+            install_update,
+            load_update_prefs,
+            save_update_prefs,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tubbie");
