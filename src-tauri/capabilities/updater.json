@@ -1,0 +1,9 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "updater",
+  "description": "Capability set for the auto-update flow. updater:default is granted only to the Settings webview — the main board window never needs to inspect or trigger updates directly. The Rust-side wrappers in commands.rs (check_for_updates, install_update, load_update_prefs, save_update_prefs) are reachable from any window via invoke() and rely on the renderer's own discipline to not trigger updates from the main board (mirrors the load_app_key precedent — capability-gated where the plugin layer permits it, wrapper-gated by convention everywhere else).",
+  "windows": ["settings"],
+  "permissions": [
+    "updater:default"
+  ]
+}

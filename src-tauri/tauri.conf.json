@@ -46,20 +46,20 @@
     "copyright": "© 2026 Bruno Belcastro",
     "shortDescription": "London Underground tube arrivals board",
     "longDescription": "A desktop dot-matrix tube arrivals board powered by TfL's Unified API. View real-time arrivals for any London Underground station with classic amber LED aesthetics.",
-    "createUpdaterArtifacts": false,
+    "createUpdaterArtifacts": true,
     "macOS": {
       "minimumSystemVersion": "11.0",
-      "signingIdentity": null,
-      "providerShortName": null,
-      "entitlements": null,
+      "signingIdentity": "Developer ID Application: BRUNO BELCASTRO PINTO (5FD9DWK258)",
+      "providerShortName": "5FD9DWK258",
+      "entitlements": "entitlements.plist",
       "infoPlist": "Info.plist"
     }
   },
   "plugins": {
     "updater": {
-      "active": false,
+      "active": true,
       "dialog": false,
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEU0REEwOUJDOTc5QUJDQzMKUldURHZKcVh2QW5hNVBTSWhlUklIZllKODRNY25oV214UThPU25ZMDI2NFR4MFZrbTJtT1VEQ1AK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDQ2RjgwRkJCQTVEOERBMkYKUldRdjJ0aWx1dy80Um5vZUljOUFEWlJRcXlrTHArVWJJd3pYMUxNR0F5TWdjN3BwN2JUK01oSXgK",
       "endpoints": [
         "https://github.com/argen/tubbie/releases/latest/download/latest.json"
       ]

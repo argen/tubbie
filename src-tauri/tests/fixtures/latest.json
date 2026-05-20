@@ -1,0 +1,11 @@
+{
+  "version": "0.1.1",
+  "notes": "Tubbie 0.1.1 — bug fixes\n",
+  "pub_date": "2026-05-20T10:00:00Z",
+  "platforms": {
+    "darwin-aarch64": {
+      "signature": "untrusted comment: signature from tauri secret key\nRWQv2tiluw/4RnoeIc9ADZRQqykLp+UbIwzX1LMGAyMgc7pp7bT+MhIxAAA=\ntrusted comment: timestamp:1716196800\nAAA=\n",
+      "url": "https://github.com/argen/tubbie/releases/download/v0.1.1/Tubbie_0.1.1_aarch64.app.tar.gz"
+    }
+  }
+}

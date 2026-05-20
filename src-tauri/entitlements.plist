@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!--
+    Hardened runtime, Developer ID (not App Sandbox).
+
+    Both keys are TRUE because WKWebView's JavaScriptCore JIT requires
+    them under hardened runtime — without them the webview crashes on
+    first paint. All other hardening keys are Apple's defaults
+    (explicit "false" entries would just restate the defaults).
+
+    `personal-information.location` is NOT needed here: that key is
+    sandbox-only. Under Developer ID the existing
+    `NSLocationWhenInUseUsageDescription` in `Info.plist` is sufficient.
+
+    `com.apple.security.network.client` is NOT needed here either:
+    that key is also sandbox-only. Under Developer ID outbound HTTPS
+    is allowed by default; the CSP at `tauri.conf.json:app.security.csp`
+    is the actual restriction surface.
+  -->
+  <key>com.apple.security.cs.allow-jit</key>
+  <true/>
+  <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+  <true/>
+</dict>
+</plist>
