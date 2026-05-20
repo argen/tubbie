@@ -71,6 +71,13 @@ build:
 # minute budget. See `docs/ADR/distribution-roadmap.md` and the M8 ADR.
 # ---------------------------------------------------------------------------
 
+# Resolve the bundle output dir, honouring CARGO_TARGET_DIR if set
+# (some setups put target/ on a faster disk or a shared cache like
+# `~/.cache/cargo-target`). Falls back to the in-repo `target/`.
+target_dir := env_var_or_default("CARGO_TARGET_DIR", "target")
+macos_bundle := target_dir / "aarch64-apple-darwin/release/bundle/macos"
+dmg_bundle := target_dir / "aarch64-apple-darwin/release/bundle/dmg"
+
 # Install the pre-push git hook. Symlink so updates to
 # `scripts/git-hooks/pre-push` apply without reinstalling.
 install-hooks:
@@ -96,30 +103,25 @@ notarize-staple:
     codesign --deep --force --options runtime --timestamp \
       --sign "$APPLE_SIGNING_IDENTITY" \
       --entitlements src-tauri/entitlements.plist \
-      target/aarch64-apple-darwin/release/bundle/macos/Tubbie.app
+      "{{macos_bundle}}/Tubbie.app"
     ditto -c -k --keepParent \
-      target/aarch64-apple-darwin/release/bundle/macos/Tubbie.app \
+      "{{macos_bundle}}/Tubbie.app" \
       /tmp/Tubbie-notarize.zip
     xcrun notarytool submit /tmp/Tubbie-notarize.zip \
       --keychain-profile tubbie-notary --wait
     rm -f /tmp/Tubbie-notarize.zip
-    xcrun stapler staple \
-      target/aarch64-apple-darwin/release/bundle/macos/Tubbie.app
-    xcrun stapler validate \
-      target/aarch64-apple-darwin/release/bundle/macos/Tubbie.app
+    xcrun stapler staple "{{macos_bundle}}/Tubbie.app"
+    xcrun stapler validate "{{macos_bundle}}/Tubbie.app"
 
 # Verify the signed bundle: deep codesign verify + Gatekeeper assess.
 sign-verify:
-    codesign --verify --deep --strict --verbose=2 \
-      target/aarch64-apple-darwin/release/bundle/macos/Tubbie.app
-    spctl --assess --type execute --verbose=4 \
-      target/aarch64-apple-darwin/release/bundle/macos/Tubbie.app
+    codesign --verify --deep --strict --verbose=2 "{{macos_bundle}}/Tubbie.app"
+    spctl --assess --type execute --verbose=4 "{{macos_bundle}}/Tubbie.app"
 
 # Write the Tauri v2 updater manifest from the just-built artifacts.
 gen-update-manifest tag:
-    scripts/build-latest-json.sh {{tag}} \
-      > target/aarch64-apple-darwin/release/bundle/macos/latest.json
-    @echo "[just] wrote target/aarch64-apple-darwin/release/bundle/macos/latest.json"
+    scripts/build-latest-json.sh {{tag}} > "{{macos_bundle}}/latest.json"
+    @echo "[just] wrote {{macos_bundle}}/latest.json"
 
 # Local signed dress-rehearsal: build, sign, notarize, staple, verify,
 # manifest. No tagging, no GitHub upload. Use this before `just release`.
@@ -142,10 +144,10 @@ release tag:
       --title "Tubbie {{tag}}" \
       --notes-file CHANGELOG-{{tag}}.md \
       --draft \
-      target/aarch64-apple-darwin/release/bundle/macos/*.dmg \
-      target/aarch64-apple-darwin/release/bundle/macos/*.app.tar.gz \
-      target/aarch64-apple-darwin/release/bundle/macos/*.app.tar.gz.sig \
-      target/aarch64-apple-darwin/release/bundle/macos/latest.json
+      "{{dmg_bundle}}"/*.dmg \
+      "{{macos_bundle}}"/*.app.tar.gz \
+      "{{macos_bundle}}"/*.app.tar.gz.sig \
+      "{{macos_bundle}}/latest.json"
     @echo ""
     @echo "[just] draft release at https://github.com/argen/tubbie/releases/tag/{{tag}}"
     @echo "[just] review the draft, then:"

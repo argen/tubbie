@@ -22,7 +22,11 @@ TAG="$1"
 VERSION="${TAG#v}"
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-BUNDLE_DIR="${ROOT}/target/aarch64-apple-darwin/release/bundle/macos"
+# Respect CARGO_TARGET_DIR if the dev has redirected target/ to a cache
+# directory (e.g. ~/.cache/cargo-target on a shared SSD). Falls back to
+# the in-repo `target/` otherwise.
+TARGET_DIR="${CARGO_TARGET_DIR:-${ROOT}/target}"
+BUNDLE_DIR="${TARGET_DIR}/aarch64-apple-darwin/release/bundle/macos"
 
 SIG_PATH="$(ls "${BUNDLE_DIR}"/*.app.tar.gz.sig 2>/dev/null | head -1)"
 TARBALL_PATH="$(ls "${BUNDLE_DIR}"/*.app.tar.gz 2>/dev/null | grep -v '\.sig$' | head -1)"
