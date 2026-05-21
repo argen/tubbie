@@ -8,8 +8,13 @@
 #
 # Feature branches (feat/*, fix/*, chore/*) additionally run:
 #   - cargo test --workspace
-#   - cd web && npm test
+#   - cd web && npm run verify   (lint + format:check + typecheck + test)
 #   - cargo clippy --workspace --all-targets -- -D warnings
+#
+# Why `npm run verify` over just `npm test`: PR-E shipped 17 lint +
+# 4 prettier + 5 typecheck errors past `npm test` because vitest
+# doesn't care about either; only the full verify gate catches them.
+# Cost is ~10s extra on push. Worth it.
 #
 # To skip in an emergency: `git push --no-verify`. Doc-only branches
 # (docs/*) skip the full gate by design; the always-on checks still
@@ -28,7 +33,7 @@ case "${branch}" in
   feat/*|fix/*|chore/*)
     echo "[pre-push] running full local gate for ${branch}"
     cargo test --workspace
-    ( cd web && npm test --silent )
+    ( cd web && npm run verify --silent )
     cargo clippy --workspace --all-targets -- -D warnings
     ;;
   docs/*|main|HEAD)
@@ -38,7 +43,7 @@ case "${branch}" in
     # Unknown branch shape — default to running the full gate.
     echo "[pre-push] non-standard branch ${branch} — running full gate"
     cargo test --workspace
-    ( cd web && npm test --silent )
+    ( cd web && npm run verify --silent )
     cargo clippy --workspace --all-targets -- -D warnings
     ;;
 esac
