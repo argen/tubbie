@@ -88,17 +88,18 @@ install-hooks:
 bump version:
     scripts/bump-version.sh {{version}}
 
-# One-off Apple Developer setup: store notarytool credentials in the
-# login keychain under the `tubbie-notary` profile. Requires APPLE_ID,
-# APPLE_TEAM_ID, APPLE_APP_SPECIFIC_PASSWORD in env (don't echo).
-notary-store-creds:
-    xcrun notarytool store-credentials tubbie-notary \
-      --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" \
-      --password "$APPLE_APP_SPECIFIC_PASSWORD"
+# Query notarization submission history. Confirms the API-key env
+# vars are wired up and that Apple accepts them. Quick smoke before
+# `release-local` / `release`.
+notary-history:
+    xcrun notarytool history \
+      --key "$NOTARY_KEY_PATH" --key-id "$NOTARY_KEY_ID" \
+      --issuer "$NOTARY_ISSUER"
 
 # Codesign + notarize + staple the just-built `.app`. Idempotent;
-# reads APPLE_SIGNING_IDENTITY from env, notarytool creds from the
-# `tubbie-notary` keychain profile.
+# reads APPLE_SIGNING_IDENTITY for codesign, and the three NOTARY_*
+# env vars (App Store Connect API key) for notarytool. See ADR
+# `docs/ADR/public-distribution.md` D5 for the auth choice.
 notarize-staple:
     codesign --deep --force --options runtime --timestamp \
       --sign "$APPLE_SIGNING_IDENTITY" \
@@ -108,7 +109,8 @@ notarize-staple:
       "{{macos_bundle}}/Tubbie.app" \
       /tmp/Tubbie-notarize.zip
     xcrun notarytool submit /tmp/Tubbie-notarize.zip \
-      --keychain-profile tubbie-notary --wait
+      --key "$NOTARY_KEY_PATH" --key-id "$NOTARY_KEY_ID" \
+      --issuer "$NOTARY_ISSUER" --wait
     rm -f /tmp/Tubbie-notarize.zip
     xcrun stapler staple "{{macos_bundle}}/Tubbie.app"
     xcrun stapler validate "{{macos_bundle}}/Tubbie.app"
