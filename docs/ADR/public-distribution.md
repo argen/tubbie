@@ -103,21 +103,57 @@ There is no faster recovery. The pubkey-baked-into-binary contract is
 the design's strength against MITM and the design's weakness against
 key compromise.
 
-### D5. Notarytool credentials in the login Keychain, not env
+### D5. Notarytool authenticates via App Store Connect API key, not Keychain
 
-`xcrun notarytool store-credentials tubbie-notary --apple-id ... --team-id ... --password ...` stores the
-App-Specific Password as a keychain item under profile `tubbie-notary`.
-All release-time notarytool calls use `--keychain-profile tubbie-notary`.
+All release-time `xcrun notarytool` calls authenticate with the App
+Store Connect API key via three env vars (`NOTARY_KEY_PATH`,
+`NOTARY_KEY_ID`, `NOTARY_ISSUER`) sourced from `.envrc`:
 
-**Why over the alternative** (`--apple-id ... --password ...` flags):
-notarytool's flag form echoes the App-Specific Password into any
-error stack trace and into `ps`-visible argv. Keychain-profile form
-keeps it sealed.
+```sh
+xcrun notarytool submit /tmp/Tubbie-notarize.zip \
+  --key "$NOTARY_KEY_PATH" --key-id "$NOTARY_KEY_ID" \
+  --issuer "$NOTARY_ISSUER" --wait
+```
 
-The App-Specific Password is also backed up in 1Password. If Apple
-expires it on next-password-change, regeneration is one trip to
-appleid.apple.com → Sign-In & Security → App-Specific Passwords, then
-re-run `just notary-store-creds`.
+The `.p8` private key lives at `~/.appstoreconnect/private_keys/`
+with `chmod 600`. Backed up in 1Password — Apple does not let you
+re-download.
+
+**Why over the previous Keychain-profile approach** (and over
+inline `--apple-id ... --password ...` flags):
+
+- The Keychain approach failed in practice. The first time we needed
+  to query a stuck submission the morning after, the
+  `tubbie-notary` profile had vanished from the login keychain —
+  cause unclear (possibly an unattended GUI prompt during sleep,
+  possibly a Keychain Services daemon hiccup). Headless retrieval
+  was impossible because the keychain requires GUI confirmation to
+  write a new entry, and we couldn't query the old submission to
+  find out what happened to it.
+- The App-Specific-Password-in-argv concern (the original rationale
+  for picking Keychain) doesn't apply to API keys: the `.p8` path in
+  argv isn't sensitive, and the actual secret is the file contents,
+  never on the command line.
+- API keys are Apple's recommended auth method for notarytool since
+  2022 and work identically interactively or headless.
+
+**Bootstrap on a fresh Mac:**
+
+1. App Store Connect → Users and Access → Integrations → "+" →
+   create an API key with **Developer** access. Download the `.p8`
+   (one-time only; Apple never shows it again).
+2. Copy `Issuer ID` and `Key ID` from the same page.
+3. `mkdir -p ~/.appstoreconnect/private_keys/` and move the `.p8`
+   there; `chmod 600`.
+4. Populate `NOTARY_KEY_PATH`, `NOTARY_KEY_ID`, `NOTARY_ISSUER` in
+   `.envrc` (see `.envrc.example` for the template).
+5. `just notary-history` to confirm Apple accepts the key.
+
+**Break-glass:** if the `.p8` leaks, revoke the key in App Store
+Connect Integrations and create a new one. Notarytool starts
+rejecting submissions signed by the revoked key within minutes —
+much faster recovery than updater-key rotation (D4), because the
+key isn't baked into shipped binaries.
 
 ### D6. Two-key entitlements file (JIT only)
 
@@ -174,10 +210,11 @@ wrong default; the Settings toggle gives users the escape hatch.
 
 | Path | Purpose |
 |---|---|
-| `.envrc` (gitignored, `chmod 600`) | Sources `APPLE_TEAM_ID=5FD9DWK258`, `APPLE_SIGNING_IDENTITY="Developer ID Application: BRUNO BELCASTRO PINTO (5FD9DWK258)"`, `APPLE_ID="bbelcastro@gmail.com"`, `TAURI_SIGNING_PRIVATE_KEY_PATH=$HOME/.tauri/tubbie-updater.key` |
-| `~/.tauri/tubbie-updater.key` (`chmod 600`) | Ed25519 private key. Backed up in 1Password. |
+| `.envrc` (gitignored, `chmod 600`) | Sources `APPLE_TEAM_ID`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `TAURI_SIGNING_PRIVATE_KEY_PATH`, and the three `NOTARY_*` vars. See `.envrc.example` for the template. |
+| `.envrc.example` (committed) | Sanitized template; what a fresh-Mac bootstrap fills in. |
+| `~/.tauri/tubbie-updater.key` (`chmod 600`) | Ed25519 private key (updater signature). Backed up in 1Password. |
+| `~/.appstoreconnect/private_keys/AuthKey_*.p8` (`chmod 600`) | App Store Connect API key for notarytool. Backed up in 1Password (Apple does not re-issue). |
 | Login Keychain | Developer ID Application certificate (CN `Developer ID Application: BRUNO BELCASTRO PINTO (5FD9DWK258)`). Backed up as `.p12` in 1Password. |
-| Login Keychain profile `tubbie-notary` | App-Specific Password for `xcrun notarytool`. Re-creatable via `just notary-store-creds`. |
 | `src-tauri/entitlements.plist` | Two-key hardened-runtime entitlements (JIT). |
 | `src-tauri/capabilities/updater.json` | `updater:default` scoped to Settings window only. |
 | `src-tauri/tauri.conf.json` | `bundle.macOS.signingIdentity` / `providerShortName` / `entitlements`; `plugins.updater.pubkey` + endpoint. |
@@ -230,7 +267,7 @@ Gatekeeper interaction.
 
 ## Rollout status
 
-As of 2026-05-20 the M8 pipeline is **built but unproven end-to-end**:
+As of 2026-05-21 the M8 pipeline is **built but unproven end-to-end**:
 
 | Step | Status |
 |---|---|
@@ -240,26 +277,24 @@ As of 2026-05-20 the M8 pipeline is **built but unproven end-to-end**:
 | PR-D — updater IPC commands + frontend wrappers | merged to main |
 | PR-E — Settings "Updates" section (seven UI states) | merged to main |
 | PR-F — this ADR + README + CLAUDE.md note + PR-template checkbox | merged to main |
-| Phase 3 — `just release-local v0.1.0-dryrun` notarization | **submitted 2026-05-20 18:23 UTC, still `In Progress` after 2+ hours** (submission id `2762ef28-ac85-4110-816f-0327932dd423`); checked via `xcrun notarytool info ... --keychain-profile tubbie-notary` |
+| Phase 3 — `just release-local v0.1.0-dryrun` notarization | **first submission (id `2762ef28-ac85-4110-816f-0327932dd423`) wedged in Apple's queue: 16h+ `In Progress`, no log available, never resolved. Resubmission pending.** |
 | Phase 7 — cut v0.1.0 + fresh-account install smoke + v0.1.1 no-op auto-update smoke | blocked on Phase 3 |
 | Phase 8 — flip repo public + apply branch protection | blocked on Phase 7 |
 
 **What to check first on resumption:**
 
-1. Re-run `xcrun notarytool info 2762ef28-ac85-4110-816f-0327932dd423 --keychain-profile tubbie-notary`.
-2. If **Accepted:** continue the dry-run from the `notarize-staple`
-   recipe step that was running (it should auto-progress through
-   `stapler staple` → `stapler validate` → `sign-verify` →
-   `gen-update-manifest`). Confirm `spctl --assess --type execute
-   --verbose=4` returns `accepted source=Notarized Developer ID`.
-   Phase 3 closes; proceed to Phase 7.
-3. If **Invalid:** pull reasons with `xcrun notarytool log
-   2762ef28-ac85-4110-816f-0327932dd423 --keychain-profile
-   tubbie-notary`. If the rejection is `macOSPrivateApi`-related,
-   apply the D7 fallback (flip to `false` in `tauri.conf.json`),
-   re-run `just release-local v0.1.0-dryrun`, and amend D7's status
-   line above.
-4. If still **In Progress** past ~4 h: check
+1. Source `.envrc` (loads `NOTARY_KEY_PATH` / `NOTARY_KEY_ID` /
+   `NOTARY_ISSUER`).
+2. `just notary-history` to confirm the API key still authenticates.
+3. From a clean `main`: `just release-local v0.1.0-dryrun2` to
+   rebuild + re-sign + resubmit. The previous submission
+   (`2762ef28-...`) is abandoned; do not wait on it further.
+4. If the new submission also stalls past ~30 min: check
    <https://developer.apple.com/system-status/> for a Notary Service
    incident. The local `--wait` polling process is independent of
    Apple's queue — killing it does not cancel the submission.
+5. If notarization rejects: pull reasons with `xcrun notarytool log
+   <id> --key "$NOTARY_KEY_PATH" --key-id "$NOTARY_KEY_ID" --issuer "$NOTARY_ISSUER"`.
+   If the rejection is `macOSPrivateApi`-related, apply the D7
+   fallback (flip to `false` in `tauri.conf.json`), re-run the
+   dry-run, and amend D7's status line above.

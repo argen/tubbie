@@ -7,7 +7,7 @@
 #    `src-tauri/tauri.conf.json:.version`
 #  - required signing env vars are unset
 #  - we already have a tag with this name (no clobbering past releases)
-#  - notarytool can't see the `tubbie-notary` keychain profile
+#  - notarytool can't authenticate with the API key in NOTARY_*
 #
 # Usage:
 #   scripts/preflight.sh v0.1.0
@@ -59,14 +59,18 @@ if git ls-remote --exit-code --tags origin "${TAG}" >/dev/null 2>&1; then
   fail "tag ${TAG} already exists on origin"
 fi
 
-# 6. Required signing env vars
-for var in APPLE_SIGNING_IDENTITY APPLE_TEAM_ID TAURI_SIGNING_PRIVATE_KEY; do
+# 6. Required signing + notarization env vars
+for var in APPLE_SIGNING_IDENTITY APPLE_TEAM_ID TAURI_SIGNING_PRIVATE_KEY \
+           NOTARY_KEY_PATH NOTARY_KEY_ID NOTARY_ISSUER; do
   if [[ -z "${!var:-}" ]]; then
     fail "${var} is not set — source your .envrc first"
   fi
 done
 if [[ ! -r "${TAURI_SIGNING_PRIVATE_KEY}" ]]; then
   fail "TAURI_SIGNING_PRIVATE_KEY=${TAURI_SIGNING_PRIVATE_KEY} is not readable"
+fi
+if [[ ! -r "${NOTARY_KEY_PATH}" ]]; then
+  fail "NOTARY_KEY_PATH=${NOTARY_KEY_PATH} is not readable"
 fi
 
 # 7. Signing identity is present in login keychain
@@ -75,9 +79,12 @@ if ! security find-identity -p codesigning -v 2>/dev/null \
   fail "signing identity '${APPLE_SIGNING_IDENTITY}' not in login keychain"
 fi
 
-# 8. notarytool keychain profile exists
-if ! xcrun notarytool history --keychain-profile tubbie-notary >/dev/null 2>&1; then
-  fail "notarytool profile 'tubbie-notary' not found — run \`just notary-store-creds\`"
+# 8. notarytool API key authenticates against Apple
+if ! xcrun notarytool history \
+       --key "${NOTARY_KEY_PATH}" \
+       --key-id "${NOTARY_KEY_ID}" \
+       --issuer "${NOTARY_ISSUER}" >/dev/null 2>&1; then
+  fail "notarytool API key auth failed — check NOTARY_KEY_PATH / NOTARY_KEY_ID / NOTARY_ISSUER in .envrc"
 fi
 
 echo "preflight OK for ${TAG}"
