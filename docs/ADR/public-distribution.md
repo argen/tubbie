@@ -103,6 +103,43 @@ There is no faster recovery. The pubkey-baked-into-binary contract is
 the design's strength against MITM and the design's weakness against
 key compromise.
 
+**Password handling at build time.** The key was generated with a
+password (the `-p` flag on `tauri signer generate`). `cargo tauri
+build` reads it from the `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` env
+var, falling back to an interactive prompt on stdin. In a TTY-less
+context (background run, watcher-driven release), the prompt fails
+with `os error 6 / Device not configured` and the build aborts at
+the updater-artifact signing step.
+
+To unblock unattended builds, the password is stashed in the login
+Keychain (item `tubbie-updater`, account `$USER`) and read at
+`.envrc`-source time:
+
+```sh
+export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="$(security find-generic-password -s tubbie-updater -a "$USER" -w 2>/dev/null)"
+```
+
+Bootstrap with `just updater-pwd-store` once per machine — it wraps
+`security add-generic-password -U` and prompts for the value
+without echoing it. The 1Password copy remains the canonical backup.
+
+**Trade-off this opens.** Any process the dev runs can read the
+keychain item without further prompting (`security find-generic-password -w` returns it). If a malicious process executes under the
+dev's account, it can sign builds against the real updater key.
+Compensating controls:
+
+- The `.key` file itself is `chmod 600` (only readable by the dev's
+  user), so the password alone is insufficient — both are needed.
+- The Mac is the dev's release machine; no untrusted tenants.
+- Alternative (run only in a TTY, type the password every time)
+  was tried first and rejected as soon as the background-watcher
+  release pattern emerged; typing on every build is fine for a
+  manual rare-release rhythm and not fine for a watcher-driven one.
+
+If your threat model doesn't accept the keychain stash, comment out
+the `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` line in `.envrc` and run
+`just release-local` only in an interactive shell.
+
 ### D5. Notarytool authenticates via App Store Connect API key, not Keychain
 
 All release-time `xcrun notarytool` calls authenticate with the App
@@ -213,6 +250,7 @@ wrong default; the Settings toggle gives users the escape hatch.
 | `.envrc` (gitignored, `chmod 600`) | Sources `APPLE_TEAM_ID`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `TAURI_SIGNING_PRIVATE_KEY_PATH`, and the three `NOTARY_*` vars. See `.envrc.example` for the template. |
 | `.envrc.example` (committed) | Sanitized template; what a fresh-Mac bootstrap fills in. |
 | `~/.tauri/tubbie-updater.key` (`chmod 600`) | Ed25519 private key (updater signature). Backed up in 1Password. |
+| Login Keychain item `tubbie-updater` | Password for the updater key above. Read by `.envrc` at source time so background builds don't hit the interactive prompt. Bootstrap via `just updater-pwd-store`. Backed up in 1Password. |
 | `~/.appstoreconnect/private_keys/AuthKey_*.p8` (`chmod 600`) | App Store Connect API key for notarytool. Backed up in 1Password (Apple does not re-issue). |
 | Login Keychain | Developer ID Application certificate (CN `Developer ID Application: BRUNO BELCASTRO PINTO (5FD9DWK258)`). Backed up as `.p12` in 1Password. |
 | `src-tauri/entitlements.plist` | Two-key hardened-runtime entitlements (JIT). |

@@ -96,6 +96,16 @@ notary-history:
       --key "$NOTARY_KEY_PATH" --key-id "$NOTARY_KEY_ID" \
       --issuer "$NOTARY_ISSUER"
 
+# One-off: stash the Tauri updater-key password in the login Keychain
+# so `cargo tauri build` can sign updater artifacts unattended. Prompts
+# interactively for the password — the value is never echoed. Idempotent
+# via -U (update if exists). See ADR D4 for the trade-off.
+updater-pwd-store:
+    @echo "Enter the Tauri updater-key password (will not echo)."
+    @echo "This is the password set when you ran \`cargo tauri signer generate -p ...\`."
+    @security add-generic-password -U -s "tubbie-updater" -a "$USER" -w
+    @echo "[just] stored. source .envrc to pick it up."
+
 # Codesign + notarize + staple the just-built `.app`. Idempotent;
 # reads APPLE_SIGNING_IDENTITY for codesign, and the three NOTARY_*
 # env vars (App Store Connect API key) for notarytool. See ADR

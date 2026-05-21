@@ -27,8 +27,18 @@ export APPLE_SIGNING_IDENTITY="Developer ID Application: YOUR NAME (TEAM_ID)"
 export TAURI_SIGNING_PRIVATE_KEY_PATH="$HOME/.tauri/tubbie-updater.key"
 export TAURI_SIGNING_PRIVATE_KEY="$TAURI_SIGNING_PRIVATE_KEY_PATH"
 
-# Key password is NEVER stored on disk. If you generated the key
-# with a password, `cargo tauri build` prompts for it at release time.
+# Key password is stashed in the login Keychain (item name
+# `tubbie-updater`, account `$USER`) and pulled at source time. This
+# lets `cargo tauri build` complete unattended — the TTY-less
+# context of a background run cannot answer the interactive prompt.
+#
+# Bootstrap once: `just updater-pwd-store` and type the password
+# when prompted. Backed up in 1Password alongside the .key file.
+#
+# The keychain item is readable by any process the user runs; this
+# is the trade-off documented in ADR D4. If you reject it, comment
+# out the line below and run `just release-local` only in a TTY.
+export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="$(security find-generic-password -s tubbie-updater -a "$USER" -w 2>/dev/null)"
 
 # ---- Apple notarytool (App Store Connect API key) -------------------------
 
