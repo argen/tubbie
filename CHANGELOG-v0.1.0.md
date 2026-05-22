@@ -23,5 +23,3 @@ Download `Tubbie_0.1.0_aarch64.dmg` below, mount it, drag Tubbie to `/Applicatio
 
 - arm64 only this round. Intel Mac support is a possible follow-up if there's demand — please [open an issue](../../issues).
 - This is a first release; expect rough edges. Bug reports and feature requests welcome.
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
