@@ -294,6 +294,70 @@ only place to inject resilience.
 This was discovered the hard way during the dry-run — see D7's
 "false alarm story" for the misdiagnosis trail.
 
+### D10. `app.restart()` is the caller's responsibility on macOS
+
+`tauri-plugin-updater` 2.10.1 papers over a platform divergence in
+its documentation. On Windows (NSIS/MSI) `Update::download_and_install`
+hands the installer process the responsibility for killing the parent
+PID and launching the new exe; on Linux AppImage the plugin re-execs
+the bundle from inside the future itself. **On macOS, neither
+happens** — `download_and_install` is download + signature-verify +
+atomic-replace of `/Applications/<App>.app`, and then it returns
+`Ok(())`. The running process keeps running. The caller has to invoke
+`AppHandle::restart()` to `exec` into the new bundle.
+
+We discovered this in the v0.1.0 → v0.1.1 keystone test:
+`/Applications/Tubbie.app/Contents/Info.plist` reported
+`CFBundleShortVersionString = 0.1.1` (the swap had landed), but the
+running v0.1.0 process was still alive, and the Settings UI was
+frozen on "Installing — please don't close Tubbie" because
+`handleInstall`'s `await installUpdate()` had resolved with the
+component pinned to `'installing'`.
+
+`install_update` now does, in order:
+1. `update.download_and_install(...)` — staging.
+2. `app.emit("updater://restart-imminent", ())` — best-effort
+   signal to the renderer so it can paint a transient `'restarting'`
+   state before the process dies. Emit failures are ignored.
+3. `app.restart()` — returns `-> !`, no code follows.
+
+The renderer arms a 5 s safety timer on install start. If neither
+the event nor a process death arrives within the window, it flips
+to a new `'restart-failed'` state with copy:
+
+> Update installed, but Tubbie couldn't restart automatically.
+> Quit Tubbie and open it again to finish.
+
+This is the recovery path for any future regression in
+`app.restart()` (sandbox tightening, NSWorkspace permission churn,
+etc.) — the bundle is already in place on disk, so a manual quit-
+and-relaunch always completes the upgrade.
+
+**Why not call `app.restart()` from the renderer instead** (via a
+separate IPC command): the IPC reply would race the `exec` syscall.
+Either the reply lands (renderer transitions normally) or it
+doesn't (renderer is left guessing whether the restart was even
+attempted). Calling `restart()` inside `install_update` makes the
+restart unconditional on staging success and removes the round-trip.
+
+**Why a 5 s window** for the safety timer: long enough for
+`download_and_install`'s tail latency + `exec`'s teardown +
+Cocoa main-loop drain on the dying process; short enough that a
+stuck UI surfaces recovery copy before the user assumes Tubbie
+crashed. Tuned in `web/src/lib/components/UpdatesSection.svelte`
+as `RESTART_TIMEOUT_MS`; matched in the DOM regression test.
+
+**Why "quit and reopen" rather than auto-retry**: the staged bundle
+is byte-identical to what `download_and_install` just wrote.
+Re-invoking the install does nothing useful and could re-trigger
+the same restart failure. A manual relaunch is one keystroke and
+always works.
+
+The v0.1.1 zombie users (whoever did the keystone test before this
+ADR landed) are stuck on the broken code path; v0.1.1 → v0.1.2
+will require a manual quit-and-reopen after install. v0.1.2 → any
+later version restarts cleanly. Release notes call this out.
+
 ## Operational details
 
 ### Files of record
@@ -358,8 +422,8 @@ Gatekeeper interaction.
 
 ## Rollout status
 
-As of 2026-05-22 the M8 pipeline is **end-to-end proven** — what
-remains is cutting v0.1.0:
+As of 2026-05-22 the M8 pipeline is **public**. v0.1.0 and v0.1.1
+shipped; v0.1.2 contains the D10 restart-after-install hotfix.
 
 | Step | Status |
 |---|---|
@@ -367,36 +431,20 @@ remains is cutting v0.1.0:
 | PR-B — signing identity, entitlements, real pubkey in `tauri.conf.json` | merged to main |
 | PR-C — local Justfile release pipeline + pre-push hook + scripts | merged to main |
 | PR-D — updater IPC commands + frontend wrappers | merged to main |
-| PR-E — Settings "Updates" section (seven UI states) | merged to main |
+| PR-E — Settings "Updates" section (nine UI states after D10) | merged to main |
 | PR-F — this ADR + README + CLAUDE.md note + PR-template checkbox | merged to main |
 | Phase 3 — notarization dry-run | **✓ Accepted + stapled.** Submission `3fd6c34f-2727-485c-98f7-a84dece1ec8b` on 2026-05-21. `spctl --assess` returns `accepted source=Notarized Developer ID`. |
-| Phase 7 — cut v0.1.0 + fresh-account install smoke + v0.1.1 no-op auto-update smoke | ready to run once outstanding follow-up PRs land |
-| Phase 8 — flip repo public + apply branch protection | blocked on Phase 7 |
+| Phase 7 — cut v0.1.0 + fresh-account install smoke + v0.1.1 no-op auto-update smoke | **✓ v0.1.0 and v0.1.1 published.** Keystone test surfaced the D10 restart bug — bundle staged on disk but process never restarted. |
+| Phase 8 — flip repo public + apply branch protection | **✓ argen/tubbie public.** Branch protection: PR-review required, no force-push, no deletions, linear history. |
+| D10 hotfix — `app.restart()` after `download_and_install` + 5 s safety-timeout | **✓ v0.1.2** (this PR). v0.1.1 → v0.1.2 still needs a manual quit-and-reopen; later updates restart cleanly. |
 
-**Follow-ups still open or in flight** (small, post-dry-run cleanup):
+**Known carry-over:** anyone who installed v0.1.0 or v0.1.1 and ran
+the in-app updater on the broken code path needs to quit Tubbie
+(`Cmd+Q` / Activity Monitor) and relaunch — `/Applications/Tubbie.app`
+will already be on the newer version. Release notes for v0.1.2 lead
+with this.
 
-- #103 — keychain stash for the updater-key password (D4 follow-up).
-- #105 — rotate updater pubkey (old key's password was lost during
-  bootstrap; new key proven via submission `3fd6c34f-...`).
-- This PR — network-resilient `notarize-staple` (D9).
-- ADR D7 + D9 + this rollout-status section all reflect the actual
-  outcome (false-stall misdiagnosis, recovery via D9).
-
-**What to do on next resumption (cutting v0.1.0):**
-
-1. Make sure #103 + #105 + this PR have all merged.
-2. `source .envrc` and `just notary-history` to confirm the API key
-   still authenticates.
-3. `just bump 0.1.0` to set version in lockstep.
-4. Open a tiny PR with the version bump + a `CHANGELOG-v0.1.0.md`.
-5. After it merges: `just release v0.1.0` from clean main.
-6. Smoke-test the draft Release on a fresh macOS user account per
-   the "Verification" section above. Promote to published when
-   green.
-7. Tag a follow-up `v0.1.1` no-op release later the same day and
-   confirm the in-app updater installs cleanly from v0.1.0.
-
-If a submission ever appears stuck again, do **not** start a new
-build. Instead `just notarize-query <id>` against the original
-submission id — it almost certainly resolved on Apple's side while
-the local `--wait` was dying on a network blink (see D9).
+If a notarization submission ever appears stuck again, do **not**
+start a new build. Instead `just notarize-query <id>` against the
+original submission id — it almost certainly resolved on Apple's
+side while the local `--wait` was dying on a network blink (see D9).

@@ -33,7 +33,7 @@
 //! emit `Board` snapshots as `app.emit("board-update", board)` events.
 
 use serde::{Deserialize, Serialize};
-use tauri::State;
+use tauri::{Emitter, State};
 use tauri_plugin_updater::UpdaterExt;
 
 use tfl_board::{BoardConfig, VALID_THEME_IDS};
@@ -986,12 +986,25 @@ pub async fn check_for_updates(
 /// pulled the release between `check_for_updates` and `install_update`):
 /// the command returns `Err` and the renderer surfaces the failure.
 ///
-/// `download_and_install` runs the install on success; on Tauri 2.x macOS
-/// the app process is then asked to exit and re-launch. The two no-op
-/// progress callbacks satisfy the API contract without piping bytes
-/// across IPC for v0.1.0 — release artifacts are ~10 MB over modern
-/// broadband, well under the 2 s threshold where a progress bar pays
-/// for itself (revisit in v0.2.0 if user feedback warrants).
+/// `download_and_install` downloads, signature-verifies and stages the
+/// new `.app` bundle into `/Applications`. On macOS that's **all** it
+/// does — the running process is not killed and not relaunched. The
+/// v0.1.1 stuck-install bug was this command returning `Ok(())` with
+/// the bundle already swapped on disk while the v0.1.0 process kept
+/// running, so the renderer's `await installUpdate()` resolved into a
+/// frozen `'installing'` UI. v0.1.2 fixes it by emitting
+/// `updater://restart-imminent` (so the renderer can show a transient
+/// `'restarting'` state) and then invoking `app.restart()`, which
+/// `exec`s a fresh process from the new bundle.
+///
+/// The two no-op progress callbacks satisfy the API contract without
+/// piping bytes across IPC for v0.1.x — release artifacts are ~10 MB
+/// over modern broadband, well under the 2 s threshold where a
+/// progress bar pays for itself (revisit in v0.2.0 if user feedback
+/// warrants).
+///
+/// `app.restart()` returns `-> !`, so no code can follow it; any error
+/// the renderer might observe comes from the pre-restart phase.
 #[tauri::command]
 pub async fn install_update(app: tauri::AppHandle) -> Result<(), String> {
     let updater = app
@@ -1006,7 +1019,14 @@ pub async fn install_update(app: tauri::AppHandle) -> Result<(), String> {
     update
         .download_and_install(|_, _| {}, || {})
         .await
-        .map_err(|e| format!("install_update: {e}"))
+        .map_err(|e| format!("install_update: {e}"))?;
+    // Best-effort: fire the event before restart so the renderer can
+    // paint the "Restarting Tubbie…" state even if the event delivery
+    // races the process death. Ignore emit failures — restart still
+    // happens, and the renderer's 5 s fallback timer will catch any
+    // pathological case where neither the event nor the restart fires.
+    let _ = app.emit("updater://restart-imminent", ());
+    app.restart();
 }
 
 /// Load the persisted auto-update preferences. Returns the default
