@@ -16,6 +16,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CONF="${ROOT}/src-tauri/tauri.conf.json"
 CARGO="${ROOT}/src-tauri/Cargo.toml"
+LOCK="${ROOT}/Cargo.lock"
 
 conf_version="$(python3 -c "import json,sys; print(json.load(open('${CONF}'))['version'])")"
 # Take the first version= line under [package]; Cargo.toml's [package]
@@ -23,12 +24,22 @@ conf_version="$(python3 -c "import json,sys; print(json.load(open('${CONF}'))['v
 cargo_version="$(awk '/^\[package\]/ {flag=1; next} /^\[/ {flag=0} flag && /^version = /' "${CARGO}" \
                   | head -1 \
                   | sed -E 's/version = "([^"]+)".*/\1/')"
+# Cargo.lock's [[package]] entry for `tubbie`. The version line is the
+# next non-blank line after `name = "tubbie"`. The lockfile MUST agree
+# or the release artifacts will carry an inconsistent self-reported
+# version (Tauri reads conf, cargo reads Cargo.toml, and the build
+# graph keys off Cargo.lock — drift surfaces as a stale `getVersion()`
+# in the installed binary).
+lock_version="$(awk '/^name = "tubbie"$/ {getline; print; exit}' "${LOCK}" \
+                  | sed -E 's/version = "([^"]+)".*/\1/')"
 
-if [[ "$conf_version" != "$cargo_version" ]]; then
+if [[ "$conf_version" != "$cargo_version" ]] \
+   || [[ "$conf_version" != "$lock_version" ]]; then
   cat >&2 <<EOF
-error: version drift between bundle and crate manifests:
+error: version drift between bundle / crate / lockfile manifests:
   src-tauri/tauri.conf.json  version: ${conf_version}
   src-tauri/Cargo.toml       version: ${cargo_version}
+  Cargo.lock (tubbie)        version: ${lock_version}
 
 Run \`just bump <new-version>\` to keep them in lockstep.
 EOF

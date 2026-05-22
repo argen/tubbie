@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Set `version` in both `src-tauri/tauri.conf.json` and
-# `src-tauri/Cargo.toml` to the same value, in one atomic edit.
+# Set `version` in `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`,
+# and the `[[package]] name = "tubbie"` entry in the root `Cargo.lock`,
+# to the same value, in one atomic edit.
 #
 # Usage:
 #   scripts/bump-version.sh 0.1.0
@@ -8,7 +9,13 @@
 #
 # The version is validated against a permissive semver regex (allows
 # pre-release tags). The script runs `check-version-lockstep.sh` at
-# the end to confirm the edits agree.
+# the end to confirm all three files agree.
+#
+# Cargo.lock is included because cargo will rewrite it on the next
+# build anyway; doing it here makes `just bump` produce a single,
+# committable delta and unblocks the `preflight` clean-tree check
+# in `just release` without an extra hand-staged commit (the lesson
+# from v0.1.2's mid-release ceremony).
 set -euo pipefail
 
 if [[ $# -ne 1 ]]; then
@@ -26,6 +33,7 @@ fi
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CONF="${ROOT}/src-tauri/tauri.conf.json"
 CARGO="${ROOT}/src-tauri/Cargo.toml"
+LOCK="${ROOT}/Cargo.lock"
 
 python3 - "${CONF}" "${NEW}" <<'PY'
 import json, sys
@@ -61,5 +69,23 @@ with open(path, 'w') as fh:
     fh.write(new_txt)
 PY
 
+# Cargo.lock has many `[[package]]` blocks; only the one whose `name`
+# is `tubbie` should be edited. The version line is the immediately-
+# following line per cargo's lockfile format (stable since cargo 1.0).
+python3 - "${LOCK}" "${NEW}" <<'PY'
+import re, sys
+path, new = sys.argv[1], sys.argv[2]
+with open(path) as fh:
+    txt = fh.read()
+pattern = re.compile(
+    r'(name = "tubbie"\nversion = )"[^"]+"',
+)
+new_txt, n = pattern.subn(lambda m: f'{m.group(1)}"{new}"', txt, count=1)
+if n != 1:
+    sys.exit(f'error: could not find [[package]] tubbie entry in {path}')
+with open(path, 'w') as fh:
+    fh.write(new_txt)
+PY
+
 "${ROOT}/scripts/check-version-lockstep.sh"
-echo "bumped to ${NEW} (tauri.conf.json + src-tauri/Cargo.toml)"
+echo "bumped to ${NEW} (tauri.conf.json + src-tauri/Cargo.toml + Cargo.lock)"
