@@ -45,7 +45,7 @@ use tokio::{
 #[async_trait]
 pub trait ConfigStore: Send + Sync + 'static {
     /// Load the board configuration. Returns the documented default
-    /// (Belsize Park, no filters, 20 s poll) if no config has been saved.
+    /// (Oxford Circus, no filters, 30 s poll) if no config has been saved.
     async fn load_config(&self) -> Result<BoardConfig, String>;
 
     /// Atomically set and persist the board configuration.
@@ -448,7 +448,38 @@ impl AppState {
 // Defaults
 // ---------------------------------------------------------------------------
 
-/// Default board config: Belsize Park, no filters, 30-second poll.
+/// Default board config: Oxford Circus, no filters, 30-second poll.
+///
+/// Oxford Circus chosen as the first-launch default because it's a
+/// well-known central interchange (Bakerloo / Central / Victoria) that
+/// new users will recognise. Settings → Stations lets them change it
+/// to their actual local stop in seconds.
 pub fn default_board_config() -> BoardConfig {
-    BoardConfig::new("940GZZLUBZP")
+    BoardConfig::new("940GZZLUOXC")
+}
+
+#[cfg(test)]
+mod default_board_config_tests {
+    use super::*;
+
+    /// Pins the first-launch default station. Changing this needs an
+    /// intentional product decision + a CHANGELOG note — fresh installs
+    /// open to whatever station this returns.
+    #[test]
+    fn default_station_is_oxford_circus() {
+        let cfg = default_board_config();
+        assert_eq!(
+            cfg.station_id, "940GZZLUOXC",
+            "first-launch default must be Oxford Circus (940GZZLUOXC)"
+        );
+        assert!(
+            cfg.line_ids.is_empty(),
+            "default config must not pre-filter by line"
+        );
+        assert!(
+            cfg.directions.is_empty(),
+            "default config must not pre-filter by direction"
+        );
+        assert_eq!(cfg.poll_seconds, 30, "default poll interval is 30 s");
+    }
 }

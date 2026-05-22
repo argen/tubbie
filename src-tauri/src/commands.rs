@@ -673,7 +673,7 @@ pub async fn request_current_location(
 
 /// Fetch the arrivals board for the currently saved station config.
 ///
-/// Uses the `BoardConfig` from the config store (or the default: Belsize Park).
+/// Uses the `BoardConfig` from the config store (or the default: Oxford Circus).
 ///
 /// M6 TODO: wire a polling stream via `BoardService::stream` + Tauri event
 /// emission so the frontend receives updates without polling this command.
@@ -692,7 +692,7 @@ pub async fn save_config(cfg: BoardConfig, state: State<'_, AppState>) -> Result
 
 /// Load the currently saved `BoardConfig`, or return the default.
 ///
-/// Default: Belsize Park (`940GZZLUBZP`), no line/direction filter, 20 s poll.
+/// Default: Oxford Circus (`940GZZLUOXC`), no line/direction filter, 30 s poll.
 #[tauri::command]
 pub async fn load_config(state: State<'_, AppState>) -> Result<BoardConfig, String> {
     load_config_inner(&state).await
@@ -1562,7 +1562,7 @@ mod tests {
         let cfg = load_config_inner(&state)
             .await
             .expect("should return default");
-        assert_eq!(cfg.station_id, "940GZZLUBZP");
+        assert_eq!(cfg.station_id, "940GZZLUOXC");
         assert_eq!(cfg.poll_seconds, 30);
     }
 
@@ -1730,7 +1730,7 @@ mod tests {
     async fn get_board_returns_board_for_default_config() {
         let state = fixture_state();
         let board = get_board_inner(&state).await.expect("should return board");
-        assert_eq!(board.station_id, "940GZZLUBZP");
+        assert_eq!(board.station_id, "940GZZLUOXC");
         assert!(!board.platforms.is_empty(), "board should have platforms");
     }
 
