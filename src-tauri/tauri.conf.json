@@ -59,7 +59,7 @@
     "updater": {
       "active": true,
       "dialog": false,
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDQ2RjgwRkJCQTVEOERBMkYKUldRdjJ0aWx1dy80Um5vZUljOUFEWlJRcXlrTHArVWJJd3pYMUxNR0F5TWdjN3BwN2JUK01oSXgK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDFGQzM4NEE2RUFBOEMzMkQKUldRdHc2anFwb1RESDIxRjcrazloR2VxVk91TVFCTk5XK3prZDY1UnFJMFZVbVM2ZUFjcndXL1oK",
       "endpoints": [
         "https://github.com/argen/tubbie/releases/latest/download/latest.json"
       ]
