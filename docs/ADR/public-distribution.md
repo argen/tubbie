@@ -183,26 +183,79 @@ those defaults shift.
   use App Sandbox. (If we ever add a MAS variant, this entitlement
   file gets a sandboxed sibling.)
 
-### D7. `macOSPrivateApi: true` retained, with a tested fallback
+### D7. `macOSPrivateApi: true` retained — confirmed via dry-run
 
 The original `distribution-roadmap.md` warned that `macOSPrivateApi:
 true` (used for the undecorated chrome) periodically breaks
-notarization when Apple updates its scanner. The Phase 3 local dry-run
-(`just release-local v0.1.0-dryrun`) is the verification mechanism;
-see "Rollout status" below for the live result.
+notarization when Apple updates its scanner. The Phase 3 dry-run
+(submissions `2762ef28-...` on 2026-05-20 and `3fd6c34f-...` on
+2026-05-21) **both Accepted** — the first with `macOSPrivateApi:
+true`, the second with `false` after we briefly flipped it while
+chasing what turned out to be a misdiagnosis (see D9). Apple's
+scanner has no problem with the flag in our current binary.
 
-**If notarization rejects:** flip `macOSPrivateApi: false` in
-`tauri.conf.json` and accept a stock title bar for that release. The
-undecorated chrome is cosmetic — the dot-matrix board content is
-unaffected. A re-cut with this flip unblocks the release within
-minutes; restoring the undecorated chrome is a v0.X.Y+1 polish item
-once Tauri / Apple work it out upstream.
+**False alarm story** (worth recording so we don't chase the wrong
+gremlin again): for ~24 hours we thought Apple was stalling our
+submissions for 87+ minutes / 16+ hours. The submissions were in
+fact processing normally — Apple accepted them all within minutes.
+Our local `xcrun notarytool submit --wait` poller was dying on
+transient Wi-Fi drops (`NSURLErrorDomain -1009`), and we kept
+re-querying with a fresh `--wait` that also died, never noticing
+the underlying submissions had already resolved. D9 documents the
+fix: poll-and-recover wrapper that survives network blinks.
+
+**If a future Apple scanner update does reject `macOSPrivateApi:
+true`:** the fallback is mechanical — flip to `false` in
+`tauri.conf.json`, remove the `macos-private-api` feature from
+`src-tauri/Cargo.toml`'s tauri dependency, drop the
+`.transparent(false)` call in `commands.rs::open_settings_window_impl`
+(it's a no-op with the feature off), and accept a stock title bar
+for that release. The board content is unaffected. Restoring the
+undecorated chrome is a v0.X.Y+1 polish item once Tauri / Apple
+work it out upstream.
 
 ### D8. Auto-update default ON
 
 `UpdatePrefs::default()` returns `auto_check: true`. Opt-OUT, not
 opt-in. A live-data app shipping with stale WKWebView CVEs is the
 wrong default; the Settings toggle gives users the escape hatch.
+
+### D9. Notarize via poll-and-recover, not `notarytool --wait`
+
+`xcrun notarytool submit --wait` blocks the local process until
+Apple returns a verdict. If the local network blinks mid-wait,
+`--wait` aborts with `NSURLErrorDomain -1009` and propagates a
+non-zero exit. The submission survives on Apple's side, but the
+calling pipeline is now broken — and worse, a naïve re-run starts
+a brand-new submission instead of re-attaching to the original.
+
+`just notarize-staple` delegates the submit-and-wait step to
+`scripts/notarize-submit-and-wait.sh`. The script:
+
+1. Submits without `--wait` (returns immediately with submission id).
+2. Polls `notarytool info` every `NOTARY_POLL_INTERVAL_SECS` (default
+   30 s). Network errors on the poll fall through as "no status this
+   tick" and the loop continues — they do not propagate as exit codes.
+3. Exits 0 on `Accepted`, 1 on `Invalid`/`Rejected` (printing the
+   notary log), 3 on timeout past `NOTARY_MAX_WAIT_SECS` (default
+   30 min).
+4. Supports a `query <id>` mode to re-attach to an existing
+   submission, e.g. after a laptop sleep blew past the timeout —
+   `just notarize-query <id>` is the user-facing entry point.
+
+**Why over a more elaborate retry library** (curl-with-retry,
+exponential backoff): the failure mode is binary (network up or
+down) and the cost of one extra 30 s tick is trivial. A simple
+loop with terminal-status detection is auditable in ~100 lines
+of bash, no extra dependencies on the dev's Mac.
+
+**Why over Apple's own `notarytool` retry flags:** as of Xcode
+26.1's `notarytool`, there is no `--retry-on-disconnect` option;
+`--wait` is a single network session. The wrapper script is the
+only place to inject resilience.
+
+This was discovered the hard way during the dry-run — see D7's
+"false alarm story" for the misdiagnosis trail.
 
 ## Operational details
 
@@ -267,7 +320,8 @@ Gatekeeper interaction.
 
 ## Rollout status
 
-As of 2026-05-21 the M8 pipeline is **built but unproven end-to-end**:
+As of 2026-05-22 the M8 pipeline is **end-to-end proven** — what
+remains is cutting v0.1.0:
 
 | Step | Status |
 |---|---|
@@ -277,24 +331,34 @@ As of 2026-05-21 the M8 pipeline is **built but unproven end-to-end**:
 | PR-D — updater IPC commands + frontend wrappers | merged to main |
 | PR-E — Settings "Updates" section (seven UI states) | merged to main |
 | PR-F — this ADR + README + CLAUDE.md note + PR-template checkbox | merged to main |
-| Phase 3 — `just release-local v0.1.0-dryrun` notarization | **first submission (id `2762ef28-ac85-4110-816f-0327932dd423`) wedged in Apple's queue: 16h+ `In Progress`, no log available, never resolved. Resubmission pending.** |
-| Phase 7 — cut v0.1.0 + fresh-account install smoke + v0.1.1 no-op auto-update smoke | blocked on Phase 3 |
+| Phase 3 — notarization dry-run | **✓ Accepted + stapled.** Submission `3fd6c34f-2727-485c-98f7-a84dece1ec8b` on 2026-05-21. `spctl --assess` returns `accepted source=Notarized Developer ID`. |
+| Phase 7 — cut v0.1.0 + fresh-account install smoke + v0.1.1 no-op auto-update smoke | ready to run once outstanding follow-up PRs land |
 | Phase 8 — flip repo public + apply branch protection | blocked on Phase 7 |
 
-**What to check first on resumption:**
+**Follow-ups still open or in flight** (small, post-dry-run cleanup):
 
-1. Source `.envrc` (loads `NOTARY_KEY_PATH` / `NOTARY_KEY_ID` /
-   `NOTARY_ISSUER`).
-2. `just notary-history` to confirm the API key still authenticates.
-3. From a clean `main`: `just release-local v0.1.0-dryrun2` to
-   rebuild + re-sign + resubmit. The previous submission
-   (`2762ef28-...`) is abandoned; do not wait on it further.
-4. If the new submission also stalls past ~30 min: check
-   <https://developer.apple.com/system-status/> for a Notary Service
-   incident. The local `--wait` polling process is independent of
-   Apple's queue — killing it does not cancel the submission.
-5. If notarization rejects: pull reasons with `xcrun notarytool log
-   <id> --key "$NOTARY_KEY_PATH" --key-id "$NOTARY_KEY_ID" --issuer "$NOTARY_ISSUER"`.
-   If the rejection is `macOSPrivateApi`-related, apply the D7
-   fallback (flip to `false` in `tauri.conf.json`), re-run the
-   dry-run, and amend D7's status line above.
+- #103 — keychain stash for the updater-key password (D4 follow-up).
+- #105 — rotate updater pubkey (old key's password was lost during
+  bootstrap; new key proven via submission `3fd6c34f-...`).
+- This PR — network-resilient `notarize-staple` (D9).
+- ADR D7 + D9 + this rollout-status section all reflect the actual
+  outcome (false-stall misdiagnosis, recovery via D9).
+
+**What to do on next resumption (cutting v0.1.0):**
+
+1. Make sure #103 + #105 + this PR have all merged.
+2. `source .envrc` and `just notary-history` to confirm the API key
+   still authenticates.
+3. `just bump 0.1.0` to set version in lockstep.
+4. Open a tiny PR with the version bump + a `CHANGELOG-v0.1.0.md`.
+5. After it merges: `just release v0.1.0` from clean main.
+6. Smoke-test the draft Release on a fresh macOS user account per
+   the "Verification" section above. Promote to published when
+   green.
+7. Tag a follow-up `v0.1.1` no-op release later the same day and
+   confirm the in-app updater installs cleanly from v0.1.0.
+
+If a submission ever appears stuck again, do **not** start a new
+build. Instead `just notarize-query <id>` against the original
+submission id — it almost certainly resolved on Apple's side while
+the local `--wait` was dying on a network blink (see D9).

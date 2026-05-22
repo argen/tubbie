@@ -100,6 +100,11 @@ notary-history:
 # reads APPLE_SIGNING_IDENTITY for codesign, and the three NOTARY_*
 # env vars (App Store Connect API key) for notarytool. See ADR
 # `docs/ADR/public-distribution.md` D5 for the auth choice.
+#
+# Notarization uses scripts/notarize-submit-and-wait.sh which polls
+# resiliently — a local network blink mid-submission no longer aborts
+# the pipeline (the submission survives on Apple's side and the
+# script re-queries on next tick). See D9 for the rationale.
 notarize-staple:
     codesign --deep --force --options runtime --timestamp \
       --sign "$APPLE_SIGNING_IDENTITY" \
@@ -108,12 +113,17 @@ notarize-staple:
     ditto -c -k --keepParent \
       "{{macos_bundle}}/Tubbie.app" \
       /tmp/Tubbie-notarize.zip
-    xcrun notarytool submit /tmp/Tubbie-notarize.zip \
-      --key "$NOTARY_KEY_PATH" --key-id "$NOTARY_KEY_ID" \
-      --issuer "$NOTARY_ISSUER" --wait
+    scripts/notarize-submit-and-wait.sh /tmp/Tubbie-notarize.zip
     rm -f /tmp/Tubbie-notarize.zip
     xcrun stapler staple "{{macos_bundle}}/Tubbie.app"
     xcrun stapler validate "{{macos_bundle}}/Tubbie.app"
+
+# Re-attach to a notarization submission that timed out locally (e.g.
+# laptop slept past NOTARY_MAX_WAIT_SECS). Use the submission id printed
+# by `notarize-staple` / `notarize-submit-and-wait.sh`. On Accepted the
+# script exits 0; you can then `xcrun stapler staple <app>` manually.
+notarize-query id:
+    scripts/notarize-submit-and-wait.sh query {{id}}
 
 # Verify the signed bundle: deep codesign verify + Gatekeeper assess.
 sign-verify:
