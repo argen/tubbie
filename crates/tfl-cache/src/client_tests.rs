@@ -1760,6 +1760,113 @@ mod tests {
         );
     }
 
+    /// A transient hub-detail fetch failure (429 on cellular) leaves a
+    /// hub-sourced station's `Station.lines` incomplete — the exact shape
+    /// of the Highbury & Islington "no Windrush" report, where every line
+    /// a hub station serves arrives via the single `/StopPoint/{hub}`
+    /// detail fetch. Invariant #26's short-retry self-heal only covered
+    /// per-*mode* failures (`failed_modes`); a hub-fetch failure left the
+    /// entry stamped as a *full* warm, so the incomplete data was served
+    /// for the entire 14-min `STOP_POINTS_TTL` instead of being retried
+    /// after 60 s. This test pins that a hub-fetch failure now marks the
+    /// warm as partial so the short-retry window applies.
+    ///
+    /// Goes RED before `hub_warm_incomplete` is wired: every mode
+    /// succeeds, so `failed_modes` is empty and a `failed_modes`-only
+    /// partial check returns `false`.
+    #[tokio::test(flavor = "current_thread")]
+    async fn hub_fetch_failure_marks_warm_partial() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use std::sync::Arc;
+
+        // Every mode fetch succeeds; only the HUBABC detail fetch fails
+        // transiently — so `failed_modes` stays empty and the partial
+        // signal must come from the hub-fetch path.
+        struct HubFailingHttp {
+            inner: FixtureTflHttp,
+            hub_calls: Arc<AtomicUsize>,
+        }
+        impl TflHttp for HubFailingHttp {
+            fn fetch(
+                &self,
+                endpoint: &str,
+                id: &str,
+            ) -> impl std::future::Future<Output = Result<serde_json::Value, TflError>> + Send
+            {
+                let is_hub = endpoint == "stop-point" && id == "HUBABC";
+                if is_hub {
+                    self.hub_calls.fetch_add(1, Ordering::SeqCst);
+                }
+                let inner_fut = self.inner.fetch(endpoint, id);
+                async move {
+                    if is_hub {
+                        return Err(TflError::RateLimited { retry_after: None });
+                    }
+                    inner_fut.await
+                }
+            }
+        }
+
+        fn fixture_dir_with_hub_station() -> PathBuf {
+            let dir = tempfile::tempdir().expect("tempdir");
+            let sp_dir = dir.path().join("stop-points");
+            std::fs::create_dir_all(&sp_dir).unwrap();
+            let ls_dir = dir.path().join("line-status");
+            std::fs::create_dir_all(&ls_dir).unwrap();
+            let tube = serde_json::json!({
+                "stopPoints": [{
+                    "id": "940GZZLUABC",
+                    "commonName": "Hub ABC Underground Station",
+                    "modes": ["tube"],
+                    "lat": 51.5, "lon": -0.1,
+                    "hubNaptanCode": "HUBABC",
+                    "lineModeGroups": [{"modeName": "tube", "lineIdentifier": ["northern"]}]
+                }]
+            });
+            std::fs::write(
+                sp_dir.join("tube.json"),
+                serde_json::to_string(&tube).unwrap(),
+            )
+            .unwrap();
+            for mode in ["overground", "dlr", "elizabeth-line"] {
+                std::fs::write(sp_dir.join(format!("{mode}.json")), r#"{"stopPoints":[]}"#).unwrap();
+                std::fs::write(ls_dir.join(format!("{mode}.json")), "[]").unwrap();
+            }
+            std::fs::write(ls_dir.join("tube.json"), "[]").unwrap();
+            let path = dir.path().to_path_buf();
+            std::mem::forget(dir);
+            path
+        }
+
+        // Partial case: HUBABC always 429s → warm must be flagged partial.
+        let hub_calls = Arc::new(AtomicUsize::new(0));
+        let client = TflClient::new(HubFailingHttp {
+            inner: FixtureTflHttp::new(fixture_dir_with_hub_station()),
+            hub_calls: hub_calls.clone(),
+        });
+        client
+            .warm_stop_points_cache()
+            .await
+            .expect("warm must succeed overall even when a hub fetch fails");
+        assert!(
+            hub_calls.load(Ordering::SeqCst) >= 1,
+            "precondition: HUBABC must have been attempted",
+        );
+        assert!(
+            client.stop_points_warm_is_partial(),
+            "a transient hub-fetch failure must mark the warm partial so the \
+             short retry window (not the full 14-min TTL) applies",
+        );
+
+        // Control: a clean warm (no hub failure) must NOT be flagged partial.
+        let clean = TflClient::new(FixtureTflHttp::new(fixture_dir_with_hub_station()));
+        clean.warm_stop_points_cache().await.expect("clean warm");
+        assert!(
+            !clean.stop_points_warm_is_partial(),
+            "a fully-successful warm must not be flagged partial",
+        );
+    }
+
     #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
     async fn single_flight_concurrent_warm_issues_one_fetch_per_mode() {
         use std::sync::atomic::{AtomicUsize, Ordering};

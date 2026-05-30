@@ -207,6 +207,15 @@ struct StopPointsCacheEntry {
     /// so the failed mode gets another chance on the next call instead
     /// of poisoning the cache for 14 minutes.
     failed_modes: Vec<&'static str>,
+    /// `true` when at least one hub-detail (`/StopPoint/{hub}`) fetch in the
+    /// hub fan-out failed transiently during the warm that produced this
+    /// entry. Hub-sourced stations (e.g. Highbury & Islington, where every
+    /// served line — Victoria + the named Overground lines — arrives via
+    /// the single hub-detail fetch) would otherwise carry an incomplete
+    /// `Station.lines` for the full [`STOP_POINTS_TTL`]. Treated like
+    /// `failed_modes` for freshness: a hub-incomplete entry uses the short
+    /// [`PARTIAL_WARM_RETRY_AFTER`] window so the failed hub is retried.
+    hub_warm_incomplete: bool,
 }
 
 /// Typed TfL API client, generic over any `TflHttp` transport.
@@ -506,10 +515,16 @@ impl<H: TflHttp> TflClient<H> {
     /// canonical `~190 tube hubs in the fixture vs. 4 recorded HUB*.json
     /// files` situation hits this path: the 186 missing hubs return
     /// `NotFound` once, get cached as empty, and never re-fetch.
-    async fn hub_lines_cached(&self, hub_id: &str) -> Vec<LineRef> {
+    /// Returns `(lines, transient_failure)`. `transient_failure` is `true`
+    /// only when every retry attempt hit a transient error (429 / transport
+    /// / http) and the hub's lines could not be fetched this warm — the
+    /// caller marks the cache entry partial so the short retry window
+    /// applies. A legitimately-empty hub (`NotFound`, cached) and a
+    /// successful fetch both report `false`.
+    async fn hub_lines_cached(&self, hub_id: &str) -> (Vec<LineRef>, bool) {
         if let Ok(guard) = self.hub_lines_cache.lock() {
             if let Some(cached) = guard.get(hub_id) {
-                return cached.clone();
+                return (cached.clone(), false);
             }
         }
 
@@ -559,8 +574,9 @@ impl<H: TflHttp> TflClient<H> {
                             );
                             // Transient final-attempt failure is NOT
                             // cached — next caller (next warm cycle,
-                            // next subscription) gets a fresh shot.
-                            return vec![];
+                            // next subscription) gets a fresh shot. Signal
+                            // the failure so the warm is marked partial.
+                            return (vec![], true);
                         }
                         eprintln!(
                             "[tfl-cache] hub-lines/{hub_id} attempt {} failed (will retry): {err}",
@@ -579,9 +595,9 @@ impl<H: TflHttp> TflClient<H> {
                     if let Ok(mut guard) = self.hub_lines_cache.lock() {
                         guard.insert(hub_id.to_string(), vec![]);
                     }
-                    return vec![];
+                    return (vec![], false);
                 }
-                _ => return vec![],
+                _ => return (vec![], false),
             }
         };
 
@@ -651,7 +667,7 @@ impl<H: TflHttp> TflClient<H> {
         if let Ok(mut guard) = self.hub_lines_cache.lock() {
             guard.insert(hub_id.to_string(), lines.clone());
         }
-        lines
+        (lines, false)
     }
 
     /// Fetch the current status for a line on any surfaced mode.
@@ -968,7 +984,8 @@ impl<H: TflHttp> TflClient<H> {
                 }
             };
             if let Some(entry) = guard.as_ref() {
-                let is_stale_partial = !entry.failed_modes.is_empty()
+                let is_stale_partial = (!entry.failed_modes.is_empty()
+                    || entry.hub_warm_incomplete)
                     && entry.fetched_at.elapsed() >= PARTIAL_WARM_RETRY_AFTER;
                 if !is_stale_partial {
                     return Ok(entry.stations.clone());
@@ -1114,6 +1131,12 @@ impl<H: TflHttp> TflClient<H> {
 
         let mut stations: Vec<Station> = by_id.into_values().collect();
 
+        // Set when any hub-detail fetch in the fan-out below fails
+        // transiently — the entry is then treated like a partial mode warm
+        // (short retry window) so hub-sourced stations don't serve an
+        // incomplete `Station.lines` for the full TTL.
+        let mut hub_warm_incomplete = false;
+
         // For multi-mode stations that carry a hub NaPTAN code, merge lines
         // from sibling stop-points so the Settings chip UI shows all lines.
         //
@@ -1131,13 +1154,16 @@ impl<H: TflHttp> TflClient<H> {
         if !stations_per_hub.is_empty() {
             let hub_results = futures::future::join_all(stations_per_hub.iter().map(
                 |(hub_id, indices)| async move {
-                    let lines = self.hub_lines_cached(hub_id).await;
-                    (indices.clone(), lines)
+                    let (lines, hub_failed) = self.hub_lines_cached(hub_id).await;
+                    (indices.clone(), lines, hub_failed)
                 },
             ))
             .await;
 
-            for (indices, hub_lines) in hub_results {
+            for (indices, hub_lines, hub_failed) in hub_results {
+                if hub_failed {
+                    hub_warm_incomplete = true;
+                }
                 for i in indices {
                     let station = &mut stations[i];
                     for line in &hub_lines {
@@ -1153,6 +1179,7 @@ impl<H: TflHttp> TflClient<H> {
             fetched_at: Instant::now(),
             stations: stations.clone(),
             failed_modes: failed_modes.clone(),
+            hub_warm_incomplete,
         };
         match self.stop_points_cache.lock() {
             Ok(mut guard) => {
@@ -1190,7 +1217,7 @@ impl<H: TflHttp> TflClient<H> {
             }
         };
         let entry = guard.as_ref()?;
-        let ttl = if entry.failed_modes.is_empty() {
+        let ttl = if entry.failed_modes.is_empty() && !entry.hub_warm_incomplete {
             STOP_POINTS_TTL
         } else {
             PARTIAL_WARM_RETRY_AFTER
@@ -1200,6 +1227,26 @@ impl<H: TflHttp> TflClient<H> {
         } else {
             None
         }
+    }
+
+    /// Was the stop-points cache entry produced by a *partial* warm — one
+    /// where at least one per-mode fetch or hub-detail fetch failed, so the
+    /// cached `Station.lines` may be missing lines the station actually
+    /// serves? Returns `false` when the cache is cold (no entry).
+    ///
+    /// Drives the short-retry self-heal (invariant #26): a partial entry is
+    /// re-fetched after [`PARTIAL_WARM_RETRY_AFTER`] rather than the full
+    /// [`STOP_POINTS_TTL`]. Exposed publicly as a diagnostic seam so
+    /// callers (and tests) can reason about cache completeness.
+    pub fn stop_points_warm_is_partial(&self) -> bool {
+        let guard = match self.stop_points_cache.lock() {
+            Ok(g) => g,
+            Err(poison) => poison.into_inner(),
+        };
+        guard
+            .as_ref()
+            .map(|entry| !entry.failed_modes.is_empty() || entry.hub_warm_incomplete)
+            .unwrap_or(false)
     }
 
     /// Returns the cached station list whenever any cached data exists,
