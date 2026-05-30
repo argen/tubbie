@@ -877,7 +877,9 @@ impl<H: TflHttp> TflClient<H> {
             .filter(is_canonical_station_id)
             .collect();
         let candidates = dedupe_by_hub_naptan(candidates);
-        Ok(tfl_client::nearest::rank_nearest(candidates, lat, lon, limit))
+        Ok(tfl_client::nearest::rank_nearest(
+            candidates, lat, lon, limit,
+        ))
     }
 
     /// Pre-fetch and cache the stop-points list. Fire-and-forget from app
@@ -977,9 +979,7 @@ impl<H: TflHttp> TflClient<H> {
             let guard = match self.stop_points_cache.lock() {
                 Ok(g) => g,
                 Err(poison) => {
-                    eprintln!(
-                        "[tfl-cache] stop-points cache mutex poisoned on read; recovering"
-                    );
+                    eprintln!("[tfl-cache] stop-points cache mutex poisoned on read; recovering");
                     poison.into_inner()
                 }
             };
@@ -1064,10 +1064,12 @@ impl<H: TflHttp> TflClient<H> {
             }
         }
 
-        let fetches = self
-            .modes
-            .iter()
-            .map(|mode| async move { (*mode, self.fetch_stop_points_for_mode_with_retry(mode).await) });
+        let fetches = self.modes.iter().map(|mode| async move {
+            (
+                *mode,
+                self.fetch_stop_points_for_mode_with_retry(mode).await,
+            )
+        });
         let per_mode = futures::future::join_all(fetches).await;
 
         let mut by_id: HashMap<String, Station> = HashMap::new();
@@ -1124,7 +1126,9 @@ impl<H: TflHttp> TflClient<H> {
             );
             if let Some(prior) = self.read_cache_any() {
                 for prior_station in prior {
-                    by_id.entry(prior_station.id.clone()).or_insert(prior_station);
+                    by_id
+                        .entry(prior_station.id.clone())
+                        .or_insert(prior_station);
                 }
             }
         }

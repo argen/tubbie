@@ -892,8 +892,10 @@ mod tests {
             CANONICAL_MULTI_MODE_HUBS.len(),
         );
 
-        for (i, (json_scenario, &(const_id, const_lines))) in
-            positive.iter().zip(CANONICAL_MULTI_MODE_HUBS.iter()).enumerate()
+        for (i, (json_scenario, &(const_id, const_lines))) in positive
+            .iter()
+            .zip(CANONICAL_MULTI_MODE_HUBS.iter())
+            .enumerate()
         {
             assert_eq!(
                 json_scenario.station_id, const_id,

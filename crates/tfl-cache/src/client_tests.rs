@@ -155,10 +155,8 @@ mod tests {
             .await
             .expect("default client should resolve overground line via overground fixture");
 
-        let tube_only = TflClient::with_modes(
-            FixtureTflHttp::new(workspace_fixtures_dir()),
-            &["tube"],
-        );
+        let tube_only =
+            TflClient::with_modes(FixtureTflHttp::new(workspace_fixtures_dir()), &["tube"]);
         let err = tube_only
             .get_line_status("mildmay")
             .await
@@ -245,10 +243,19 @@ mod tests {
         let ids: std::collections::HashSet<&str> =
             statuses.iter().map(|s| s.line_id.as_str()).collect();
 
-        assert!(ids.contains("northern"), "expected tube line 'northern', got: {ids:?}");
+        assert!(
+            ids.contains("northern"),
+            "expected tube line 'northern', got: {ids:?}"
+        );
         assert!(ids.contains("dlr"), "expected DLR line 'dlr', got: {ids:?}");
-        assert!(ids.contains("elizabeth"), "expected Elizabeth line 'elizabeth', got: {ids:?}");
-        assert!(ids.contains("mildmay"), "expected Overground line 'mildmay', got: {ids:?}");
+        assert!(
+            ids.contains("elizabeth"),
+            "expected Elizabeth line 'elizabeth', got: {ids:?}"
+        );
+        assert!(
+            ids.contains("mildmay"),
+            "expected Overground line 'mildmay', got: {ids:?}"
+        );
     }
 
     #[tokio::test]
@@ -290,7 +297,13 @@ mod tests {
         let order: Vec<&str> = statuses.iter().map(|s| s.line_id.as_str()).collect();
         assert_eq!(
             order,
-            vec!["alpha-line", "bravo-line", "delta-line", "charlie-line", "echo-line"],
+            vec![
+                "alpha-line",
+                "bravo-line",
+                "delta-line",
+                "charlie-line",
+                "echo-line"
+            ],
             "expected worst-first then alphabetical by line_id"
         );
 
@@ -323,7 +336,8 @@ mod tests {
             ) -> impl std::future::Future<Output = Result<serde_json::Value, TflError>> + Send
             {
                 if endpoint == "line-status" {
-                    self.line_status_calls.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                    self.line_status_calls
+                        .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
                 }
                 let inner = self.inner.clone();
                 let endpoint = endpoint.to_string();
@@ -339,11 +353,20 @@ mod tests {
         };
         let client = TflClient::with_modes(http, &["tube"]);
 
-        client.get_all_line_statuses().await.expect("first call should succeed");
+        client
+            .get_all_line_statuses()
+            .await
+            .expect("first call should succeed");
         let after_cold = counter.load(Ordering::SeqCst);
-        assert_eq!(after_cold, 1, "cold-cache call should fetch tube exactly once");
+        assert_eq!(
+            after_cold, 1,
+            "cold-cache call should fetch tube exactly once"
+        );
 
-        client.get_all_line_statuses().await.expect("warm-cache call should succeed");
+        client
+            .get_all_line_statuses()
+            .await
+            .expect("warm-cache call should succeed");
         let after_warm = counter.load(Ordering::SeqCst);
         assert_eq!(
             after_warm, 1,
@@ -383,7 +406,10 @@ mod tests {
         .unwrap();
 
         let client = TflClient::with_modes(FixtureTflHttp::new(dir.path()), &["overground"]);
-        let statuses = client.get_all_line_statuses().await.expect("should succeed");
+        let statuses = client
+            .get_all_line_statuses()
+            .await
+            .expect("should succeed");
 
         let liberty = statuses
             .iter()
@@ -424,7 +450,10 @@ mod tests {
         .unwrap();
 
         let client = TflClient::with_modes(FixtureTflHttp::new(dir.path()), &["tube"]);
-        let statuses = client.get_all_line_statuses().await.expect("should succeed");
+        let statuses = client
+            .get_all_line_statuses()
+            .await
+            .expect("should succeed");
         assert_eq!(statuses.len(), 1);
         assert!(statuses[0].validity_periods.is_empty());
     }
@@ -455,7 +484,10 @@ mod tests {
             .await
             .expect("search should succeed");
 
-        assert!(!results.is_empty(), "search for 'oval' should return results");
+        assert!(
+            !results.is_empty(),
+            "search for 'oval' should return results"
+        );
         let first = &results[0];
         assert!(
             first.common_name.to_lowercase().contains("oval"),
@@ -482,7 +514,10 @@ mod tests {
         .unwrap();
 
         let synthetic = TflClient::new(FixtureTflHttp::new(dir.path()));
-        let results2 = synthetic.search_stations("bank").await.expect("synthetic search should succeed");
+        let results2 = synthetic
+            .search_stations("bank")
+            .await
+            .expect("synthetic search should succeed");
         assert_eq!(results2.len(), 3, "all 3 contain 'bank'");
         assert_eq!(results2[0].id, "940GZZLUAAA");
         assert_eq!(results2[1].id, "940GZZLUBBB");
@@ -493,9 +528,18 @@ mod tests {
     async fn search_stations_case_insensitive() {
         let client = real_client();
 
-        let lower = client.search_stations("belsize").await.expect("lowercase search");
-        let upper = client.search_stations("BELSIZE").await.expect("uppercase search");
-        let mixed = client.search_stations("BeLsIzE").await.expect("mixed-case search");
+        let lower = client
+            .search_stations("belsize")
+            .await
+            .expect("lowercase search");
+        let upper = client
+            .search_stations("BELSIZE")
+            .await
+            .expect("uppercase search");
+        let mixed = client
+            .search_stations("BeLsIzE")
+            .await
+            .expect("mixed-case search");
 
         assert!(!lower.is_empty(), "should find 'belsize' results");
         assert_eq!(
@@ -522,21 +566,40 @@ mod tests {
                 { "id": "940GZZLUVCX", "commonName": "Victoria Coach Terminal",       "modes": ["tube", "bus"], "lat": 51.5, "lon": -0.14 }
             ]
         });
-        fs::write(ep_dir.join("tube.json"), serde_json::to_string(&fixture).unwrap()).unwrap();
+        fs::write(
+            ep_dir.join("tube.json"),
+            serde_json::to_string(&fixture).unwrap(),
+        )
+        .unwrap();
 
         let client = TflClient::new(FixtureTflHttp::new(dir.path()));
-        let results = client.search_stations("victoria").await.expect("search should succeed");
+        let results = client
+            .search_stations("victoria")
+            .await
+            .expect("search should succeed");
 
         let ids: Vec<&str> = results.iter().map(|s| s.id.as_str()).collect();
-        assert!(!ids.contains(&"490BUSVIC"), "bus-only stop must be excluded; got: {ids:?}");
-        assert!(ids.contains(&"940GZZLUVIC"), "tube stop must be included; got: {ids:?}");
-        assert!(ids.contains(&"940GZZLUVCX"), "tube+bus stop must be included; got: {ids:?}");
+        assert!(
+            !ids.contains(&"490BUSVIC"),
+            "bus-only stop must be excluded; got: {ids:?}"
+        );
+        assert!(
+            ids.contains(&"940GZZLUVIC"),
+            "tube stop must be included; got: {ids:?}"
+        );
+        assert!(
+            ids.contains(&"940GZZLUVCX"),
+            "tube+bus stop must be included; got: {ids:?}"
+        );
     }
 
     #[tokio::test]
     async fn search_stations_empty_query_returns_empty() {
         let client = real_client();
-        let results = client.search_stations("").await.expect("empty query should not error");
+        let results = client
+            .search_stations("")
+            .await
+            .expect("empty query should not error");
         assert!(results.is_empty(), "empty query must return empty Vec");
     }
 
@@ -544,17 +607,34 @@ mod tests {
     async fn search_stations_whitespace_only_query_returns_empty() {
         let client = real_client();
         for query in ["   ", "\t", "\n", " \t \n "] {
-            let results = client.search_stations(query).await.expect("whitespace query should not error");
-            assert!(results.is_empty(), "whitespace-only query {query:?} must return empty Vec");
+            let results = client
+                .search_stations(query)
+                .await
+                .expect("whitespace query should not error");
+            assert!(
+                results.is_empty(),
+                "whitespace-only query {query:?} must return empty Vec"
+            );
         }
     }
 
     #[tokio::test]
     async fn search_stations_limits_to_20() {
         let client = real_client();
-        let results = client.search_stations("underground").await.expect("search should succeed");
-        assert!(results.len() <= 20, "search must return at most 20 results, got {}", results.len());
-        assert_eq!(results.len(), 20, "with 'underground' query there should be exactly 20 results");
+        let results = client
+            .search_stations("underground")
+            .await
+            .expect("search should succeed");
+        assert!(
+            results.len() <= 20,
+            "search must return at most 20 results, got {}",
+            results.len()
+        );
+        assert_eq!(
+            results.len(),
+            20,
+            "with 'underground' query there should be exactly 20 results"
+        );
     }
 
     // -------------------------------------------------------------------------
@@ -564,7 +644,11 @@ mod tests {
     fn write_stop_points_fixture(dir: &std::path::Path, body: serde_json::Value) {
         let ep_dir = dir.join("stop-points");
         std::fs::create_dir_all(&ep_dir).unwrap();
-        std::fs::write(ep_dir.join("tube.json"), serde_json::to_string(&body).unwrap()).unwrap();
+        std::fs::write(
+            ep_dir.join("tube.json"),
+            serde_json::to_string(&body).unwrap(),
+        )
+        .unwrap();
     }
 
     #[tokio::test]
@@ -588,7 +672,10 @@ mod tests {
         );
 
         let client = TflClient::new(FixtureTflHttp::new(dir.path()));
-        let results = client.search_stations("oxford").await.expect("search should succeed");
+        let results = client
+            .search_stations("oxford")
+            .await
+            .expect("search should succeed");
 
         assert_eq!(results.len(), 1);
         let oxc = &results[0];
@@ -597,7 +684,9 @@ mod tests {
 
         let names: Vec<&str> = oxc.lines.iter().map(|l| l.name.as_str()).collect();
         assert!(
-            names.contains(&"Bakerloo") && names.contains(&"Central") && names.contains(&"Victoria"),
+            names.contains(&"Bakerloo")
+                && names.contains(&"Central")
+                && names.contains(&"Victoria"),
             "line names should be pretty-printed, got {names:?}"
         );
     }
@@ -623,7 +712,10 @@ mod tests {
         );
 
         let client = TflClient::new(FixtureTflHttp::new(dir.path()));
-        let results = client.search_stations("mixed").await.expect("search should succeed");
+        let results = client
+            .search_stations("mixed")
+            .await
+            .expect("search should succeed");
 
         assert_eq!(results.len(), 1);
         let line_ids: Vec<&str> = results[0].lines.iter().map(|l| l.id.as_str()).collect();
@@ -648,7 +740,10 @@ mod tests {
         );
 
         let client = TflClient::new(FixtureTflHttp::new(dir.path()));
-        let results = client.search_stations("bare").await.expect("search should succeed");
+        let results = client
+            .search_stations("bare")
+            .await
+            .expect("search should succeed");
 
         assert_eq!(results.len(), 1);
         assert!(results[0].lines.is_empty());
@@ -672,7 +767,10 @@ mod tests {
         );
 
         let client = TflClient::new(FixtureTflHttp::new(dir.path()));
-        let results = client.search_stations("trimmed").await.expect("search should succeed");
+        let results = client
+            .search_stations("trimmed")
+            .await
+            .expect("search should succeed");
 
         let line_ids: Vec<&str> = results[0].lines.iter().map(|l| l.id.as_str()).collect();
         assert_eq!(line_ids, vec!["jubilee", "metropolitan"]);
@@ -699,7 +797,10 @@ mod tests {
         );
 
         let client = TflClient::new(FixtureTflHttp::new(dir.path()));
-        let results = client.search_stations("explicit").await.expect("search should succeed");
+        let results = client
+            .search_stations("explicit")
+            .await
+            .expect("search should succeed");
 
         let line_ids: Vec<&str> = results[0].lines.iter().map(|l| l.id.as_str()).collect();
         assert_eq!(line_ids, vec!["jubilee"]);
@@ -712,8 +813,14 @@ mod tests {
     #[tokio::test]
     async fn error_variant_not_found() {
         let client = real_client();
-        let err = client.get_arrivals("DEFINITELY_NOT_A_STATION").await.expect_err("must error");
-        assert!(matches!(err, TflError::NotFound(_)), "expected NotFound, got: {err:?}");
+        let err = client
+            .get_arrivals("DEFINITELY_NOT_A_STATION")
+            .await
+            .expect_err("must error");
+        assert!(
+            matches!(err, TflError::NotFound(_)),
+            "expected NotFound, got: {err:?}"
+        );
     }
 
     #[tokio::test]
@@ -724,9 +831,15 @@ mod tests {
         fs::write(ep_dir.join("BAD.json"), r#""not an array""#).unwrap();
 
         let client = TflClient::new(FixtureTflHttp::new(dir.path()));
-        let err = client.get_arrivals("BAD").await.expect_err("bad JSON shape must error");
+        let err = client
+            .get_arrivals("BAD")
+            .await
+            .expect_err("bad JSON shape must error");
 
-        assert!(matches!(err, TflError::Parse(_)), "expected TflError::Parse, got: {err:?}");
+        assert!(
+            matches!(err, TflError::Parse(_)),
+            "expected TflError::Parse, got: {err:?}"
+        );
     }
 
     #[tokio::test]
@@ -737,9 +850,15 @@ mod tests {
         fs::write(ep_dir.join("BADJSON.json"), "{ this is not json }").unwrap();
 
         let client = TflClient::new(FixtureTflHttp::new(dir.path()));
-        let err = client.get_arrivals("BADJSON").await.expect_err("invalid JSON must error");
+        let err = client
+            .get_arrivals("BADJSON")
+            .await
+            .expect_err("invalid JSON must error");
 
-        assert!(matches!(err, TflError::ParseAt { .. }), "expected TflError::ParseAt, got: {err:?}");
+        assert!(
+            matches!(err, TflError::ParseAt { .. }),
+            "expected TflError::ParseAt, got: {err:?}"
+        );
     }
 
     // -------------------------------------------------------------------------
@@ -760,7 +879,13 @@ mod tests {
     impl<H: TflHttp> CountingTflHttp<H> {
         fn new(inner: H) -> (Self, Arc<AtomicUsize>) {
             let count = Arc::new(AtomicUsize::new(0));
-            (Self { inner, count: count.clone() }, count)
+            (
+                Self {
+                    inner,
+                    count: count.clone(),
+                },
+                count,
+            )
         }
     }
 
@@ -785,7 +910,13 @@ mod tests {
     impl<H: TflHttp> RecordingTflHttp<H> {
         fn new(inner: H) -> (Self, RecordedCalls) {
             let calls: RecordedCalls = Arc::new(std::sync::Mutex::new(Vec::new()));
-            (Self { inner, calls: calls.clone() }, calls)
+            (
+                Self {
+                    inner,
+                    calls: calls.clone(),
+                },
+                calls,
+            )
         }
     }
 
@@ -795,7 +926,10 @@ mod tests {
             endpoint: &str,
             id: &str,
         ) -> impl std::future::Future<Output = Result<Value, TflError>> + Send {
-            self.calls.lock().unwrap().push((endpoint.to_string(), id.to_string()));
+            self.calls
+                .lock()
+                .unwrap()
+                .push((endpoint.to_string(), id.to_string()));
             self.inner.fetch(endpoint, id)
         }
     }
@@ -805,7 +939,10 @@ mod tests {
         let (http, calls) = RecordingTflHttp::new(FixtureTflHttp::new(workspace_fixtures_dir()));
         let client = TflClient::new(http);
 
-        client.warm_stop_points_cache().await.expect("warm should succeed");
+        client
+            .warm_stop_points_cache()
+            .await
+            .expect("warm should succeed");
 
         let recorded = calls.lock().unwrap().clone();
         let hub_calls: Vec<&str> = recorded
@@ -874,13 +1011,19 @@ mod tests {
         let _ = client.search_stations("king").await.unwrap();
         let after_searches = count.load(Ordering::SeqCst);
 
-        assert_eq!(after_warm, after_searches, "two searches after warm must hit the cache");
+        assert_eq!(
+            after_warm, after_searches,
+            "two searches after warm must hit the cache"
+        );
     }
 
     #[tokio::test]
     async fn search_stations_finds_victoria_in_full_fixture() {
         let client = real_client();
-        let results = client.search_stations("victoria").await.expect("victoria search should succeed");
+        let results = client
+            .search_stations("victoria")
+            .await
+            .expect("victoria search should succeed");
 
         assert!(!results.is_empty());
 
@@ -899,7 +1042,10 @@ mod tests {
             .expect("Victoria Underground Station should be in results");
 
         let line_ids: Vec<&str> = victoria_tube.lines.iter().map(|l| l.id.as_str()).collect();
-        assert!(line_ids.contains(&"victoria"), "expected victoria line, got {line_ids:?}");
+        assert!(
+            line_ids.contains(&"victoria"),
+            "expected victoria line, got {line_ids:?}"
+        );
         assert!(
             line_ids.contains(&"district") || line_ids.contains(&"circle"),
             "expected at least one of district/circle, got {line_ids:?}"
@@ -917,7 +1063,10 @@ mod tests {
         let _ = client.search_stations("oxford").await.unwrap();
         let after_three = count.load(Ordering::SeqCst);
 
-        assert_eq!(after_first, after_three, "two further searches must add zero fetches");
+        assert_eq!(
+            after_first, after_three,
+            "two further searches must add zero fetches"
+        );
     }
 
     #[tokio::test]
@@ -931,7 +1080,10 @@ mod tests {
         client.warm_stop_points_cache().await.unwrap();
         let after_three = count.load(Ordering::SeqCst);
 
-        assert_eq!(after_first, after_three, "repeated warm calls within TTL must add zero fetches");
+        assert_eq!(
+            after_first, after_three,
+            "repeated warm calls within TTL must add zero fetches"
+        );
     }
 
     // -------------------------------------------------------------------------
@@ -984,12 +1136,24 @@ mod tests {
         );
 
         let client = TflClient::new(FixtureTflHttp::new(dir.path()));
-        let results = client.search_stations("bank").await.expect("search should succeed");
+        let results = client
+            .search_stations("bank")
+            .await
+            .expect("search should succeed");
 
-        let bank = results.iter().find(|s| s.id == "940GZZLUBNK").expect("Bank must be in results");
+        let bank = results
+            .iter()
+            .find(|s| s.id == "940GZZLUBNK")
+            .expect("Bank must be in results");
         let line_ids: Vec<&str> = bank.lines.iter().map(|l| l.id.as_str()).collect();
-        assert!(line_ids.contains(&"central"), "tube lines must still be present, got {line_ids:?}");
-        assert!(line_ids.contains(&"dlr"), "DLR from hub child must be merged in, got {line_ids:?}");
+        assert!(
+            line_ids.contains(&"central"),
+            "tube lines must still be present, got {line_ids:?}"
+        );
+        assert!(
+            line_ids.contains(&"dlr"),
+            "DLR from hub child must be merged in, got {line_ids:?}"
+        );
     }
 
     #[tokio::test]
@@ -1024,7 +1188,10 @@ mod tests {
         );
 
         let client = TflClient::new(FixtureTflHttp::new(dir.path()));
-        let results = client.search_stations("bank").await.expect("search should succeed");
+        let results = client
+            .search_stations("bank")
+            .await
+            .expect("search should succeed");
 
         let bank = results.iter().find(|s| s.id == "940GZZLUBNK").unwrap();
         let central_count = bank.lines.iter().filter(|l| l.id == "central").count();
@@ -1051,11 +1218,17 @@ mod tests {
         // intentionally omit the HUBBAN.json hub fixture
 
         let client = TflClient::new(FixtureTflHttp::new(dir.path()));
-        let results = client.search_stations("bank").await.expect("missing hub fixture must not cause error");
+        let results = client
+            .search_stations("bank")
+            .await
+            .expect("missing hub fixture must not cause error");
 
         let bank = results.iter().find(|s| s.id == "940GZZLUBNK").unwrap();
         let line_ids: Vec<&str> = bank.lines.iter().map(|l| l.id.as_str()).collect();
-        assert!(line_ids.contains(&"central"), "tube lines must still be present");
+        assert!(
+            line_ids.contains(&"central"),
+            "tube lines must still be present"
+        );
     }
 
     #[tokio::test]
@@ -1092,12 +1265,23 @@ mod tests {
         );
 
         let client = TflClient::new(FixtureTflHttp::new(dir.path()));
-        let results = client.search_stations("victoria").await.expect("search should succeed");
+        let results = client
+            .search_stations("victoria")
+            .await
+            .expect("search should succeed");
 
         let victoria = results.iter().find(|s| s.id == "940GZZLUVIC").unwrap();
         let line_ids: Vec<&str> = victoria.lines.iter().map(|l| l.id.as_str()).collect();
-        assert!(!line_ids.iter().any(|id| *id == "52" || *id == "C1"), "bus lines must be excluded");
-        assert!(!line_ids.iter().any(|id| *id == "gatwick-express" || *id == "southern"), "national-rail lines must be excluded");
+        assert!(
+            !line_ids.iter().any(|id| *id == "52" || *id == "C1"),
+            "bus lines must be excluded"
+        );
+        assert!(
+            !line_ids
+                .iter()
+                .any(|id| *id == "gatwick-express" || *id == "southern"),
+            "national-rail lines must be excluded"
+        );
         assert!(line_ids.contains(&"victoria"), "tube lines must remain");
     }
 
@@ -1108,7 +1292,10 @@ mod tests {
     #[tokio::test]
     async fn stop_points_cache_includes_overground_dlr_elizabeth_stations() {
         let client = real_client();
-        client.warm_stop_points_cache().await.expect("warm should succeed");
+        client
+            .warm_stop_points_cache()
+            .await
+            .expect("warm should succeed");
 
         let allowed_og = client.allowed_line_ids_for("910GHACKNYC").await.unwrap();
         assert!(
@@ -1126,19 +1313,34 @@ mod tests {
     #[tokio::test]
     async fn search_stations_returns_overground_only_station() {
         let client = real_client();
-        let results = client.search_stations("hackney central").await.expect("hackney search should succeed");
+        let results = client
+            .search_stations("hackney central")
+            .await
+            .expect("hackney search should succeed");
 
-        let hackney = results.iter().find(|s| s.id == "910GHACKNYC").unwrap_or_else(|| {
-            panic!("Hackney Central must appear in results; got {:?}", results.iter().map(|s| &s.id).collect::<Vec<_>>())
-        });
+        let hackney = results
+            .iter()
+            .find(|s| s.id == "910GHACKNYC")
+            .unwrap_or_else(|| {
+                panic!(
+                    "Hackney Central must appear in results; got {:?}",
+                    results.iter().map(|s| &s.id).collect::<Vec<_>>()
+                )
+            });
         let line_ids: Vec<&str> = hackney.lines.iter().map(|l| l.id.as_str()).collect();
-        assert!(line_ids.contains(&"mildmay"), "Hackney Central must carry mildmay; got {line_ids:?}");
+        assert!(
+            line_ids.contains(&"mildmay"),
+            "Hackney Central must carry mildmay; got {line_ids:?}"
+        );
     }
 
     #[tokio::test]
     async fn search_stations_includes_dlr_only_station() {
         let client = real_client();
-        let results = client.search_stations("beckton").await.expect("beckton search should succeed");
+        let results = client
+            .search_stations("beckton")
+            .await
+            .expect("beckton search should succeed");
 
         assert!(
             results.iter().any(|s| s.id == "940GZZDLBEC"),
@@ -1173,8 +1375,16 @@ mod tests {
                 "lineModeGroups": [{"modeName": "national-rail", "lineIdentifier": ["gatwick-express"]}],
             }]
         });
-        fs::write(sp_dir.join("tube.json"), serde_json::to_string(&tube).unwrap()).unwrap();
-        fs::write(sp_dir.join("overground.json"), serde_json::to_string(&og).unwrap()).unwrap();
+        fs::write(
+            sp_dir.join("tube.json"),
+            serde_json::to_string(&tube).unwrap(),
+        )
+        .unwrap();
+        fs::write(
+            sp_dir.join("overground.json"),
+            serde_json::to_string(&og).unwrap(),
+        )
+        .unwrap();
         fs::write(sp_dir.join("dlr.json"), r#"{"stopPoints":[]}"#).unwrap();
         fs::write(sp_dir.join("elizabeth-line.json"), r#"{"stopPoints":[]}"#).unwrap();
         for mode in ["tube", "overground", "dlr", "elizabeth-line"] {
@@ -1216,8 +1426,16 @@ mod tests {
                  "modes": ["overground"], "lineModeGroups": []},
             ]
         });
-        fs::write(sp_dir.join("tube.json"), serde_json::to_string(&tube).unwrap()).unwrap();
-        fs::write(sp_dir.join("overground.json"), serde_json::to_string(&og).unwrap()).unwrap();
+        fs::write(
+            sp_dir.join("tube.json"),
+            serde_json::to_string(&tube).unwrap(),
+        )
+        .unwrap();
+        fs::write(
+            sp_dir.join("overground.json"),
+            serde_json::to_string(&og).unwrap(),
+        )
+        .unwrap();
         fs::write(sp_dir.join("dlr.json"), r#"{"stopPoints":[]}"#).unwrap();
         fs::write(sp_dir.join("elizabeth-line.json"), r#"{"stopPoints":[]}"#).unwrap();
         for mode in ["tube", "overground", "dlr", "elizabeth-line"] {
@@ -1227,7 +1445,11 @@ mod tests {
         let client = TflClient::new(FixtureTflHttp::new(dir.path()));
         let results = client.search_stations("test").await.unwrap();
         let ids: Vec<&str> = results.iter().map(|s| s.id.as_str()).collect();
-        assert_eq!(ids, vec!["940GZZLUTST"], "only canonical station should remain");
+        assert_eq!(
+            ids,
+            vec!["940GZZLUTST"],
+            "only canonical station should remain"
+        );
     }
 
     #[tokio::test]
@@ -1256,8 +1478,16 @@ mod tests {
                 "lineModeGroups": [{"modeName": "overground", "lineIdentifier": ["mildmay"]}],
             }]
         });
-        fs::write(sp_dir.join("tube.json"), serde_json::to_string(&tube).unwrap()).unwrap();
-        fs::write(sp_dir.join("overground.json"), serde_json::to_string(&og).unwrap()).unwrap();
+        fs::write(
+            sp_dir.join("tube.json"),
+            serde_json::to_string(&tube).unwrap(),
+        )
+        .unwrap();
+        fs::write(
+            sp_dir.join("overground.json"),
+            serde_json::to_string(&og).unwrap(),
+        )
+        .unwrap();
         fs::write(sp_dir.join("dlr.json"), r#"{"stopPoints":[]}"#).unwrap();
         fs::write(sp_dir.join("elizabeth-line.json"), r#"{"stopPoints":[]}"#).unwrap();
         for mode in ["tube", "overground", "dlr", "elizabeth-line"] {
@@ -1272,7 +1502,10 @@ mod tests {
             matches[0].lines.iter().map(|l| l.id.as_str()).collect();
         let expected: std::collections::BTreeSet<&str> =
             ["central", "jubilee", "mildmay"].into_iter().collect();
-        assert_eq!(lines, expected, "merged station must carry the union of tube + overground line ids");
+        assert_eq!(
+            lines, expected,
+            "merged station must carry the union of tube + overground line ids"
+        );
     }
 
     #[tokio::test]
@@ -1284,9 +1517,20 @@ mod tests {
             .iter()
             .filter(|s| s.hub_naptan_code.as_deref() == Some("HUBBAN"))
             .collect();
-        assert_eq!(bank_rows.len(), 1, "expected one Bank row; got {} ({:?})", bank_rows.len(),
-            bank_rows.iter().map(|s| (&s.id, &s.common_name)).collect::<Vec<_>>());
-        assert!(bank_rows[0].id.starts_with("940GZZLU"), "tube canonical should win");
+        assert_eq!(
+            bank_rows.len(),
+            1,
+            "expected one Bank row; got {} ({:?})",
+            bank_rows.len(),
+            bank_rows
+                .iter()
+                .map(|s| (&s.id, &s.common_name))
+                .collect::<Vec<_>>()
+        );
+        assert!(
+            bank_rows[0].id.starts_with("940GZZLU"),
+            "tube canonical should win"
+        );
 
         let farr_results = client.search_stations("farringdon").await.unwrap();
         let farr_rows: Vec<&Station> = farr_results
@@ -1294,7 +1538,10 @@ mod tests {
             .filter(|s| s.hub_naptan_code.as_deref() == Some("HUBZFD"))
             .collect();
         assert_eq!(farr_rows.len(), 1, "expected one Farringdon row");
-        assert!(farr_rows[0].id.starts_with("940GZZLU"), "tube canonical should win");
+        assert!(
+            farr_rows[0].id.starts_with("940GZZLU"),
+            "tube canonical should win"
+        );
     }
 
     #[tokio::test(flavor = "current_thread")]
@@ -1330,7 +1577,10 @@ mod tests {
         };
         let client = TflClient::new(http);
 
-        client.warm_stop_points_cache().await.expect("warm should ultimately succeed via per-mode retry");
+        client
+            .warm_stop_points_cache()
+            .await
+            .expect("warm should ultimately succeed via per-mode retry");
 
         assert!(
             tube_calls.load(Ordering::SeqCst) >= 2,
@@ -1339,7 +1589,10 @@ mod tests {
         );
 
         let bzp = client.allowed_line_ids_for("940GZZLUBZP").await.unwrap();
-        assert!(bzp.contains("northern"), "Belsize Park must be in the cache after retry; got {bzp:?}");
+        assert!(
+            bzp.contains("northern"),
+            "Belsize Park must be in the cache after retry; got {bzp:?}"
+        );
     }
 
     #[tokio::test(flavor = "current_thread")]
@@ -1376,9 +1629,16 @@ mod tests {
         };
         let client = TflClient::new(http);
 
-        client.warm_stop_points_cache().await.expect("warm completes when at least one mode succeeds");
+        client
+            .warm_stop_points_cache()
+            .await
+            .expect("warm completes when at least one mode succeeds");
 
-        assert_eq!(dlr_calls.load(Ordering::SeqCst), 1, "NotFound is terminal — DLR must be tried exactly once");
+        assert_eq!(
+            dlr_calls.load(Ordering::SeqCst),
+            1,
+            "NotFound is terminal — DLR must be tried exactly once"
+        );
     }
 
     #[tokio::test]
@@ -1386,10 +1646,15 @@ mod tests {
         let (http, count) = CountingTflHttp::new(FixtureTflHttp::new(workspace_fixtures_dir()));
         let client = TflClient::new(http);
 
-        client.warm_stop_points_cache().await.expect("warm should succeed");
+        client
+            .warm_stop_points_cache()
+            .await
+            .expect("warm should succeed");
         let after_warm = count.load(Ordering::SeqCst);
 
-        client.__test_force_stale_stop_points_cache().expect("test helper must work");
+        client
+            .__test_force_stale_stop_points_cache()
+            .expect("test helper must work");
 
         let results = client.search_stations("belsize").await.unwrap();
         let after_search = count.load(Ordering::SeqCst);
@@ -1406,32 +1671,52 @@ mod tests {
         let (http, count) = CountingTflHttp::new(FixtureTflHttp::new(workspace_fixtures_dir()));
         let client = TflClient::new(http);
 
-        client.warm_stop_points_cache().await.expect("warm should succeed");
+        client
+            .warm_stop_points_cache()
+            .await
+            .expect("warm should succeed");
         let after_warm = count.load(Ordering::SeqCst);
 
-        let n = client.refresh_stop_points_cache().await.expect("refresh should succeed");
+        let n = client
+            .refresh_stop_points_cache()
+            .await
+            .expect("refresh should succeed");
         let after_refresh = count.load(Ordering::SeqCst);
 
         assert!(n > 100, "expect populated station count");
-        assert!(after_refresh > after_warm, "refresh_stop_points_cache must trigger network calls even on a fresh cache");
+        assert!(
+            after_refresh > after_warm,
+            "refresh_stop_points_cache must trigger network calls even on a fresh cache"
+        );
     }
 
     #[tokio::test]
     async fn allowed_line_ids_for_serves_stale_cache_past_ttl() {
         let client = real_client();
-        client.warm_stop_points_cache().await.expect("warm should succeed");
+        client
+            .warm_stop_points_cache()
+            .await
+            .expect("warm should succeed");
 
         let allowed_fresh = client.allowed_line_ids_for("940GZZLUBNK").await.unwrap();
-        assert!(allowed_fresh.contains("dlr"), "fresh cache: Bank tube parent should know about DLR; got {allowed_fresh:?}");
+        assert!(
+            allowed_fresh.contains("dlr"),
+            "fresh cache: Bank tube parent should know about DLR; got {allowed_fresh:?}"
+        );
 
-        client.__test_force_stale_stop_points_cache().expect("test helper must work");
+        client
+            .__test_force_stale_stop_points_cache()
+            .expect("test helper must work");
 
         let allowed_stale = client.allowed_line_ids_for("940GZZLUBNK").await.unwrap();
         assert!(
             allowed_stale.contains("dlr"),
             "stale cache: Bank tube parent must STILL know about DLR; got {allowed_stale:?}"
         );
-        assert_eq!(allowed_stale, allowed_fresh, "stale-but-cached lookup must return identical data to fresh");
+        assert_eq!(
+            allowed_stale, allowed_fresh,
+            "stale-but-cached lookup must return identical data to fresh"
+        );
     }
 
     #[tokio::test]
@@ -1447,46 +1732,97 @@ mod tests {
     #[tokio::test]
     async fn search_bank_includes_dlr_chip() {
         let client = real_client();
-        let results = client.search_stations("bank").await.expect("search should succeed");
+        let results = client
+            .search_stations("bank")
+            .await
+            .expect("search should succeed");
 
-        let bank = results.iter().find(|s| s.id == "940GZZLUBNK").expect("Bank must appear in results");
+        let bank = results
+            .iter()
+            .find(|s| s.id == "940GZZLUBNK")
+            .expect("Bank must appear in results");
         let line_ids: Vec<&str> = bank.lines.iter().map(|l| l.id.as_str()).collect();
-        assert!(line_ids.contains(&"dlr"), "Bank must include DLR chip after hub merge; got {line_ids:?}");
-        assert!(line_ids.contains(&"central"), "Bank must still include tube lines; got {line_ids:?}");
+        assert!(
+            line_ids.contains(&"dlr"),
+            "Bank must include DLR chip after hub merge; got {line_ids:?}"
+        );
+        assert!(
+            line_ids.contains(&"central"),
+            "Bank must still include tube lines; got {line_ids:?}"
+        );
     }
 
     #[tokio::test]
     async fn search_tottenham_court_road_includes_elizabeth_chip() {
         let client = real_client();
-        let results = client.search_stations("tottenham").await.expect("search should succeed");
+        let results = client
+            .search_stations("tottenham")
+            .await
+            .expect("search should succeed");
 
-        let tcr = results.iter().find(|s| s.id == "940GZZLUTCR").expect("TCR must appear in results");
+        let tcr = results
+            .iter()
+            .find(|s| s.id == "940GZZLUTCR")
+            .expect("TCR must appear in results");
         let line_ids: Vec<&str> = tcr.lines.iter().map(|l| l.id.as_str()).collect();
-        assert!(line_ids.contains(&"elizabeth"), "TCR must include Elizabeth chip; got {line_ids:?}");
-        assert!(line_ids.contains(&"central"), "TCR must still include tube lines; got {line_ids:?}");
+        assert!(
+            line_ids.contains(&"elizabeth"),
+            "TCR must include Elizabeth chip; got {line_ids:?}"
+        );
+        assert!(
+            line_ids.contains(&"central"),
+            "TCR must still include tube lines; got {line_ids:?}"
+        );
     }
 
     #[tokio::test]
     async fn search_whitechapel_includes_elizabeth_and_windrush_chips() {
         let client = real_client();
-        let results = client.search_stations("whitechapel").await.expect("search should succeed");
+        let results = client
+            .search_stations("whitechapel")
+            .await
+            .expect("search should succeed");
 
-        let wpl = results.iter().find(|s| s.id == "940GZZLUWPL").expect("Whitechapel must appear in results");
+        let wpl = results
+            .iter()
+            .find(|s| s.id == "940GZZLUWPL")
+            .expect("Whitechapel must appear in results");
         let line_ids: Vec<&str> = wpl.lines.iter().map(|l| l.id.as_str()).collect();
-        assert!(line_ids.contains(&"elizabeth"), "Whitechapel must include Elizabeth chip; got {line_ids:?}");
-        assert!(line_ids.contains(&"windrush"), "Whitechapel must include Windrush chip; got {line_ids:?}");
-        assert!(line_ids.contains(&"hammersmith-city"), "Whitechapel must still include tube lines; got {line_ids:?}");
+        assert!(
+            line_ids.contains(&"elizabeth"),
+            "Whitechapel must include Elizabeth chip; got {line_ids:?}"
+        );
+        assert!(
+            line_ids.contains(&"windrush"),
+            "Whitechapel must include Windrush chip; got {line_ids:?}"
+        );
+        assert!(
+            line_ids.contains(&"hammersmith-city"),
+            "Whitechapel must still include tube lines; got {line_ids:?}"
+        );
     }
 
     #[tokio::test]
     async fn search_belsize_park_tube_only_unchanged() {
         let client = real_client();
-        let results = client.search_stations("belsize").await.expect("search should succeed");
+        let results = client
+            .search_stations("belsize")
+            .await
+            .expect("search should succeed");
 
-        let bzp = results.iter().find(|s| s.id == "940GZZLUBZP").expect("Belsize Park must appear in results");
-        assert!(bzp.hub_naptan_code.is_none(), "Belsize Park must have no hub code");
+        let bzp = results
+            .iter()
+            .find(|s| s.id == "940GZZLUBZP")
+            .expect("Belsize Park must appear in results");
+        assert!(
+            bzp.hub_naptan_code.is_none(),
+            "Belsize Park must have no hub code"
+        );
         let line_ids: Vec<&str> = bzp.lines.iter().map(|l| l.id.as_str()).collect();
-        assert!(line_ids.iter().all(|id| *id == "northern"), "Belsize Park must have only the Northern line");
+        assert!(
+            line_ids.iter().all(|id| *id == "northern"),
+            "Belsize Park must have only the Northern line"
+        );
     }
 
     // -------------------------------------------------------------------------
@@ -1537,7 +1873,8 @@ mod tests {
                 &self,
                 endpoint: &str,
                 id: &str,
-            ) -> impl std::future::Future<Output = Result<serde_json::Value, TflError>> + Send {
+            ) -> impl std::future::Future<Output = Result<serde_json::Value, TflError>> + Send
+            {
                 let is_hubxyz = endpoint == "stop-point" && id == "HUBXYZ";
                 let is_hubabc = endpoint == "stop-point" && id == "HUBABC";
 
@@ -1624,11 +1961,13 @@ mod tests {
                 std::fs::write(
                     sp_dir.join("tube.json"),
                     serde_json::to_string(&fixture).unwrap(),
-                ).unwrap();
+                )
+                .unwrap();
                 // Provide empty fixtures for the other three modes so the multi-mode
                 // fan-out doesn't hit NotFound for those.
                 for mode in ["overground", "dlr", "elizabeth-line"] {
-                    std::fs::write(sp_dir.join(format!("{mode}.json")), r#"{"stopPoints":[]}"#).unwrap();
+                    std::fs::write(sp_dir.join(format!("{mode}.json")), r#"{"stopPoints":[]}"#)
+                        .unwrap();
                     std::fs::write(ls_dir.join(format!("{mode}.json")), "[]").unwrap();
                 }
                 std::fs::write(ls_dir.join("tube.json"), "[]").unwrap();
@@ -1657,7 +1996,10 @@ mod tests {
         // To isolate the "not cached after transient" assertion cleanly, we
         // use `refresh_stop_points_cache` (force = true) for the second warm
         // so we bypass the stale-ok short-circuit.
-        client.warm_stop_points_cache().await.expect("first warm must succeed");
+        client
+            .warm_stop_points_cache()
+            .await
+            .expect("first warm must succeed");
 
         let hubxyz_after_first = hubxyz_calls.load(Ordering::SeqCst);
         assert!(
@@ -1671,7 +2013,10 @@ mod tests {
         //   first warm's retry loop it may have succeeded (call_n ≥ 1 returns Ok).
         //   Either way: if it succeeded, it's now cached and won't re-fetch either.
         //   The invariant we pin is only the NotFound side here.
-        client.refresh_stop_points_cache().await.expect("second warm (forced refresh) must succeed");
+        client
+            .refresh_stop_points_cache()
+            .await
+            .expect("second warm (forced refresh) must succeed");
 
         let hubxyz_after_second = hubxyz_calls.load(Ordering::SeqCst);
         assert_eq!(
@@ -1693,7 +2038,8 @@ mod tests {
                 &self,
                 endpoint: &str,
                 id: &str,
-            ) -> impl std::future::Future<Output = Result<serde_json::Value, TflError>> + Send {
+            ) -> impl std::future::Future<Output = Result<serde_json::Value, TflError>> + Send
+            {
                 let is_hubabc = endpoint == "stop-point" && id == "HUBABC";
                 if is_hubabc {
                     self.hubabc_calls.fetch_add(1, Ordering::SeqCst);
@@ -1726,9 +2072,14 @@ mod tests {
                         "lineModeGroups": [{"modeName": "tube", "lineIdentifier": ["northern"]}]
                     }]
                 });
-                std::fs::write(sp_dir2.join("tube.json"), serde_json::to_string(&fixture2).unwrap()).unwrap();
+                std::fs::write(
+                    sp_dir2.join("tube.json"),
+                    serde_json::to_string(&fixture2).unwrap(),
+                )
+                .unwrap();
                 for mode in ["overground", "dlr", "elizabeth-line"] {
-                    std::fs::write(sp_dir2.join(format!("{mode}.json")), r#"{"stopPoints":[]}"#).unwrap();
+                    std::fs::write(sp_dir2.join(format!("{mode}.json")), r#"{"stopPoints":[]}"#)
+                        .unwrap();
                     std::fs::write(ls_dir2.join(format!("{mode}.json")), "[]").unwrap();
                 }
                 std::fs::write(ls_dir2.join("tube.json"), "[]").unwrap();
@@ -1743,7 +2094,10 @@ mod tests {
 
         // First warm: HUBABC → RateLimited (all STOP_POINTS_FETCH_ATTEMPTS).
         // Not cached.
-        client2.warm_stop_points_cache().await.expect("warm with transient hubabc must not fail overall");
+        client2
+            .warm_stop_points_cache()
+            .await
+            .expect("warm with transient hubabc must not fail overall");
         let after_first_warm = always_rate_limited_hubabc_calls.load(Ordering::SeqCst);
         assert!(
             after_first_warm >= 1,
@@ -1751,7 +2105,10 @@ mod tests {
         );
 
         // Second warm (forced): HUBABC was NOT cached → must be re-fetched again.
-        client2.refresh_stop_points_cache().await.expect("second warm must still succeed overall");
+        client2
+            .refresh_stop_points_cache()
+            .await
+            .expect("second warm must still succeed overall");
         let after_second_warm = always_rate_limited_hubabc_calls.load(Ordering::SeqCst);
         assert!(
             after_second_warm > after_first_warm,
@@ -1829,7 +2186,8 @@ mod tests {
             )
             .unwrap();
             for mode in ["overground", "dlr", "elizabeth-line"] {
-                std::fs::write(sp_dir.join(format!("{mode}.json")), r#"{"stopPoints":[]}"#).unwrap();
+                std::fs::write(sp_dir.join(format!("{mode}.json")), r#"{"stopPoints":[]}"#)
+                    .unwrap();
                 std::fs::write(ls_dir.join(format!("{mode}.json")), "[]").unwrap();
             }
             std::fs::write(ls_dir.join("tube.json"), "[]").unwrap();
@@ -1885,7 +2243,8 @@ mod tests {
                 &self,
                 endpoint: &str,
                 id: &str,
-            ) -> impl std::future::Future<Output = Result<serde_json::Value, TflError>> + Send {
+            ) -> impl std::future::Future<Output = Result<serde_json::Value, TflError>> + Send
+            {
                 if endpoint == "stop-points" {
                     self.stop_points_calls.fetch_add(1, Ordering::SeqCst);
                 }
@@ -1920,15 +2279,16 @@ mod tests {
             .collect();
 
         for h in handles {
-            h.await.expect("task must not panic").expect("warm must succeed");
+            h.await
+                .expect("task must not panic")
+                .expect("warm must succeed");
         }
 
         let total_calls = stop_points_calls.load(Ordering::SeqCst);
         // Single-flight: exactly SUPPORTED_MODES_COUNT fetches (one per mode).
         // Without single-flight: N * SUPPORTED_MODES_COUNT = 20 fetches.
         assert_eq!(
-            total_calls,
-            SUPPORTED_MODES_COUNT,
+            total_calls, SUPPORTED_MODES_COUNT,
             "single-flight must serialise concurrent warms to exactly one fetch per mode \
              ({SUPPORTED_MODES_COUNT}); got {total_calls} — without single-flight each of the \
              {N} concurrent callers would each fan out {SUPPORTED_MODES_COUNT} mode fetches"
@@ -2090,8 +2450,8 @@ mod tests {
                 id: &str,
             ) -> impl std::future::Future<Output = Result<Value, TflError>> + Send {
                 let is_tube_warm = endpoint == "stop-points" && id == "tube";
-                let is_first_tube_warm = is_tube_warm
-                    && self.tube_calls.fetch_add(1, Ordering::SeqCst) == 0;
+                let is_first_tube_warm =
+                    is_tube_warm && self.tube_calls.fetch_add(1, Ordering::SeqCst) == 0;
                 let inner_fut = self.inner.fetch(endpoint, id);
                 async move {
                     if is_first_tube_warm {
@@ -2172,9 +2532,9 @@ mod tests {
                 let inner_fut = self.inner.fetch(endpoint, id);
                 async move {
                     match call_idx {
-                        Some(n) if n >= 1 => {
-                            Err(TflError::NotFound("simulated later tube outage".to_string()))
-                        }
+                        Some(n) if n >= 1 => Err(TflError::NotFound(
+                            "simulated later tube outage".to_string(),
+                        )),
                         _ => inner_fut.await,
                     }
                 }

@@ -960,9 +960,7 @@ pub struct UpdateInfoDto {
 ///   the two via the error message — a `signature` substring routes to the
 ///   security-event copy in the Settings banner.
 #[tauri::command]
-pub async fn check_for_updates(
-    app: tauri::AppHandle,
-) -> Result<Option<UpdateInfoDto>, String> {
+pub async fn check_for_updates(app: tauri::AppHandle) -> Result<Option<UpdateInfoDto>, String> {
     let updater = app
         .updater_builder()
         .build()
@@ -2501,8 +2499,8 @@ mod tests {
             "Harrow-on-the-Hill",
             "Shepherd's Bush",
             "Totteridge & Whetstone",
-            "Liberté",         // Unicode letter — defensive, future-proof.
-            "A/B Junction",    // forward slash appears in raw fixture names.
+            "Liberté",      // Unicode letter — defensive, future-proof.
+            "A/B Junction", // forward slash appears in raw fixture names.
             "St. James's Park",
         ] {
             assert!(
@@ -2878,7 +2876,11 @@ mod tests {
             .as_array()
             .expect("capabilities JSON must have a 'windows' array")
             .iter()
-            .map(|v| v.as_str().expect("window entry must be a string").to_string())
+            .map(|v| {
+                v.as_str()
+                    .expect("window entry must be a string")
+                    .to_string()
+            })
             .collect()
     }
 
@@ -2953,7 +2955,10 @@ mod tests {
             .await
             .expect("save should succeed");
         let result = load_app_key_inner(&state).await;
-        assert!(result.is_ok(), "load_app_key_inner must succeed: {result:?}");
+        assert!(
+            result.is_ok(),
+            "load_app_key_inner must succeed: {result:?}"
+        );
         assert_eq!(result.unwrap(), Some("test-key".to_string()));
     }
 
@@ -3049,11 +3054,7 @@ mod tests {
             .save_update_prefs(&prefs)
             .await
             .expect("save");
-        let loaded = state
-            .config_store
-            .load_update_prefs()
-            .await
-            .expect("load");
+        let loaded = state.config_store.load_update_prefs().await.expect("load");
         assert_eq!(loaded, prefs);
     }
 
