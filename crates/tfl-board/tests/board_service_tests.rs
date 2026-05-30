@@ -504,6 +504,156 @@ async fn refresh_drops_phantom_overground_arrival_at_tube_only_station() {
     );
 }
 
+/// Windrush regression (user-reported, Highbury & Islington, 2026-05):
+/// a station whose post-merge allowed set advertises ONE named Overground
+/// line (here Mildmay at Hackney Central) but where TfL's live arrivals
+/// feed tags a train with a DIFFERENT named Overground line (Windrush).
+/// The two ids feed from different TfL endpoints and the rename
+/// (Nov 2024) left them inconsistent station-to-station, so the defensive
+/// `drop_arrivals_for_lines_not_serving` filter must compare on the
+/// Overground *family*, not the raw id — otherwise a legitimate Windrush
+/// train is dropped and the user sees "no predicted trains" for a running
+/// line. Goes RED before `line_family_key` is wired into the filter
+/// (allowed = {mildmay}, "windrush" ∉ {mildmay}).
+#[tokio::test]
+async fn refresh_keeps_windrush_when_station_serves_a_sibling_overground_line() {
+    use tfl_client::fixture::FixtureTflHttp;
+
+    // Hackney Central is an Overground station whose merged allowed set is
+    // {mildmay}. Inject a Windrush arrival as TfL's live feed would deliver
+    // it — a different named OG line, same physical Overground network.
+    let windrush_payload = serde_json::json!([
+        {
+            "id": "100",
+            "stationName": "Hackney Central",
+            "platformName": "Platform 1",
+            "lineId": "windrush",
+            "lineName": "Windrush",
+            "destinationName": "Clapham Junction",
+            "towards": "Clapham Junction",
+            "currentLocation": "Approaching",
+            "timeToStation": 120,
+            "expectedArrival": "2026-04-29T09:18:00Z",
+            "naptanId": "910GHACKNYC",
+            "direction": "outbound",
+            "modeName": "overground",
+        }
+    ]);
+
+    struct InjectingHttp {
+        inner: FixtureTflHttp,
+        payload: serde_json::Value,
+    }
+    impl tfl_client::http::TflHttp for InjectingHttp {
+        async fn fetch(&self, kind: &str, id: &str) -> Result<serde_json::Value, TflError> {
+            if kind == "arrivals" && id == "910GHACKNYC" {
+                return Ok(self.payload.clone());
+            }
+            self.inner.fetch(kind, id).await
+        }
+    }
+
+    let injecting = InjectingHttp {
+        inner: FixtureTflHttp::new(fixtures_dir()),
+        payload: windrush_payload,
+    };
+    let client = Arc::new(TflClient::new(injecting));
+    client
+        .warm_stop_points_cache()
+        .await
+        .expect("warm stop-points");
+
+    let svc = BoardService::new(
+        Arc::clone(&client),
+        FakeClock::from_rfc3339("2026-04-29T09:16:00Z").unwrap(),
+    );
+    let cfg = BoardConfig::new("910GHACKNYC");
+    let board = svc.refresh(&cfg).await.expect("refresh Hackney Central");
+
+    let mut lines: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+    for p in &board.platforms {
+        for a in &p.arrivals {
+            lines.insert(a.line_id.clone());
+        }
+    }
+    assert!(
+        lines.contains("windrush"),
+        "a Windrush arrival must survive at an Overground station whose \
+         allowed set lists a sibling Overground line (Mildmay); got {lines:?}"
+    );
+}
+
+/// Negative pin for the family-aware filter: relaxing the comparison to the
+/// Overground family MUST NOT over-open it. A cross-mode phantom — a tube
+/// Bakerloo prediction injected at the Overground-only Hackney Central —
+/// must still be dropped, because `bakerloo` and `mildmay` are different
+/// families. Guards against the family fix swallowing the invariant-#10
+/// phantom-drop purpose. Green before and after the fix.
+#[tokio::test]
+async fn refresh_still_drops_cross_mode_phantom_at_overground_station() {
+    use tfl_client::fixture::FixtureTflHttp;
+
+    let phantom_payload = serde_json::json!([
+        {
+            "id": "200",
+            "stationName": "Hackney Central",
+            "platformName": "Platform 1",
+            "lineId": "bakerloo",
+            "lineName": "Bakerloo",
+            "destinationName": "Elephant & Castle",
+            "towards": "Elephant",
+            "currentLocation": "On schedule",
+            "timeToStation": 90,
+            "expectedArrival": "2026-04-29T09:18:30Z",
+            "naptanId": "910GHACKNYC",
+            "direction": "outbound",
+            "modeName": "tube",
+        }
+    ]);
+
+    struct InjectingHttp {
+        inner: FixtureTflHttp,
+        payload: serde_json::Value,
+    }
+    impl tfl_client::http::TflHttp for InjectingHttp {
+        async fn fetch(&self, kind: &str, id: &str) -> Result<serde_json::Value, TflError> {
+            if kind == "arrivals" && id == "910GHACKNYC" {
+                return Ok(self.payload.clone());
+            }
+            self.inner.fetch(kind, id).await
+        }
+    }
+
+    let injecting = InjectingHttp {
+        inner: FixtureTflHttp::new(fixtures_dir()),
+        payload: phantom_payload,
+    };
+    let client = Arc::new(TflClient::new(injecting));
+    client
+        .warm_stop_points_cache()
+        .await
+        .expect("warm stop-points");
+
+    let svc = BoardService::new(
+        Arc::clone(&client),
+        FakeClock::from_rfc3339("2026-04-29T09:16:00Z").unwrap(),
+    );
+    let cfg = BoardConfig::new("910GHACKNYC");
+    let board = svc.refresh(&cfg).await.expect("refresh Hackney Central");
+
+    let mut lines: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+    for p in &board.platforms {
+        for a in &p.arrivals {
+            lines.insert(a.line_id.clone());
+        }
+    }
+    assert!(
+        !lines.contains("bakerloo"),
+        "a cross-mode (tube) Bakerloo phantom must still be dropped at an \
+         Overground-only station; got {lines:?}"
+    );
+}
+
 /// Off-axis filter: a Hammersmith & City prediction whose `platform_name`
 /// is "Northbound - Platform 4" (a Met-line platform) is a TfL data quirk
 /// — H&C is east-west everywhere on the network. The platform-prefix

@@ -110,6 +110,18 @@ referenced from tests and PRs — don't renumber.
     populates after the first emit. Disallowed arrivals log one warning
     per `(station, line)` per refresh on stderr with `[tfl-board]` —
     don't silence it, it's our only signal of upstream data drift.
+    **Compare on the line *family*, not the raw id.** TfL's station
+    metadata and its arrivals feed disagree on the Overground id form
+    (legacy `london-overground` vs the six named lines, and named-vs-named
+    station-to-station). The filter folds every Overground id to one key
+    via `tfl_domain::line_family_key` before the membership check, so a
+    Windrush train survives at a station whose metadata only advertised
+    Mildmay (the Highbury & Islington "no predicted trains" report). A
+    cross-mode phantom (tube `bakerloo` at an OG station) is still a
+    different family and still dropped. Tests:
+    `refresh_keeps_windrush_when_station_serves_a_sibling_overground_line`,
+    `refresh_still_drops_cross_mode_phantom_at_overground_station`,
+    `crates/tfl-domain/tests/line_family_key.rs`.
 
 11. **Line-grouped UI re-buckets per-line, not per-platform.** The Rust
     backend groups by `Direction` — `Board.platforms[]` has at most seven
@@ -283,6 +295,16 @@ referenced from tests and PRs — don't renumber.
     `search_stations_returns_bank_tube_hub_when_tube_mode_was_rate_limited`,
     `partial_warm_serves_cached_result_within_retry_after_window`,
     `partial_warm_backfills_failed_mode_from_prior_cache`.
+    **Hub-detail fetch failures count as partial too.** Hub-sourced
+    stations (Highbury & Islington, where every served line — Victoria +
+    the named Overground lines — arrives via the single `/StopPoint/{hub}`
+    detail fetch, not the per-mode lists) carry an incomplete
+    `Station.lines` when that hub fetch 429s. `hub_lines_cached` now
+    returns `(lines, transient_failure)` and `refresh_stop_points_inner`
+    sets `StopPointsCacheEntry.hub_warm_incomplete` so the entry uses the
+    short retry window instead of being stranded for the full 14-min TTL.
+    The public `stop_points_warm_is_partial()` predicate exposes this.
+    Test: `hub_fetch_failure_marks_warm_partial`.
 
 ### Network status
 

@@ -366,6 +366,32 @@ pub fn is_supported_line_id(id: &str) -> bool {
     )
 }
 
+/// Collapse the entire London Overground family — the legacy
+/// `london-overground` id and the six named lines TfL introduced in
+/// November 2024 (Liberty, Lioness, Mildmay, Suffragette, Weaver, Windrush)
+/// — to a single key. Every other line id is returned unchanged.
+///
+/// TfL is inconsistent about which Overground id form appears on which
+/// endpoint: a station's hub-detail `lineModeGroups` may advertise
+/// `mildmay` (or the legacy `london-overground`) while the live arrivals
+/// feed tags a calling train `windrush`, and the two feeds disagree
+/// station-to-station post-rename. The defensive
+/// `drop_arrivals_for_lines_not_serving` filter compares an arrival's line
+/// against the station's served set; a raw-string comparison drops a
+/// legitimate Windrush train at a station whose metadata only listed
+/// Mildmay — the user-reported "no predicted trains for the Windrush line
+/// at Highbury & Islington" bug. Comparing on the family key makes that
+/// mismatch impossible while still distinguishing Overground from tube /
+/// DLR / Elizabeth (a `bakerloo` phantom at an Overground station is still
+/// a different family and still dropped).
+pub fn line_family_key(id: &str) -> &str {
+    match id {
+        "london-overground" | "liberty" | "lioness" | "mildmay" | "suffragette" | "weaver"
+        | "windrush" => "london-overground",
+        other => other,
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Line
 // ---------------------------------------------------------------------------

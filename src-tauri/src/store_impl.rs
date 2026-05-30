@@ -45,7 +45,9 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use security_framework::passwords::{delete_generic_password, get_generic_password, set_generic_password};
+use security_framework::passwords::{
+    delete_generic_password, get_generic_password, set_generic_password,
+};
 use serde_json::Value;
 use tauri::AppHandle;
 use tauri_plugin_store::{Store, StoreExt};
@@ -313,10 +315,7 @@ fn keychain_save(service: &str, account: &str, key: Option<String>) -> Result<()
         None => match delete_generic_password(service, account) {
             Ok(()) => Ok(()),
             Err(e) if e.code() == -25300 => Ok(()),
-            Err(e) => Err(format!(
-                "Keychain delete failed (code {}): {e}",
-                e.code()
-            )),
+            Err(e) => Err(format!("Keychain delete failed (code {}): {e}", e.code())),
         },
         Some(k) => {
             // `set_generic_password` upserts (creates or replaces).
@@ -633,7 +632,10 @@ mod tests {
         );
 
         // Verify the key IS retrievable from the Keychain (round-trip sanity).
-        let loaded = store.load_app_key().await.expect("load_app_key should succeed");
+        let loaded = store
+            .load_app_key()
+            .await
+            .expect("load_app_key should succeed");
         assert_eq!(
             loaded.as_deref(),
             Some(secret),
@@ -738,7 +740,10 @@ mod tests {
             .await
             .expect("save_app_key should succeed");
 
-        let loaded = store.load_app_key().await.expect("load_app_key should succeed");
+        let loaded = store
+            .load_app_key()
+            .await
+            .expect("load_app_key should succeed");
         assert_eq!(
             loaded.as_deref(),
             Some(key),
@@ -750,7 +755,10 @@ mod tests {
             .await
             .expect("clear save_app_key should succeed");
 
-        let cleared = store.load_app_key().await.expect("load_app_key after clear should succeed");
+        let cleared = store
+            .load_app_key()
+            .await
+            .expect("load_app_key after clear should succeed");
         assert!(
             cleared.is_none(),
             "key should be None after clearing; got: {:?}",
@@ -785,13 +793,20 @@ mod tests {
         );
 
         // Seed the Keychain with a "newer" value.
-        keychain_save(KEYCHAIN_SERVICE, &unique_account, Some("keychain-value".to_string()))
-            .expect("seed Keychain");
+        keychain_save(
+            KEYCHAIN_SERVICE,
+            &unique_account,
+            Some("keychain-value".to_string()),
+        )
+        .expect("seed Keychain");
 
         let store = KeychainBackedConfigStore::with_account(unique_account.clone());
 
         // `load_app_key` should return the Keychain value, not any JSON value.
-        let loaded = store.load_app_key().await.expect("load_app_key should succeed");
+        let loaded = store
+            .load_app_key()
+            .await
+            .expect("load_app_key should succeed");
         assert_eq!(
             loaded.as_deref(),
             Some("keychain-value"),

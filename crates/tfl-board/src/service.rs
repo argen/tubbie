@@ -33,7 +33,8 @@ use tokio::time::{interval, MissedTickBehavior};
 use tfl_cache::TflClient;
 use tfl_client::{clock::Clock, http::TflHttp};
 use tfl_domain::{
-    line_compass_axis, Arrival, Board, Direction, LineStatus, NearbyStation, Platform, Station,
+    line_compass_axis, line_family_key, Arrival, Board, Direction, LineStatus, NearbyStation,
+    Platform, Station,
 };
 
 use crate::config::BoardConfig;
@@ -650,12 +651,24 @@ async fn drop_arrivals_for_lines_not_serving<H: TflHttp>(
         }
     };
 
+    // Compare on the line *family*, not the raw id. TfL's station metadata
+    // and its live arrivals feed disagree on the Overground id form
+    // (legacy `london-overground` vs the six named lines, and named-line vs
+    // named-line station-to-station). A raw-string `allowed.contains` drops
+    // a legitimate Windrush train at a station whose metadata only listed
+    // Mildmay — the Highbury & Islington "no predicted trains" bug. Folding
+    // every Overground id to one family key (`line_family_key`) keeps real
+    // Overground arrivals while still dropping cross-mode phantoms (a tube
+    // `bakerloo` at an Overground station is a different family).
+    let allowed_families: std::collections::HashSet<&str> =
+        allowed.iter().map(|id| line_family_key(id)).collect();
+
     // Track which disallowed lines we've already warned about so we log
     // once per (station, line) pair per refresh — not once per arrival.
     let mut warned: std::collections::HashSet<String> = std::collections::HashSet::new();
     let mut kept: Vec<Arrival> = Vec::with_capacity(arrivals.len());
     for arrival in arrivals {
-        if allowed.contains(&arrival.line_id) {
+        if allowed_families.contains(line_family_key(&arrival.line_id)) {
             kept.push(arrival);
             continue;
         }
