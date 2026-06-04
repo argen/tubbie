@@ -66,7 +66,15 @@ use commands::{
     save_display_prefs, save_update_prefs, search_stations,
 };
 use state::{AnyBoardService, AppState};
-use store_impl::{KeychainBackedConfigStore, StorePluginConfigStore, StorePluginFavoritesStore};
+#[cfg(target_os = "macos")]
+use store_impl::KeychainBackedConfigStore;
+use store_impl::{StorePluginConfigStore, StorePluginFavoritesStore};
+// On non-macOS the startup API-key read calls the `ConfigStore` trait method
+// `load_app_key` on a concrete `StorePluginConfigStore` (the macOS path uses
+// the inherent keychain helper instead), so the trait must be in scope there
+// for method resolution.
+#[cfg(not(target_os = "macos"))]
+use state::ConfigStore as _;
 
 /// RAII handle for a Tauri event listener. Calling `unlisten` in `Drop`
 /// guarantees cleanup even if the awaiting task is aborted mid-flight (window
@@ -673,9 +681,19 @@ pub fn run() {
             // locked out. The KeychainBackedConfigStore::load_app_key will
             // migrate the legacy value on the next async call; here we do a
             // direct synchronous read for the startup HTTP client.
+            //
+            // On non-macOS platforms (Linux CI, future ports) the Keychain is
+            // unavailable; the API key lives in the store-plugin JSON instead.
+            #[cfg(target_os = "macos")]
             let saved_key: Option<String> =
                 store_impl::keychain_load_with_legacy_fallback(&plugin_store).unwrap_or_else(|e| {
                     eprintln!("[tubbie] Failed to load API key from Keychain at startup: {e}");
+                    None
+                });
+            #[cfg(not(target_os = "macos"))]
+            let saved_key: Option<String> =
+                tauri::async_runtime::block_on(plugin_store.load_app_key()).unwrap_or_else(|e| {
+                    eprintln!("[tubbie] Failed to load API key from store at startup: {e}");
                     None
                 });
 
@@ -691,11 +709,15 @@ pub fn run() {
             let client = Arc::new(TflClient::new(http));
             let board_service = Arc::new(BoardService::new(Arc::clone(&client), SystemClock))
                 as Arc<dyn AnyBoardService>;
-            // Wrap the plugin store in a KeychainBackedConfigStore so that
-            // subsequent save_app_key / load_app_key calls go through the
+            // On macOS, wrap the plugin store in a KeychainBackedConfigStore so
+            // that subsequent save_app_key / load_app_key calls go through the
             // macOS Keychain rather than the plaintext JSON file (MEDIUM-1).
+            // On other platforms (Linux CI), use the store-plugin store directly.
+            #[cfg(target_os = "macos")]
             let config_store = Arc::new(KeychainBackedConfigStore::new(plugin_store))
                 as Arc<dyn state::ConfigStore>;
+            #[cfg(not(target_os = "macos"))]
+            let config_store = Arc::new(plugin_store) as Arc<dyn state::ConfigStore>;
 
             // Favorites store: separate `"favorites"` key, same config.json file.
             // Opened lazily-idempotent by the plugin — re-opening the same

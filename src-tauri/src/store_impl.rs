@@ -45,6 +45,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+#[cfg(target_os = "macos")]
 use security_framework::passwords::{
     delete_generic_password, get_generic_password, set_generic_password,
 };
@@ -100,6 +101,7 @@ use tfl_domain::Favorite;
 /// `load_display_prefs`, or `save_display_prefs` on a store constructed via
 /// `with_account` will panic — those methods are not usable without an inner
 /// plugin store.
+#[cfg(target_os = "macos")]
 pub struct KeychainBackedConfigStore {
     inner: Option<StorePluginConfigStore>,
     account: String,
@@ -114,11 +116,14 @@ pub struct KeychainBackedConfigStore {
 }
 
 /// Keychain service identifier. Matches `identifier` in `tauri.conf.json`.
+#[cfg(target_os = "macos")]
 const KEYCHAIN_SERVICE: &str = "app.tubbie";
 
 /// Default Keychain account name for the TfL app key (production).
+#[cfg(target_os = "macos")]
 const KEYCHAIN_ACCOUNT: &str = "tfl_app_key";
 
+#[cfg(target_os = "macos")]
 impl KeychainBackedConfigStore {
     /// Production constructor. Wraps an existing `StorePluginConfigStore`
     /// and uses the default `tfl_app_key` Keychain account.
@@ -177,6 +182,7 @@ impl KeychainBackedConfigStore {
     }
 }
 
+#[cfg(target_os = "macos")]
 #[async_trait]
 impl ConfigStore for KeychainBackedConfigStore {
     // Delegate non-secret config to the inner store-plugin store.
@@ -294,6 +300,7 @@ impl ConfigStore for KeychainBackedConfigStore {
 /// Load a generic password from the macOS Keychain.
 ///
 /// Returns `Ok(None)` when the item does not exist (`errSecItemNotFound = -25300`).
+#[cfg(target_os = "macos")]
 fn keychain_load(service: &str, account: &str) -> Result<Option<String>, String> {
     match get_generic_password(service, account) {
         Ok(bytes) => {
@@ -310,6 +317,7 @@ fn keychain_load(service: &str, account: &str) -> Result<Option<String>, String>
 /// Save or delete a generic password in the macOS Keychain.
 ///
 /// Pass `None` to delete (idempotent — `errSecItemNotFound` treated as success).
+#[cfg(target_os = "macos")]
 fn keychain_save(service: &str, account: &str, key: Option<String>) -> Result<(), String> {
     match key {
         None => match delete_generic_password(service, account) {
@@ -549,6 +557,7 @@ impl ConfigStore for StorePluginConfigStore {
 /// write in the `setup` closure that could prompt the user at an unexpected
 /// moment. The asymmetry is intentional and documented here to prevent a
 /// future reviewer from adding the clear "for consistency".
+#[cfg(target_os = "macos")]
 pub fn keychain_load_with_legacy_fallback(
     plugin_store: &StorePluginConfigStore,
 ) -> Result<Option<String>, String> {
@@ -574,7 +583,7 @@ pub fn keychain_load_with_legacy_fallback(
 // Tests
 // ---------------------------------------------------------------------------
 
-#[cfg(test)]
+#[cfg(all(test, target_os = "macos"))]
 mod tests {
     use super::*;
 
