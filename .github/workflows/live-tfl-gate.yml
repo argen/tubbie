@@ -49,6 +49,29 @@ jobs:
             const repo  = context.repo.repo;
             const pr    = context.payload.pull_request;
 
+            // ── 0. Cargo.lock-only exemption ─────────────────────────────────
+            // This workflow also triggers on `Cargo.lock` so dependency bumps
+            // are seen. But a PR that changes Cargo.lock WITHOUT touching any
+            // tfl-* / fixture-recorder source exercises no live-tested logic —
+            // and an automated bump (dependabot) can't run live tests or carry
+            // the [live-tested] tag, so it would block forever. Skip the gate
+            // when no live-tested source file changed; the tag is still
+            // required for any PR that touches tfl-* / fixture-recorder source.
+            const files = await github.paginate(
+              github.rest.pulls.listFiles,
+              { owner, repo, pull_number: pr.number, per_page: 100 }
+            );
+            const touchesLiveSource = files.some(f =>
+              /^crates\/(tfl-[^/]+|fixture-recorder)\//.test(f.filename)
+            );
+            if (!touchesLiveSource) {
+              core.info(
+                'No tfl-* / fixture-recorder source changed (Cargo.lock-only ' +
+                'or unrelated paths). Live gate not applicable — passing.'
+              );
+              return;
+            }
+
             // ── 1. Check PR body ─────────────────────────────────────────────
             const body = pr.body ?? '';
             if (/\[live-tested\]/i.test(body)) {
