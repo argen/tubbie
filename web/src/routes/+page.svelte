@@ -6,6 +6,10 @@
   import type { Board as BoardT, LineStatus } from '$lib/ipc/types.js';
 
   let statuses = $state<LineStatus[]>([]);
+  // True when at least one line's status fetch failed this cycle while others
+  // succeeded — the Status panel shows a quiet partial note without nuking
+  // confidence in the (still-live) board.
+  let statusPartial = $state(false);
 
   function uniqueLineIds(b: BoardT | null): string[] {
     if (b === null) return [];
@@ -21,10 +25,15 @@
   async function fetchStatuses(ids: string[]): Promise<void> {
     if (ids.length === 0) {
       statuses = [];
+      statusPartial = false;
       return;
     }
     const results = await Promise.allSettled(ids.map((id) => getLineStatus(id)));
     statuses = results.flatMap((r) => (r.status === 'fulfilled' ? [r.value] : []));
+    // Partial only when SOME succeeded and SOME failed — a total failure just
+    // leaves the prior statuses/empty and isn't worth a scary note.
+    const failed = results.filter((r) => r.status === 'rejected').length;
+    statusPartial = failed > 0 && failed < results.length;
   }
 
   // Refresh on line-id set change and every 60s so a live disruption lands in
@@ -78,6 +87,7 @@
   <Board
     board={$board}
     {statuses}
+    {statusPartial}
     stationName={$board.platforms[0]?.arrivals[0]?.station_name ?? $board.station_id}
     lineIds={$config.line_ids}
   />

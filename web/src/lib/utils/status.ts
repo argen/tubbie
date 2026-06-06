@@ -71,3 +71,28 @@ export function allGoodService(statuses: LineStatus[]): boolean {
 export function disruptedLinesWorstFirst(statuses: LineStatus[]): LineStatus[] {
   return sortLinesWorstFirst(statuses.filter(isDisrupted));
 }
+
+const BUCKET_LABEL: Record<SeverityBucket, string> = {
+  Closed: 'Closed',
+  PartClosure: 'Part closure',
+  SevereDelays: 'Severe delays',
+  ReducedService: 'Reduced service',
+  MinorDelays: 'Minor delays',
+  Information: 'Information',
+  Other: 'Service notice',
+  GoodService: 'Good service',
+};
+
+/** Human-readable label for a bucket (presentation text, not a code remap). */
+export function bucketLabel(bucket: SeverityBucket | undefined): string {
+  return bucket !== undefined ? BUCKET_LABEL[bucket] : BUCKET_LABEL.Other;
+}
+
+/**
+ * The short status line for a disrupted line: TfL's own disruption text when
+ * present, else the bucket label. Callers should only pass disrupted lines.
+ */
+export function lineStatusLabel(line: LineStatus): string {
+  const text = line.disruption_text?.trim();
+  return text && text.length > 0 ? text : bucketLabel(worstBucket(line));
+}
