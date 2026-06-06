@@ -411,6 +411,26 @@ impl StorePluginConfigStore {
     pub fn raw_get(&self, key: &str) -> Option<Value> {
         self.store.get(key)
     }
+
+    /// Write a raw key/value and persist to disk. Used by the background
+    /// pool-key refresh in `lib.rs` to cache the fetched key for the next
+    /// launch (a non-secret value — it lives in the JSON store, not the
+    /// Keychain, matching the iOS pool-key cache risk decision). The
+    /// `store.set` + `store.save` pair is the same one `save_config` uses;
+    /// the blocking `save` (fs write) runs on `spawn_blocking`.
+    pub async fn raw_set_and_save(&self, key: &str, value: Value) -> Result<(), String> {
+        let store = Arc::clone(&self.store);
+        let key = key.to_string();
+        tokio::task::spawn_blocking(move || {
+            store.set(&key, value);
+            store
+                .save()
+                .map_err(|e| format!("failed to save config store: {e}"))
+        })
+        .await
+        .map_err(|e| format!("spawn_blocking panicked: {e}"))??;
+        Ok(())
+    }
 }
 
 #[async_trait]

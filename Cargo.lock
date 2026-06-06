@@ -4777,6 +4777,7 @@ dependencies = [
  "objc2",
  "objc2-core-location",
  "objc2-foundation",
+ "reqwest",
  "security-framework",
  "serde",
  "serde_json",
@@ -4792,6 +4793,7 @@ dependencies = [
  "thiserror 2.0.18",
  "tokio",
  "url",
+ "wiremock",
 ]
 
 [[package]]

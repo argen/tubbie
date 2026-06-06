@@ -70,6 +70,22 @@ describe('Settings — Fix 1: app key not in renderer heap', () => {
     expect(input?.placeholder).toContain('optional');
   });
 
+  it('happy path (no stored key) shows NO anonymous/quota language', async () => {
+    // Phase 1 pool-key: the happy path must be invisible — no "anonymous
+    // access (50 req/min)" quota language. A pool key may silently be active,
+    // and quota math just alarms the user. The manual-key affordance stays,
+    // but framed as optional without quota scare copy.
+    setMockHandler('has_app_key', () => false);
+
+    render(SettingsPage);
+
+    await waitFor(() => document.getElementById('api-key-input'));
+
+    const body = document.body.textContent ?? '';
+    expect(body).not.toMatch(/anonymous/i);
+    expect(body).not.toMatch(/50 req/i);
+  });
+
   it('load_app_key is NOT invoked during onMount', async () => {
     const loadAppKeyMock = vi.fn(() => null);
     setMockHandler('load_app_key', loadAppKeyMock);
