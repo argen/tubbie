@@ -66,6 +66,14 @@
      thin stripe on each arrival row so multi-line stations can
      be read at a glance. Reference:
      https://content.tfl.gov.uk/tfl-colour-standard.pdf
+
+     CROSS-PLATFORM CONTRACT: these values MUST stay identical to
+     the iOS canonical set (tubbie-ios .../SharedLineColors.swift).
+     They are two hand-kept tables of the same TfL standard; the
+     test `web/src/lib/__tests__/line-colors.test.ts` pins this
+     block so a Mac-side edit can't silently drift. If you change a
+     colour here, change SharedLineColors.swift in the same change
+     set (and vice-versa).
      ------------------------------------------------------------ */
   --line-bakerloo: #b36305;
   --line-central: #e32017;
