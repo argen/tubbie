@@ -68,4 +68,9 @@ describe('StatusView', () => {
     render(StatusView, { statuses: [line('victoria', 'GoodService', null)] });
     expect(screen.queryByRole('button', { name: /refresh/i })).toBeNull();
   });
+
+  it('shows "Service status unavailable." when statuses array is empty (network-wide fetch returned nothing)', () => {
+    render(StatusView, { statuses: [] });
+    expect(screen.getByText(/service status unavailable\./i)).toBeTruthy();
+  });
 });

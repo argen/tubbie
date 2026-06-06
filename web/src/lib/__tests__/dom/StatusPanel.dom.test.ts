@@ -22,14 +22,14 @@ describe('StatusPanel', () => {
     render(StatusPanel, {
       statuses: [line('victoria', 'GoodService', null), line('northern', 'GoodService', null)],
     });
-    expect(screen.getByText(/good service on all your lines/i)).toBeTruthy();
+    expect(screen.getByText(/good service across the network/i)).toBeTruthy();
     // No disruption rows.
     expect(document.querySelector('.status__list')).toBeNull();
   });
 
   it('treats empty statuses as good service (not a blank pane)', () => {
     render(StatusPanel, { statuses: [] });
-    expect(screen.getByText(/good service on all your lines/i)).toBeTruthy();
+    expect(screen.getByText(/good service across the network/i)).toBeTruthy();
   });
 
   it('lists disrupted lines worst-first and omits healthy lines', () => {
@@ -71,11 +71,16 @@ describe('StatusPanel', () => {
       statuses: [line('victoria', 'GoodService', null)],
       partial: true,
     });
-    expect(screen.getByText(/couldn’t be checked/i)).toBeTruthy();
+    expect(screen.getByText(/couldn't be checked/i)).toBeTruthy();
   });
 
   it('omits the partial note when nothing failed', () => {
     render(StatusPanel, { statuses: [line('victoria', 'GoodService', null)] });
-    expect(screen.queryByText(/couldn’t be checked/i)).toBeNull();
+    expect(screen.queryByText(/couldn't be checked/i)).toBeNull();
+  });
+
+  it('says "Good service across the network" (network-wide copy) when all lines are healthy', () => {
+    render(StatusPanel, { statuses: [line('victoria', 'GoodService', null)] });
+    expect(screen.getByText(/good service across the network/i)).toBeTruthy();
   });
 });

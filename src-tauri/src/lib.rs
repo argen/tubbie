@@ -61,8 +61,9 @@ use tokio::task::AbortHandle;
 #[cfg(target_os = "macos")]
 use commands::request_current_location;
 use commands::{
-    add_favorite, apply_board_size, check_for_updates, find_nearest_stations, get_board,
-    get_line_status, has_app_key, install_update, list_favorites, load_app_key, load_config,
+    add_favorite, apply_board_size, check_for_updates, find_nearest_stations, get_all_line_statuses,
+    get_board, get_line_status, has_app_key, install_update, list_favorites, load_app_key,
+    load_config,
     load_display_mode, load_display_prefs, load_update_prefs, open_settings_window,
     open_settings_window_impl, remove_favorite, save_app_key, save_config, save_display_mode,
     save_display_prefs, save_update_prefs, search_stations, set_tray_disruption,
@@ -1083,6 +1084,7 @@ pub fn run() {
             has_app_key,
             open_settings_window,
             get_line_status,
+            get_all_line_statuses,
             save_display_mode,
             load_display_mode,
             save_display_prefs,

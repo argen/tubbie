@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onDestroy, onMount } from 'svelte';
+  import { onDestroy, onMount, tick } from 'svelte';
   import type { Arrival, Board, Direction, LineStatus } from '$lib/ipc/types.js';
   import {
     formatTime,
@@ -14,9 +14,13 @@
   import { displayMode } from '$lib/stores/displayMode.js';
   import { displayPrefs } from '$lib/stores/displayPrefs.js';
   import { applyBoardSize, openSettingsWindow } from '$lib/ipc/commands.js';
+  import { config } from '$lib/stores/config.js';
+  import { selectStation } from '$lib/stores/settingsForm.js';
+  import type { Station } from '$lib/ipc/types.js';
   import LineGroup from './LineGroup.svelte';
   import StatusPanel from './StatusPanel.svelte';
   import StatusView from './StatusView.svelte';
+  import StationSearch from './StationSearch.svelte';
 
   interface Props {
     board: Board;
@@ -28,8 +32,8 @@
     statusPartial?: boolean;
     /** Epoch ms of the last successful status fetch (for the freshness line). */
     statusUpdatedAt?: number | null;
-    /** Manual status refresh (Status view "Refresh" button). */
-    onStatusRefresh?: () => void;
+    /** Manual status refresh (Status view "Refresh" button). May be async. */
+    onStatusRefresh?: () => void | Promise<void>;
   }
 
   const {
@@ -45,13 +49,45 @@
   // Header view toggle: the board body shows either arrivals or the full
   // Service-status view (the desktop equivalent of the iOS Status tab).
   let view = $state<'arrivals' | 'status'>('arrivals');
-  // Disruption count drives the toggle's badge; scoped to the selected lines
-  // so it matches the board the user sees (and the menu-bar indicator).
-  const disruptionCount = $derived(
-    disruptedLinesWorstFirst(
-      lineIds.length > 0 ? statuses.filter((s) => lineIds.includes(s.line_id)) : statuses,
-    ).length,
-  );
+
+  // Station-search overlay — toggled by the magnifier button in the header.
+  let searchOpen = $state(false);
+  let searchToggleEl = $state<HTMLButtonElement>();
+  let searchOverlayEl = $state<HTMLDivElement>();
+
+  function closeSearch(): void {
+    searchOpen = false;
+    // Return focus to the toggle so keyboard / screen-reader users aren't
+    // dropped at the top of the document when the overlay unmounts.
+    searchToggleEl?.focus();
+  }
+
+  function handleStationSelect(station: Station): void {
+    selectStation(station);
+    closeSearch();
+  }
+
+  // When the overlay opens: move focus into the search input (so keyboard /
+  // screen-reader users land in the field) and bind a WINDOW-level Escape
+  // handler so Esc closes it regardless of where focus currently sits — not
+  // only when focus is already inside the overlay div.
+  $effect(() => {
+    if (!searchOpen) return;
+    void tick().then(() => {
+      searchOverlayEl?.querySelector<HTMLInputElement>('input')?.focus();
+    });
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') closeSearch();
+    };
+    window.addEventListener('keydown', onKey);
+    return (): void => {
+      window.removeEventListener('keydown', onKey);
+    };
+  });
+  // Disruption count drives the toggle's badge. Network-wide — matches the
+  // StatusView it opens (invariant #22: lineIds is a display-mask on arrivals
+  // only; the status badge reflects the full network picture).
+  const disruptionCount = $derived(disruptedLinesWorstFirst(statuses).length);
 
   // Pretty-print a line id for the filter badge, preferring a matching
   // arrival's line_name (already in the board data) and falling back to the
@@ -441,6 +477,35 @@
 
       <button
         type="button"
+        bind:this={searchToggleEl}
+        class="board__settings-btn board__search-btn"
+        class:board__search-btn--active={searchOpen}
+        onclick={() => {
+          searchOpen = !searchOpen;
+        }}
+        aria-pressed={searchOpen}
+        aria-label={searchOpen ? 'Close station search' : 'Change station'}
+        title="Change station"
+      >
+        <svg
+          aria-hidden="true"
+          focusable="false"
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+      </button>
+
+      <button
+        type="button"
         class="board__status-btn"
         class:board__status-btn--active={view === 'status'}
         onclick={() => (view = view === 'status' ? 'arrivals' : 'status')}
@@ -495,6 +560,19 @@
     </div>
   </header>
 
+  {#if searchOpen}
+    <!-- Station-search overlay — appears directly under the header. A
+         window-level Escape handler (see the $effect above) closes it from
+         anywhere, and the input is auto-focused on open. -->
+    <div
+      class="board__search-overlay"
+      bind:this={searchOverlayEl}
+      data-testid="board-search-overlay"
+    >
+      <StationSearch selectedId={$config.station_id} onSelect={handleStationSelect} />
+    </div>
+  {/if}
+
   <!-- Arrivals area: stacked by line. Each line group renders one
        direction column per direction, with the per-direction arrivals
        filtered to that line — so a Bakerloo + Jubilee shared platform
@@ -548,6 +626,7 @@
     height: calc(100vh - 24px); /* 24px for Attribution footer */
     background: var(--bg);
     overflow: hidden;
+    position: relative;
   }
 
   /* Title bar (window mode only).
@@ -753,6 +832,27 @@
     color: var(--fg);
     opacity: 1;
     border-color: var(--platform-label);
+  }
+
+  /* Station-search toggle — same chrome as the cog/status buttons. */
+  .board__search-btn--active {
+    color: var(--fg);
+    opacity: 1;
+    border-color: var(--fg);
+    background: color-mix(in srgb, var(--fg) 10%, transparent);
+  }
+
+  /* Search overlay — absolutely positioned directly under the header, above
+     the board content. Uses dot-matrix CSS vars for visual consistency. */
+  .board__search-overlay {
+    position: absolute;
+    top: 52px; /* header min-height */
+    left: 0;
+    right: 0;
+    z-index: 50;
+    background: var(--settings-bg, var(--bg));
+    border-bottom: 1px solid var(--input-border);
+    padding: 0.75rem 1rem;
   }
 
   /* Service-status toggle — same chrome as the cog so the pair reads as a

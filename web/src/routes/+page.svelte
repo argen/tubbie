@@ -4,7 +4,7 @@
   import { config, configError } from '$lib/stores/config.js';
   import Board from '$lib/components/Board.svelte';
   import FirstRunPrompt from '$lib/components/FirstRunPrompt.svelte';
-  import { getLineStatus, openSettingsWindow, setTrayDisruption } from '$lib/ipc/commands.js';
+  import { getAllLineStatuses, openSettingsWindow, setTrayDisruption } from '$lib/ipc/commands.js';
   import { anyDisrupted } from '$lib/utils/status.js';
   import type { Board as BoardT, LineStatus } from '$lib/ipc/types.js';
 
@@ -30,15 +30,43 @@
   }
 
   let statuses = $state<LineStatus[]>([]);
-  // True when at least one line's status fetch failed this cycle while others
-  // succeeded — the Status panel shows a quiet partial note without nuking
-  // confidence in the (still-live) board.
+  // Network-wide fetch is all-or-nothing — no partial state from the backend.
+  // The state var is kept so StatusView/StatusPanel props stay stable.
   let statusPartial = $state(false);
-  // Epoch ms of the last fetch that returned at least one line — the Status
-  // view's "Updated …" freshness line. Stays put on a total failure.
+  // Epoch ms of the last successful fetch — the Status view's "Updated …"
+  // freshness line. Stays put on failure (keep last-known data).
   let statusUpdatedAt = $state<number | null>(null);
 
-  function uniqueLineIds(b: BoardT | null): string[] {
+  /** Fetch network-wide statuses (all TfL lines, worst-first). On reject,
+   *  keep prior statuses — don't clear the board. */
+  async function refreshStatuses(): Promise<void> {
+    try {
+      const result = await getAllLineStatuses();
+      statuses = result;
+      statusPartial = false;
+      statusUpdatedAt = Date.now();
+    } catch {
+      // Keep prior statuses on failure; the freshness line will show staleness.
+    }
+  }
+
+  // Fetch once on mount and every 60 s. Station changes no longer re-key
+  // this effect — status is network-wide, not station-scoped.
+  const REFRESH_MS = 60_000;
+
+  $effect(() => {
+    void refreshStatuses();
+    const t = setInterval((): void => {
+      void refreshStatuses();
+    }, REFRESH_MS);
+    return (): void => {
+      clearInterval(t);
+    };
+  });
+
+  // Lines serving the current board — the fallback scope for the tray alert
+  // when the user has no explicit line filter set.
+  function boardLineIds(b: BoardT | null): string[] {
     if (b === null) return [];
     const ids: string[] = [];
     for (const p of b.platforms) {
@@ -46,55 +74,22 @@
         if (a.line_id.length > 0 && !ids.includes(a.line_id)) ids.push(a.line_id);
       }
     }
-    return ids.sort();
+    return ids;
   }
 
-  async function fetchStatuses(ids: string[]): Promise<void> {
-    if (ids.length === 0) {
-      statuses = [];
-      statusPartial = false;
-      return;
-    }
-    const results = await Promise.allSettled(ids.map((id) => getLineStatus(id)));
-    statuses = results.flatMap((r) => (r.status === 'fulfilled' ? [r.value] : []));
-    // Partial only when SOME succeeded and SOME failed — a total failure just
-    // leaves the prior statuses/empty and isn't worth a scary note.
-    const failed = results.filter((r) => r.status === 'rejected').length;
-    statusPartial = failed > 0 && failed < results.length;
-    if (failed < results.length) statusUpdatedAt = Date.now();
-  }
-
-  /** Manual status refresh (Status view "Refresh" button). */
-  function refreshStatuses(): void {
-    const ids = lineIdsKey.length > 0 ? lineIdsKey.split(',') : [];
-    void fetchStatuses(ids);
-  }
-
-  // Refresh on line-id set change and every 60s so a live disruption lands in
-  // the ticker without a full board reload. The $derived key means we don't
-  // tear down the interval on every 10-second board poll.
-  const REFRESH_MS = 60_000;
-  const lineIdsKey = $derived(uniqueLineIds($board).join(','));
-
-  $effect(() => {
-    const ids = lineIdsKey.length > 0 ? lineIdsKey.split(',') : [];
-    void fetchStatuses(ids);
-    const t = setInterval((): void => {
-      void fetchStatuses(ids);
-    }, REFRESH_MS);
-    return (): void => {
-      clearInterval(t);
-    };
-  });
-
-  // Drive the menu-bar disruption icon from the live statuses, scoped to the
-  // user's line selection (same mask as the title). Only pushes to the backend
-  // on a state CHANGE so we don't re-dispatch a Cocoa icon swap every poll.
-  // No-op in window mode (the command finds no tray). The hidden popover's JS
-  // keeps polling, so this stays current even when the popover is closed.
+  // Drive the menu-bar disruption icon. The ambient tray glance is scoped to
+  // the lines the user is actually WATCHING — their explicit filter if set,
+  // otherwise the lines serving the current station — NOT the whole network.
+  // (The in-app Status panel/view are network-wide now; a network-wide tray
+  // would light up for, e.g., a DLR fault while you're watching a tube-only
+  // station.) Only pushes to the backend on a state CHANGE so we don't
+  // re-dispatch a Cocoa icon swap every poll. No-op in window mode (no tray).
+  // The hidden popover's JS keeps polling, so this stays current when closed.
   let lastDisruption: boolean | null = $state(null);
   $effect(() => {
-    const disrupted = anyDisrupted(statuses, $config.line_ids);
+    const scope = $config.line_ids.length > 0 ? $config.line_ids : boardLineIds($board);
+    // No watched lines yet (board still loading, no filter) → nothing to alert.
+    const disrupted = scope.length > 0 && anyDisrupted(statuses, scope);
     if (disrupted !== lastDisruption) {
       lastDisruption = disrupted;
       void setTrayDisruption(disrupted);

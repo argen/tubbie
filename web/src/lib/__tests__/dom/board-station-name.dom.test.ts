@@ -20,6 +20,10 @@ vi.mock('$lib/stores/board.js', () => ({
   },
 }));
 
+vi.mock('$lib/stores/settingsForm.js', () => ({
+  selectStation: vi.fn(),
+}));
+
 vi.mock('$lib/stores/reducedMotion.js', () => ({
   reducedMotion: {
     subscribe: (fn: (v: boolean) => void) => {

@@ -33,7 +33,7 @@
   {#if allGood}
     <p class="status__good">
       <span class="status__good-dot" aria-hidden="true"></span>
-      Good service on all your lines
+      Good service across the network
     </p>
   {:else}
     <ul class="status__list">
@@ -48,7 +48,7 @@
   {/if}
 
   {#if partial}
-    <p class="status__partial">Some lines couldn’t be checked — arrivals are still live.</p>
+    <p class="status__partial">Some lines couldn't be checked — arrivals are still live.</p>
   {/if}
 </section>
 

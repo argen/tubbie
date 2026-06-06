@@ -88,12 +88,12 @@
   {/if}
 
   {#if statuses.length === 0}
-    <p class="statusview__empty">No lines at this station yet.</p>
+    <p class="statusview__empty">Service status unavailable.</p>
   {/if}
 
   <footer class="statusview__foot">
     {#if partial}
-      <span class="statusview__partial">Some lines couldn’t be checked.</span>
+      <span class="statusview__partial">Some lines couldn't be checked.</span>
     {/if}
     {#if updatedLabel}
       <span class="statusview__updated" aria-live="polite">Updated {updatedLabel}</span>
