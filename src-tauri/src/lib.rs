@@ -195,6 +195,9 @@ async fn spawn_stream_task(
     // is just `Arc<TflClient>` + `Clock`. Construction does no I/O; the
     // shared client's caches are warmed once at startup by AppState.
     let service = BoardService::new(Arc::clone(&client), SystemClock);
+    // Clone the config receiver before the stream consumes it, so the tray
+    // title can read the live line selection (BoardConfig.line_ids) each tick.
+    let title_cfg_rx = cfg_rx.clone();
     let mut stream = Box::pin(service.stream(cfg_rx, phase_rx));
 
     // Clone the Arc so the spawned task can clear its own handle when it ends.
@@ -221,8 +224,13 @@ async fn spawn_stream_task(
                         eprintln!("[tubbie] Failed to emit board://updated: {e}");
                     }
                     // Menubar live-arrival (Phase 2): reflect the soonest
-                    // arrival in the tray title. No-op in window mode (no tray).
-                    let title = tray_title::next_arrival_title(&board);
+                    // arrival in the tray title, restricted to the user's
+                    // selected lines so the menu bar matches the open board
+                    // (line_ids is a display mask, invariant #22). Read the
+                    // current selection live from the config channel. No-op in
+                    // window mode (no tray).
+                    let line_ids = title_cfg_rx.borrow().line_ids.clone();
+                    let title = tray_title::next_arrival_title(&board, &line_ids);
                     if title != last_title {
                         set_tray_title(&app, title.clone());
                         last_title = title;
