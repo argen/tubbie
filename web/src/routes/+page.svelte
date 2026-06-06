@@ -34,6 +34,9 @@
   // succeeded — the Status panel shows a quiet partial note without nuking
   // confidence in the (still-live) board.
   let statusPartial = $state(false);
+  // Epoch ms of the last fetch that returned at least one line — the Status
+  // view's "Updated …" freshness line. Stays put on a total failure.
+  let statusUpdatedAt = $state<number | null>(null);
 
   function uniqueLineIds(b: BoardT | null): string[] {
     if (b === null) return [];
@@ -58,6 +61,13 @@
     // leaves the prior statuses/empty and isn't worth a scary note.
     const failed = results.filter((r) => r.status === 'rejected').length;
     statusPartial = failed > 0 && failed < results.length;
+    if (failed < results.length) statusUpdatedAt = Date.now();
+  }
+
+  /** Manual status refresh (Status view "Refresh" button). */
+  function refreshStatuses(): void {
+    const ids = lineIdsKey.length > 0 ? lineIdsKey.split(',') : [];
+    void fetchStatuses(ids);
   }
 
   // Refresh on line-id set change and every 60s so a live disruption lands in
@@ -130,6 +140,8 @@
     board={$board}
     {statuses}
     {statusPartial}
+    {statusUpdatedAt}
+    onStatusRefresh={refreshStatuses}
     stationName={$board.platforms[0]?.arrivals[0]?.station_name ?? $board.station_id}
     lineIds={$config.line_ids}
   />

@@ -234,3 +234,20 @@ export function formatDistance(meters: number, locale: string): string {
   const km = adjusted / 1000;
   return `${km.toFixed(1)}KM`;
 }
+
+/**
+ * Coarse "time since" label for the status freshness line — e.g. "just now",
+ * "3 min ago", "2 hr ago". `updatedAt` / `now` are epoch milliseconds. Returns
+ * "" when `updatedAt` is null/undefined (nothing fetched yet) so the caller can
+ * omit the line. This is a status timestamp, not a train time, so a relative
+ * label is fine (the never-show-HH:MM rule is for arrivals only).
+ */
+export function formatUpdatedAgo(updatedAt: number | null | undefined, now: number): string {
+  if (updatedAt === null || updatedAt === undefined) return '';
+  const secs = Math.max(0, Math.round((now - updatedAt) / 1000));
+  if (secs < 45) return 'just now';
+  const mins = Math.round(secs / 60);
+  if (mins < 60) return `${String(mins)} min ago`;
+  const hrs = Math.round(mins / 60);
+  return `${String(hrs)} hr ago`;
+}

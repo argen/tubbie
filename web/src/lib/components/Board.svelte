@@ -3,10 +3,12 @@
   import type { Arrival, Board, Direction, LineStatus } from '$lib/ipc/types.js';
   import {
     formatTime,
+    formatUpdatedAgo,
     prettyLineName,
     shortPlatformName,
     shortStationName,
   } from '$lib/utils/format.js';
+  import { disruptedLinesWorstFirst } from '$lib/utils/status.js';
   import { lastUpdateTs } from '$lib/stores/board.js';
   import { reducedMotion } from '$lib/stores/reducedMotion.js';
   import { displayMode } from '$lib/stores/displayMode.js';
@@ -14,6 +16,7 @@
   import { applyBoardSize, openSettingsWindow } from '$lib/ipc/commands.js';
   import LineGroup from './LineGroup.svelte';
   import StatusPanel from './StatusPanel.svelte';
+  import StatusView from './StatusView.svelte';
 
   interface Props {
     board: Board;
@@ -23,6 +26,10 @@
     lineIds?: string[];
     /** True when one or more lines' status could not be fetched this cycle. */
     statusPartial?: boolean;
+    /** Epoch ms of the last successful status fetch (for the freshness line). */
+    statusUpdatedAt?: number | null;
+    /** Manual status refresh (Status view "Refresh" button). */
+    onStatusRefresh?: () => void;
   }
 
   const {
@@ -31,7 +38,20 @@
     stationName = '',
     lineIds = [],
     statusPartial = false,
+    statusUpdatedAt = null,
+    onStatusRefresh,
   }: Props = $props();
+
+  // Header view toggle: the board body shows either arrivals or the full
+  // Service-status view (the desktop equivalent of the iOS Status tab).
+  let view = $state<'arrivals' | 'status'>('arrivals');
+  // Disruption count drives the toggle's badge; scoped to the selected lines
+  // so it matches the board the user sees (and the menu-bar indicator).
+  const disruptionCount = $derived(
+    disruptedLinesWorstFirst(
+      lineIds.length > 0 ? statuses.filter((s) => lineIds.includes(s.line_id)) : statuses,
+    ).length,
+  );
 
   // Pretty-print a line id for the filter badge, preferring a matching
   // arrival's line_name (already in the board data) and falling back to the
@@ -69,6 +89,10 @@
       second: '2-digit',
     }),
   );
+
+  // Freshness label for the Status view — reuses the ticking `now` above, so
+  // no extra timer. "" until the first status fetch lands.
+  const statusUpdatedLabel = $derived(formatUpdatedAgo(statusUpdatedAt, now.getTime()));
 
   // ---------------------------------------------------------------------------
   // Refresh pulse
@@ -417,6 +441,34 @@
 
       <button
         type="button"
+        class="board__status-btn"
+        class:board__status-btn--active={view === 'status'}
+        onclick={() => (view = view === 'status' ? 'arrivals' : 'status')}
+        aria-pressed={view === 'status'}
+        aria-label={view === 'status' ? 'Hide service status' : 'Show service status'}
+        title="Service status"
+      >
+        <svg
+          aria-hidden="true"
+          focusable="false"
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+        </svg>
+        {#if disruptionCount > 0}
+          <span class="board__status-badge" aria-hidden="true">{disruptionCount}</span>
+        {/if}
+      </button>
+
+      <button
+        type="button"
         class="board__settings-btn"
         onclick={() => void openSettingsWindow()}
         aria-label="Open settings"
@@ -447,8 +499,19 @@
        direction column per direction, with the per-direction arrivals
        filtered to that line — so a Bakerloo + Jubilee shared platform
        at Baker Street shows up as separate Bakerloo and Jubilee groups
-       and the line-coloured stripe always matches the train. -->
-  <div class="board__platforms" aria-label="Arrivals by line" role="region">
+       and the line-coloured stripe always matches the train.
+
+       The arrivals tree stays MOUNTED in Status view and is hidden, not
+       unmounted — same "never re-mount the board" rule the rerender-count
+       test pins (no cache re-warm, instant toggle-back) — and `aria-hidden`
+       + `display:none` keep it out of the accessibility tree while hidden. -->
+  <div
+    class="board__platforms"
+    class:board__platforms--hidden={view === 'status'}
+    aria-hidden={view === 'status' ? 'true' : undefined}
+    aria-label="Arrivals by line"
+    role="region"
+  >
     {#each linesGrouped as group (group.lineId)}
       <LineGroup
         lineId={group.lineId}
@@ -464,8 +527,18 @@
     {/if}
   </div>
 
-  <!-- Service status — worst-first, calm states (replaces the marquee ticker) -->
-  <StatusPanel {statuses} partial={statusPartial} />
+  {#if view === 'status'}
+    <!-- Full Service-status view (desktop equivalent of the iOS Status tab). -->
+    <StatusView
+      {statuses}
+      partial={statusPartial}
+      updatedLabel={statusUpdatedLabel}
+      onRefresh={onStatusRefresh}
+    />
+  {:else}
+    <!-- Service status summary — worst-first, calm states (replaces the marquee). -->
+    <StatusPanel {statuses} partial={statusPartial} />
+  {/if}
 </main>
 
 <style>
@@ -682,6 +755,56 @@
     border-color: var(--platform-label);
   }
 
+  /* Service-status toggle — same chrome as the cog so the pair reads as a
+     control cluster. `--active` gives the pressed state a filled look. */
+  .board__status-btn {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--platform-label);
+    background: transparent;
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--row-divider);
+    border-radius: 2px;
+    transition: color 0.15s ease;
+    opacity: 0.7;
+    padding: 0;
+  }
+
+  .board__status-btn:hover,
+  .board__status-btn:focus {
+    color: var(--fg);
+    opacity: 1;
+    border-color: var(--platform-label);
+  }
+
+  .board__status-btn--active {
+    color: var(--fg);
+    opacity: 1;
+    border-color: var(--fg);
+    background: color-mix(in srgb, var(--fg) 10%, transparent);
+  }
+
+  .board__status-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    min-width: 15px;
+    height: 15px;
+    padding: 0 3px;
+    border-radius: 999px;
+    background: var(--stale-accent);
+    color: var(--bg);
+    font-family: var(--font-ui);
+    font-size: 0.65rem;
+    font-weight: 700;
+    line-height: 15px;
+    text-align: center;
+  }
+
   /* Platforms area: line groups stack vertically. Each LineGroup owns its
      own responsive grid of platform columns (auto-fit, minmax(180px,
      1fr)), so the only direction we ever need to scroll here is vertical
@@ -694,6 +817,12 @@
     overflow-y: auto;
     background: var(--row-divider);
     padding: 1px;
+  }
+
+  /* Status view: hide the (still-mounted) arrivals tree. `display: none`
+     overrides the flex above and removes it from the a11y tree. */
+  .board__platforms--hidden {
+    display: none;
   }
 
   .board__no-platforms {
