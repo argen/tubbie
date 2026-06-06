@@ -37,18 +37,24 @@ def _canvas(size: int) -> tuple[Image.Image, ImageDraw.ImageDraw, int]:
 
 
 def draw_normal(size: int) -> Image.Image:
-    """5x3 dot grid — the LED dot-matrix board."""
+    """A letter "T" rendered in a 5x5 LED dot grid — the tubbie monogram in
+    dot-matrix form (top row lit + a centre stem)."""
     img, d, s = _canvas(size)
-    cols, rows = 5, 3
-    pad = round(s * 0.16)
-    dot_r = round(s * 0.07)
+    cols, rows = 5, 5
+    pad = round(s * 0.15)
+    dot_r = round(s * 0.066)
     span_x = s - 2 * pad
     span_y = s - 2 * pad
-    for j in range(rows):
-        y = pad + span_y * j / (rows - 1)
-        for i in range(cols):
-            x = pad + span_x * i / (cols - 1)
-            d.ellipse([x - dot_r, y - dot_r, x + dot_r, y + dot_r], fill=BLACK)
+
+    def dot(col: int, row: int) -> None:
+        x = pad + span_x * col / (cols - 1)
+        y = pad + span_y * row / (rows - 1)
+        d.ellipse([x - dot_r, y - dot_r, x + dot_r, y + dot_r], fill=BLACK)
+
+    lit = [(c, 0) for c in range(cols)]  # top bar
+    lit += [(cols // 2, r) for r in range(1, rows)]  # centre stem
+    for col, row in lit:
+        dot(col, row)
     return img.resize((size, size), Image.LANCZOS)
 
 
