@@ -79,6 +79,12 @@ CANNOT be covered by `cargo test`; a wrong-thread dispatch crashes with
   ETA beside it (`Due` / `1 min` / `N mins`) — the soonest train across
   all platforms. **No crash** — a wrong-thread `set_title` would
   `EXC_BREAKPOINT` here.
+- **Tray icon legibility.** The icon is a monochrome Underground-roundel
+  template (`icons/tray-icon.png` @1x + `@2x`). Confirm it reads as a
+  roundel (thin ring + horizontal bar), tints correctly on a **light**
+  AND **dark** menu bar, and stays crisp beside the notch and under
+  Reduce-Transparency — not a muddy blob. On a Retina Mac the @2x is what
+  shows.
 - **Watch it change buckets.** As the soonest train approaches, the title
   steps `3 mins → 2 mins → 1 min → Due`. The dev log MUST NOT show a
   `set_title` dispatch on every poll when the bucket is unchanged (the
