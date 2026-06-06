@@ -42,7 +42,9 @@ def draw_normal(size: int) -> Image.Image:
     img, d, s = _canvas(size)
     cols, rows = 5, 5
     pad = round(s * 0.15)
-    dot_r = round(s * 0.066)
+    # Fatter dots (nearly touching, grid spacing is 0.175*s) so the T reads
+    # bold at menubar size rather than thin and spindly.
+    dot_r = round(s * 0.084)
     span_x = s - 2 * pad
     span_y = s - 2 * pad
 
