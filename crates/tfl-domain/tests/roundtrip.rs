@@ -76,6 +76,7 @@ fn line_status_with_validity_periods_round_trips() {
             severity: 4,
             description: "Planned Closure".to_string(),
             bucket: SeverityBucket::PartClosure,
+            affected_segments: Vec::new(),
         }],
         disruption_text: Some("Engineering work — entire line closed.".to_string()),
         validity_periods: vec![
@@ -147,6 +148,7 @@ fn status_entry_with_bucket_round_trips() {
         severity: 6,
         description: "Severe Delays".to_string(),
         bucket: SeverityBucket::SevereDelays,
+        affected_segments: Vec::new(),
     };
     let v = serde_json::to_value(&entry).expect("StatusEntry must serialize");
     assert_eq!(v["bucket"], serde_json::json!("SevereDelays"));

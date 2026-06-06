@@ -10,7 +10,7 @@
  * fixed buckets (mirrors `SeverityBucket::sort_rank`). That set is closed —
  * adding a bucket is a deliberate cross-cutting change anyway.
  */
-import type { LineStatus, SeverityBucket } from '$lib/ipc/types.js';
+import type { LineStatus, RouteSegment, SeverityBucket, StatusEntry } from '$lib/ipc/types.js';
 
 /** Worst-first rank — lower = worse. Mirrors `SeverityBucket::sort_rank`. */
 const BUCKET_RANK: Record<SeverityBucket, number> = {
@@ -108,4 +108,13 @@ export function bucketLabel(bucket: SeverityBucket | undefined): string {
 export function lineStatusLabel(line: LineStatus): string {
   const text = line.disruption_text?.trim();
   return text && text.length > 0 ? text : bucketLabel(worstBucket(line));
+}
+
+/**
+ * Safe accessor for `affected_segments` on a `StatusEntry`. Returns the
+ * array when present, or `[]` for older payloads that predate the field.
+ * Empty array → render "Entire line" in the UI.
+ */
+export function segmentsFor(entry: StatusEntry): RouteSegment[] {
+  return entry.affected_segments ?? [];
 }

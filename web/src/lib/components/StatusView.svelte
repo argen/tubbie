@@ -1,18 +1,19 @@
 <script lang="ts">
   /**
    * Full service-status view (the desktop equivalent of the iOS Status tab),
-   * shown in the board body when the header Status toggle is active. Richer
-   * than the bottom StatusPanel summary: a headline count, disrupted lines
-   * worst-first, an "Other lines — good service" section listing the healthy
-   * lines, a freshness line, and a manual refresh.
+   * shown in the board body when the header Status toggle is active.
+   *
+   * Layout mirrors the TfL website Status page:
+   *   - Left vertical colour stripe per line
+   *   - Bold line name
+   *   - Per StatusEntry: severity sub-headline + "A ↔ B" segment rows
+   *     (or "Entire line" when no segments)
+   *   - Disclosure chevron → expands disruption_text prose
+   *   - Single "Good service on all other lines" footer bar
+   *   - Empty state "Service status unavailable."
    */
   import type { LineStatus } from '$lib/ipc/types.js';
-  import {
-    disruptedLinesWorstFirst,
-    isDisrupted,
-    lineStatusLabel,
-    worstBucket,
-  } from '$lib/utils/status.js';
+  import { disruptedLinesWorstFirst, isDisrupted, segmentsFor } from '$lib/utils/status.js';
   import { prettyLineName, lineColorVar } from '$lib/utils/format.js';
 
   interface Props {
@@ -27,17 +28,23 @@
   const { statuses, partial = false, updatedLabel = '', onRefresh }: Props = $props();
 
   const disrupted = $derived(disruptedLinesWorstFirst(statuses));
-  const healthy = $derived(
-    statuses
-      .filter((s) => !isDisrupted(s))
-      .slice()
-      .sort((a, b) => prettyLineName(a.line_id).localeCompare(prettyLineName(b.line_id))),
-  );
+  const hasHealthy = $derived(statuses.some((s) => !isDisrupted(s)));
   const countLabel = $derived(
     disrupted.length === 0
       ? 'All lines good'
       : `${String(disrupted.length)} disruption${disrupted.length === 1 ? '' : 's'}`,
   );
+
+  // Per-line expanded state for disclosure chevrons.
+  let expanded = $state<Record<string, boolean>>({});
+
+  function toggleLine(lineId: string): void {
+    expanded = { ...expanded, [lineId]: !expanded[lineId] };
+  }
+
+  function detailsId(lineId: string): string {
+    return `statusview-details-${lineId}`;
+  }
 </script>
 
 <section class="statusview" aria-label="Service status">
@@ -54,37 +61,81 @@
   {#if disrupted.length > 0}
     <ul class="statusview__list">
       {#each disrupted as line (line.line_id)}
-        <li class="statusview__row" data-bucket={worstBucket(line)}>
+        {@const isExpanded = expanded[line.line_id] ?? false}
+        <li class="statusview__row">
+          <!-- Left colour stripe -->
           <span
-            class="statusview__chip"
+            class="statusview__stripe"
             style:background={lineColorVar(line.line_id)}
             aria-hidden="true"
           ></span>
-          <span class="statusview__line">{prettyLineName(line.line_id)}</span>
-          <span class="statusview__detail">{lineStatusLabel(line)}</span>
+
+          <div class="statusview__body">
+            <!-- Line name + disclosure toggle -->
+            <div class="statusview__namerow">
+              <span class="statusview__line">{prettyLineName(line.line_id)}</span>
+              {#if line.disruption_text}
+                <button
+                  type="button"
+                  class="statusview__toggle"
+                  data-testid="details-toggle"
+                  aria-expanded={isExpanded}
+                  aria-controls={detailsId(line.line_id)}
+                  onclick={() => {
+                    toggleLine(line.line_id);
+                  }}
+                >
+                  <span
+                    class="statusview__chevron"
+                    class:statusview__chevron--open={isExpanded}
+                    aria-hidden="true">›</span
+                  >
+                </button>
+              {/if}
+            </div>
+
+            <!-- Per-entry severity sub-headlines + segments -->
+            {#each line.status as entry (`${entry.description}-${String(entry.severity)}`)}
+              {@const segs = segmentsFor(entry)}
+              <div class="statusview__entry">
+                <p class="statusview__entry-headline">{entry.description}</p>
+                {#if segs.length > 0}
+                  <ul class="statusview__segments">
+                    {#each segs as seg (`${seg.from}→${seg.to}`)}
+                      <li class="statusview__segment" data-testid="route-segment">
+                        <span class="statusview__segment-from">{seg.from}</span>
+                        <span class="statusview__segment-arrow" aria-hidden="true"> ↔ </span>
+                        <span class="statusview__segment-to">{seg.to}</span>
+                      </li>
+                    {/each}
+                  </ul>
+                {:else}
+                  <p class="statusview__segment-entire">Entire line</p>
+                {/if}
+              </div>
+            {/each}
+
+            <!-- Disclosure panel (disruption prose) — only mounted when open -->
+            {#if line.disruption_text && isExpanded}
+              <div
+                id={detailsId(line.line_id)}
+                class="statusview__details statusview__details--open"
+              >
+                <p class="statusview__disruption">{line.disruption_text}</p>
+              </div>
+            {:else if line.disruption_text}
+              <!-- Placeholder to keep the aria-controls id in the DOM. -->
+              <div id={detailsId(line.line_id)} class="statusview__details" hidden></div>
+            {/if}
+          </div>
         </li>
       {/each}
     </ul>
-  {/if}
 
-  {#if healthy.length > 0}
-    <div class="statusview__healthy">
-      <p class="statusview__healthy-label">
-        {disrupted.length > 0 ? 'Other lines — good service' : 'Good service'}
-      </p>
-      <ul class="statusview__chips">
-        {#each healthy as line (line.line_id)}
-          <li class="statusview__chip-row">
-            <span
-              class="statusview__chip"
-              style:background={lineColorVar(line.line_id)}
-              aria-hidden="true"
-            ></span>
-            <span class="statusview__chip-name">{prettyLineName(line.line_id)}</span>
-          </li>
-        {/each}
-      </ul>
-    </div>
+    <!-- Footer bar replaces chip enumeration of healthy lines -->
+    {#if hasHealthy}
+      <p class="statusview__good-footer">Good service on all other lines</p>
+    {/if}
   {/if}
 
   {#if statuses.length === 0}
@@ -148,64 +199,169 @@
     border-color: var(--fg);
   }
 
+  /* ── Disrupted rows ─────────────────────────────────────────────────────── */
+
   .statusview__list {
     list-style: none;
     margin: 0 0 0.8rem;
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 0.45rem;
-  }
-  .statusview__row {
-    display: grid;
-    grid-template-columns: auto auto 1fr;
-    align-items: baseline;
-    gap: 0.6rem;
-  }
-  .statusview__chip {
-    width: 0.7rem;
-    height: 0.7rem;
-    border-radius: 2px;
-    align-self: center;
-    flex-shrink: 0;
-  }
-  .statusview__line {
-    font-weight: 600;
-    white-space: nowrap;
-  }
-  .statusview__detail {
-    color: var(--platform-label);
-    font-size: 0.9rem;
+    gap: 0;
   }
 
-  .statusview__healthy-label {
-    margin: 0 0 0.4rem;
-    font-size: 0.75rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--platform-label);
-    opacity: 0.8;
+  .statusview__row {
+    display: flex;
+    align-items: stretch;
+    border-bottom: 1px solid var(--row-divider);
   }
-  .statusview__chips {
+  .statusview__row:first-child {
+    border-top: 1px solid var(--row-divider);
+  }
+
+  /* Left vertical colour stripe */
+  .statusview__stripe {
+    width: 0.35rem;
+    flex-shrink: 0;
+    border-radius: 2px 0 0 2px;
+  }
+
+  .statusview__body {
+    flex: 1;
+    padding: 0.6rem 0.6rem 0.6rem 0.7rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  .statusview__namerow {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .statusview__line {
+    font-weight: 700;
+    font-size: 1rem;
+    letter-spacing: 0.02em;
+    flex: 1;
+  }
+
+  /* ── Disclosure toggle ──────────────────────────────────────────────────── */
+
+  .statusview__toggle {
+    background: none;
+    border: none;
+    padding: 0.1rem 0.3rem;
+    cursor: pointer;
+    color: var(--platform-label);
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+  }
+  .statusview__toggle:hover,
+  .statusview__toggle:focus-visible {
+    color: var(--fg);
+  }
+
+  .statusview__chevron {
+    display: inline-block;
+    transition: transform 0.2s ease;
+    transform: rotate(0deg);
+    line-height: 1;
+  }
+  .statusview__chevron--open {
+    transform: rotate(90deg);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .statusview__chevron {
+      transition: none;
+    }
+  }
+
+  /* ── Per-entry severity block ───────────────────────────────────────────── */
+
+  .statusview__entry {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    padding-top: 0.1rem;
+  }
+
+  .statusview__entry-headline {
+    margin: 0;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--fg);
+  }
+
+  /* ── Segments ───────────────────────────────────────────────────────────── */
+
+  .statusview__segments {
     list-style: none;
     margin: 0;
     padding: 0;
     display: flex;
-    flex-wrap: wrap;
-    gap: 0.3rem 0.8rem;
+    flex-direction: column;
+    gap: 0.1rem;
   }
-  .statusview__chip-row {
+
+  .statusview__segment {
+    font-size: 0.82rem;
+    color: var(--platform-label);
     display: flex;
-    align-items: center;
-    gap: 0.35rem;
-    font-size: 0.85rem;
-    color: var(--fg);
+    align-items: baseline;
+    gap: 0.15rem;
   }
+
+  .statusview__segment-arrow {
+    opacity: 0.6;
+  }
+
+  .statusview__segment-entire {
+    margin: 0;
+    font-size: 0.82rem;
+    color: var(--platform-label);
+    font-style: italic;
+  }
+
+  /* ── Disclosure details panel ───────────────────────────────────────────── */
+
+  .statusview__details {
+    overflow: hidden;
+  }
+  .statusview__details--open {
+    display: block;
+  }
+
+  .statusview__disruption {
+    margin: 0.2rem 0 0;
+    font-size: 0.82rem;
+    color: var(--platform-label);
+    line-height: 1.4;
+  }
+
+  /* ── Footer bar ─────────────────────────────────────────────────────────── */
+
+  .statusview__good-footer {
+    margin: 0.6rem 0 0;
+    padding: 0.5rem 0.8rem;
+    font-weight: 700;
+    font-size: 0.9rem;
+    background: var(--good-service-bg, rgba(46, 158, 91, 0.1));
+    color: var(--good-service, #2e9e5b);
+    border-radius: 4px;
+  }
+
+  /* ── Empty state ────────────────────────────────────────────────────────── */
 
   .statusview__empty {
     color: var(--platform-label);
     font-size: 0.9rem;
   }
+
+  /* ── Footer ─────────────────────────────────────────────────────────────── */
 
   .statusview__foot {
     display: flex;

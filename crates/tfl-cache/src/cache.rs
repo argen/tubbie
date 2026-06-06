@@ -38,7 +38,7 @@ use tfl_client::error::TflError;
 use tfl_client::http::TflHttp;
 use tfl_domain::types::{
     is_supported_line_id, pretty_line_name, severity_bucket, Arrival, LineRef, LineStatus,
-    SeverityBucket, Station, StatusEntry, TflLine, ValidityPeriod,
+    RouteSegment, SeverityBucket, Station, StatusEntry, TflLine, ValidityPeriod,
 };
 
 /// TfL modes tubbie surfaces. `TflClient::new` defaults to this set; the
@@ -1360,6 +1360,45 @@ fn relevance_tier(name_lower: &str, query_lower: &str) -> u8 {
     }
 }
 
+/// Build the deduplicated `affected_segments` list from a TfL disruption's
+/// `affectedRoutes`. Pairs are compared unordered (A↔B and B↔A collapse to
+/// one), preserving first-seen order. Routes with an empty origination or
+/// destination are skipped (fail-open: the UI renders "Entire line" when the
+/// vec is empty, so omitting an unusable pair is safer than fabricating one).
+fn build_affected_segments(
+    disruption: Option<&tfl_domain::types::TflDisruption>,
+) -> Vec<RouteSegment> {
+    let routes = match disruption {
+        Some(d) if !d.affected_routes.is_empty() => d.affected_routes.as_slice(),
+        _ => return Vec::new(),
+    };
+
+    let mut seen_pairs: std::collections::HashSet<(String, String)> =
+        std::collections::HashSet::new();
+    routes
+        .iter()
+        .filter(|r| {
+            !r.origination_name.trim().is_empty() && !r.destination_name.trim().is_empty()
+        })
+        .filter_map(|r| {
+            let a = r.origination_name.trim().to_string();
+            let b = r.destination_name.trim().to_string();
+            // Canonical unordered pair: sort lexicographically so A↔B and B↔A
+            // produce the same key, collapsing reverse-duplicate routes.
+            let key = if a <= b {
+                (a.clone(), b.clone())
+            } else {
+                (b.clone(), a.clone())
+            };
+            if seen_pairs.insert(key) {
+                Some(RouteSegment { from: a, to: b })
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
 /// Convert a TfL wire-format `TflLine` into a domain `LineStatus`.
 fn tfl_line_to_line_status(line: TflLine) -> LineStatus {
     let status: Vec<StatusEntry> = line
@@ -1369,6 +1408,7 @@ fn tfl_line_to_line_status(line: TflLine) -> LineStatus {
             severity: s.status_severity,
             description: s.status_severity_description.clone(),
             bucket: severity_bucket(s.status_severity),
+            affected_segments: build_affected_segments(s.disruption.as_ref()),
         })
         .collect();
 

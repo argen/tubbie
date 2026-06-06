@@ -10,6 +10,7 @@ pub use direction::{line_compass_axis, CompassAxis, Direction, NorthernBranch};
 pub use theme::{Theme, ThemeError};
 pub use types::{
     is_supported_line_id, line_family_key, pretty_line_name, severity_bucket, Arrival, Board,
-    Favorite, Line, LineRef, LineStatus, NearbyStation, Platform, SeverityBucket, Station,
-    StatusEntry, TflDisruption, TflLine, TflLineStatus, TflValidityPeriod, ValidityPeriod,
+    Favorite, Line, LineRef, LineStatus, NearbyStation, Platform, RouteSegment, SeverityBucket,
+    Station, StatusEntry, TflAffectedRoute, TflDisruption, TflLine, TflLineStatus,
+    TflValidityPeriod, ValidityPeriod,
 };

@@ -431,6 +431,20 @@ pub struct LineStatus {
     pub validity_periods: Vec<ValidityPeriod>,
 }
 
+/// A single affected route segment within a disrupted line status.
+///
+/// Derived from TfL's `disruption.affectedRoutes[].originationName` /
+/// `destinationName`. The UI renders "from ↔ to" or "Entire line" when
+/// `affected_segments` is empty.
+///
+/// `#[serde(default)]` on the parent `StatusEntry` field keeps iOS
+/// submodule pins compiling — additive field, no old data is broken.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RouteSegment {
+    pub from: String,
+    pub to: String,
+}
+
 /// An individual severity entry within a `LineStatus`.
 ///
 /// TODO(M4): StatusEntry is the severity row inside LineStatus; rendered by M6 ticker.
@@ -447,6 +461,13 @@ pub struct StatusEntry {
     /// that pre-date the field; default is computed from `severity`.
     #[serde(default = "default_status_entry_bucket")]
     pub bucket: SeverityBucket,
+    /// Affected route segments from TfL's `disruption.affectedRoutes[]`.
+    /// Empty when the status has no disruption (Good Service) or when TfL
+    /// provides no route data. The UI renders "Entire line" in that case.
+    /// `#[serde(default)]` keeps pre-existing serialized payloads (iOS
+    /// submodule) compiling — additive, non-breaking.
+    #[serde(default)]
+    pub affected_segments: Vec<RouteSegment>,
 }
 
 fn default_status_entry_bucket() -> SeverityBucket {
@@ -611,12 +632,33 @@ pub struct TflValidityPeriod {
     pub is_now: bool,
 }
 
+/// A single route entry from TfL's `disruption.affectedRoutes[]`.
+/// Maps to [`RouteSegment`] after pair-dedup in the cache layer.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TflAffectedRoute {
+    /// Human-readable route name (e.g. `"Watford - Aldgate"`). Informational only.
+    #[serde(default)]
+    pub name: String,
+    /// Origin station name (e.g. `"Harrow-on-the-Hill"`).
+    #[serde(default)]
+    pub origination_name: String,
+    /// Destination station name (e.g. `"Watford"`).
+    #[serde(default)]
+    pub destination_name: String,
+}
+
 /// TfL wire format for disruption info nested inside a line status.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TflDisruption {
     #[serde(default)]
     pub description: String,
+    /// Affected route segments from TfL's payload. May be empty when TfL
+    /// provides no route data (common for Good Service). `#[serde(default)]`
+    /// keeps pre-existing fixture JSON compiling — additive, non-breaking.
+    #[serde(default)]
+    pub affected_routes: Vec<TflAffectedRoute>,
 }
 
 // ---------------------------------------------------------------------------
