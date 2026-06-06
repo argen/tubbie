@@ -65,3 +65,30 @@ every line-count tier and the multi-line corner cases:
   transition; sitting on the same station for 60 s (two poll ticks)
   MUST NOT issue extra resize requests. The renderer-side dedupe
   (`lastSizeKey`) is what protects the main-thread Cocoa dispatch.
+
+## Menubar live-arrival (tray title)
+
+For changes to `set_tray_title`, `tray_title::next_arrival_title`, or the
+title-update hook in `spawn_stream_task`. `TrayIcon::set_title` reaches
+`NSStatusItem` — a main-thread-only Cocoa call (invariants #8/#9), so this
+CANNOT be covered by `cargo test`; a wrong-thread dispatch crashes with
+`EXC_BREAKPOINT`, not a test failure.
+
+- **Switch to menubar mode** at a busy station (King's Cross, Oxford
+  Circus). Within one poll the menu bar shows the icon **plus** a short
+  ETA beside it (`Due` / `1 min` / `N mins`) — the soonest train across
+  all platforms. **No crash** — a wrong-thread `set_title` would
+  `EXC_BREAKPOINT` here.
+- **Watch it change buckets.** As the soonest train approaches, the title
+  steps `3 mins → 2 mins → 1 min → Due`. The dev log MUST NOT show a
+  `set_title` dispatch on every poll when the bucket is unchanged (the
+  `last_title` throttle): sit on a station whose soonest train is steady
+  and confirm the title isn't re-pushed each tick.
+- **Switch menubar → window.** The title vanishes with the tray (no
+  orphaned status item, no crash). Switching back, it reappears within a
+  poll.
+- **Empty board / all trains departed.** Title clears to the bare icon
+  (no stale number frozen beside it once arrivals drain).
+- **Sustained TfL failure (pull the network).** The title holds the last
+  good ETA (same stale behaviour as the board) and does not crash; it
+  refreshes once polling recovers.
