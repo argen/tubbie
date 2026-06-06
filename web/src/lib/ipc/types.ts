@@ -176,9 +176,27 @@ export function isDisplayPrefs(v: unknown): v is DisplayPrefs {
 // LineStatus / StatusEntry
 // ---------------------------------------------------------------------------
 
+/**
+ * Render-tier bucket — mirrors `tfl_domain::SeverityBucket` variant names.
+ * This is the SINGLE canonical severity→tier mapping (computed at the Rust
+ * wire seam, invariant #25); UI MUST consume `bucket` and never re-map raw
+ * `severity` codes. Optional only for backward-compat with older payloads —
+ * the live client always populates it.
+ */
+export type SeverityBucket =
+  | 'Closed'
+  | 'PartClosure'
+  | 'SevereDelays'
+  | 'ReducedService'
+  | 'MinorDelays'
+  | 'Information'
+  | 'Other'
+  | 'GoodService';
+
 export interface StatusEntry {
   severity: number;
   description: string;
+  bucket?: SeverityBucket;
 }
 
 export interface LineStatus {
