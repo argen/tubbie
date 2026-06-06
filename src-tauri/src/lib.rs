@@ -41,6 +41,7 @@ pub mod location;
 pub mod pool_key;
 pub mod state;
 pub mod store_impl;
+pub mod tray_title;
 
 use std::sync::{Arc, Mutex, RwLock as StdRwLock};
 use std::time::Duration;
@@ -204,6 +205,11 @@ async fn spawn_stream_task(
         // Track whether the previous tick errored so we don't spam the log
         // when TfL is rate-limiting and every poll fails.
         let mut prev_was_err = false;
+        // Last menu-bar title we pushed. The formatted ETA string IS the
+        // bucket ("Due" / "1 min" / "N mins"), so comparing strings gives the
+        // bucket-boundary throttle for free: we only hop to the main thread
+        // when the displayed bucket actually changes, not on every poll.
+        let mut last_title: Option<String> = None;
         loop {
             match stream.next().await {
                 Some(Ok(board)) => {
@@ -213,6 +219,13 @@ async fn spawn_stream_task(
                     }
                     if let Err(e) = app.emit("board://updated", &board) {
                         eprintln!("[tubbie] Failed to emit board://updated: {e}");
+                    }
+                    // Menubar live-arrival (Phase 2): reflect the soonest
+                    // arrival in the tray title. No-op in window mode (no tray).
+                    let title = tray_title::next_arrival_title(&board);
+                    if title != last_title {
+                        set_tray_title(&app, title.clone());
+                        last_title = title;
                     }
                 }
                 Some(Err(e)) => {
@@ -482,6 +495,29 @@ fn build_tray(app: &tauri::AppHandle) -> Result<(), tauri::Error> {
         .build(app)?;
 
     Ok(())
+}
+
+/// Set (or clear) the menu-bar tray title — the menubar live-arrival
+/// (Phase 2). `Some(text)` shows `text` beside the tray icon; `None` clears it.
+///
+/// **Dispatches to the macOS main thread.** `TrayIcon::set_title` reaches
+/// `NSStatusItem`'s button title — a Cocoa call that trips
+/// `BSServiceMainRunLoopQueue::assertBarrierOnQueue` and crashes with
+/// `EXC_BREAKPOINT` if invoked from a Tokio worker (CLAUDE.md invariants
+/// #8/#9). The stream loop runs on a Tokio task, so it MUST come through here.
+///
+/// Fire-and-forget: we don't await the closure (the title is advisory and the
+/// next board emit will correct any miss). A no-op in window mode — `tray_by_id`
+/// returns `None` when the tray has been removed, so the title call is skipped.
+pub(crate) fn set_tray_title(app: &tauri::AppHandle, title: Option<String>) {
+    let app_clone = app.clone();
+    if let Err(e) = app.run_on_main_thread(move || {
+        if let Some(tray) = app_clone.tray_by_id(TRAY_ID) {
+            let _ = tray.set_title(title);
+        }
+    }) {
+        eprintln!("[tubbie] failed to dispatch tray title to main thread: {e}");
+    }
 }
 
 /// Run the UI side-effects that distinguish window mode from menubar mode.
