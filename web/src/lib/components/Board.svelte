@@ -901,15 +901,15 @@
 
   /* Search overlay — absolutely positioned directly under the header, above
      the board content. Uses dot-matrix CSS vars for visual consistency. */
+  /* In-flow bar that slides in flush below the header (which is taller in
+     menubar mode now it's two rows) and pushes the board down — no hardcoded
+     offset to drift out of sync with the header height. The search input's own
+     dropdown (position:absolute, z-index:100) overlays the board below it. */
   .board__search-overlay {
-    position: absolute;
-    top: 52px; /* header min-height */
-    left: 0;
-    right: 0;
-    z-index: 50;
+    flex-shrink: 0;
     background: var(--settings-bg, var(--bg));
-    border-bottom: 1px solid var(--input-border);
-    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--header-border);
+    padding: 0.6rem 1rem 0.7rem;
   }
 
   /* Service-status toggle — same chrome as the cog so the pair reads as a
