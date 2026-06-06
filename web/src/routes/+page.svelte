@@ -2,7 +2,8 @@
   import { board, boardError, isLoading } from '$lib/stores/board.js';
   import { config, configError } from '$lib/stores/config.js';
   import Board from '$lib/components/Board.svelte';
-  import { getLineStatus, openSettingsWindow } from '$lib/ipc/commands.js';
+  import { getLineStatus, openSettingsWindow, setTrayDisruption } from '$lib/ipc/commands.js';
+  import { anyDisrupted } from '$lib/utils/status.js';
   import type { Board as BoardT, LineStatus } from '$lib/ipc/types.js';
 
   let statuses = $state<LineStatus[]>([]);
@@ -51,6 +52,20 @@
     return (): void => {
       clearInterval(t);
     };
+  });
+
+  // Drive the menu-bar disruption icon from the live statuses, scoped to the
+  // user's line selection (same mask as the title). Only pushes to the backend
+  // on a state CHANGE so we don't re-dispatch a Cocoa icon swap every poll.
+  // No-op in window mode (the command finds no tray). The hidden popover's JS
+  // keeps polling, so this stays current even when the popover is closed.
+  let lastDisruption: boolean | null = $state(null);
+  $effect(() => {
+    const disrupted = anyDisrupted(statuses, $config.line_ids);
+    if (disrupted !== lastDisruption) {
+      lastDisruption = disrupted;
+      void setTrayDisruption(disrupted);
+    }
   });
 </script>
 

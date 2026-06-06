@@ -85,6 +85,14 @@ CANNOT be covered by `cargo test`; a wrong-thread dispatch crashes with
   AND **dark** menu bar, and stays crisp beside the notch and under
   Reduce-Transparency — not a muddy blob. On a Retina Mac the @2x is what
   shows.
+- **Disruption icon swap.** When a line in your selection is disrupted,
+  the tray icon swaps to the filled "alert" roundel
+  (`icons/tray-icon-alert.png`); back to the open ring when all clear.
+  Both are templates — confirm both tint on light/dark and that the swap
+  doesn't crash (`set_icon` is a main-thread Cocoa call, invariants
+  #8/#9). The swap is driven by the frontend statuses (scoped to your
+  line filter), so it still updates with the popover closed; it should
+  NOT re-dispatch every poll when the disruption state is unchanged.
 - **Watch it change buckets.** As the soonest train approaches, the title
   steps `3 mins → 2 mins → 1 min → Due`. The dev log MUST NOT show a
   `set_title` dispatch on every poll when the bucket is unchanged (the

@@ -6,6 +6,7 @@ import {
   sortLinesWorstFirst,
   allGoodService,
   disruptedLinesWorstFirst,
+  anyDisrupted,
   bucketRank,
 } from '$lib/utils/status.js';
 
@@ -85,6 +86,27 @@ describe('disruptedLinesWorstFirst', () => {
       line('jubilee', ['MinorDelays']),
     ];
     expect(disruptedLinesWorstFirst(input).map((l) => l.line_id)).toEqual(['central', 'jubilee']);
+  });
+});
+
+describe('anyDisrupted', () => {
+  const lines = [line('victoria', ['GoodService']), line('bakerloo', ['SevereDelays'])];
+
+  it('empty selection = all lines: true when any line is disrupted', () => {
+    expect(anyDisrupted(lines, [])).toBe(true);
+  });
+
+  it('false when the disruption is on a line NOT in the selection', () => {
+    // Only Victoria selected; Bakerloo (disrupted) is filtered out.
+    expect(anyDisrupted(lines, ['victoria'])).toBe(false);
+  });
+
+  it('true when a disrupted line IS in the selection', () => {
+    expect(anyDisrupted(lines, ['bakerloo'])).toBe(true);
+  });
+
+  it('false when everything in scope is good', () => {
+    expect(anyDisrupted([line('victoria', ['GoodService'])], [])).toBe(false);
   });
 });
 

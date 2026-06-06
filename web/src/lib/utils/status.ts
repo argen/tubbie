@@ -67,6 +67,19 @@ export function allGoodService(statuses: LineStatus[]): boolean {
   return statuses.every((line) => !isDisrupted(line));
 }
 
+/**
+ * True when any line within the user's selection is disrupted. `selectedLineIds`
+ * is the chip filter (`BoardConfig.line_ids`): empty = all lines (same mask as
+ * the board UI and the menu-bar title). Drives the menu-bar disruption icon so
+ * a line you filtered out can't flip the indicator.
+ */
+export function anyDisrupted(statuses: LineStatus[], selectedLineIds: string[]): boolean {
+  const active = selectedLineIds.length > 0;
+  return statuses.some(
+    (line) => (!active || selectedLineIds.includes(line.line_id)) && isDisrupted(line),
+  );
+}
+
 /** The disrupted lines only, worst-first. */
 export function disruptedLinesWorstFirst(statuses: LineStatus[]): LineStatus[] {
   return sortLinesWorstFirst(statuses.filter(isDisrupted));
