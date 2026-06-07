@@ -38,6 +38,7 @@
 pub mod commands;
 #[cfg(target_os = "macos")]
 pub mod location;
+pub mod pool_key;
 pub mod state;
 pub mod store_impl;
 
@@ -131,6 +132,42 @@ async fn wait_for_first_board_emit(app: &tauri::AppHandle, fallback: Duration) {
 
     WarmFallback::new(TokioSleepTimer, fallback).wait(rx).await;
     // _guard drops here, calling app.unlisten(listener_id).
+}
+
+/// Background pool-key cache refresh (Phase 1). Fetches the pool from the
+/// network on the ambient Tauri runtime and writes the selected key to the
+/// config store under `"pool_key_cache"` for the NEXT launch. Fully fail-open:
+/// any network / parse / store error is logged and swallowed — never surfaced,
+/// never blocking. Does NOT touch the running client (the Mac client bakes its
+/// key in at construction and has no live-swap path; that is Phase 2).
+async fn refresh_pool_key_cache(app: tauri::AppHandle) {
+    let client = match reqwest::Client::builder()
+        .timeout(pool_key::FETCH_TIMEOUT)
+        .build()
+    {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("[tubbie:pool-key] failed to build refresh client: {e}");
+            return;
+        }
+    };
+
+    // Fail-open: a None here keeps whatever is already cached.
+    let Some(key) = pool_key::fetch_one_pool_key(&client, pool_key::POOL_KEYS_URL).await else {
+        return;
+    };
+
+    match StorePluginConfigStore::open(&app) {
+        Ok(store) => {
+            if let Err(e) = store
+                .raw_set_and_save("pool_key_cache", serde_json::json!(key))
+                .await
+            {
+                eprintln!("[tubbie:pool-key] failed to cache refreshed key: {e}");
+            }
+        }
+        Err(e) => eprintln!("[tubbie:pool-key] failed to open store for cache write: {e}"),
+    }
 }
 
 /// Spawn a stream task that emits `board://updated` Tauri events.
@@ -697,6 +734,26 @@ pub fn run() {
                     None
                 });
 
+            // Pool-key fallback (Phase 1). The personal key (Keychain) always
+            // wins; the pool is a zero-config fallback so a fresh install has
+            // rate-limit headroom without registering at the TfL portal.
+            //
+            // NON-BLOCKING — the board is never blocked on the key service
+            // (a hard invariant). The client bakes its key in at construction
+            // and has no live-swap path, so the pool key spans two launches:
+            //   * here we read the LAST-CACHED pool key SYNCHRONOUSLY (a local
+            //     store read, no network) and bake it into the one client below;
+            //   * a background task spawned after setup refreshes the cache for
+            //     the NEXT launch (see `refresh_pool_key_cache`).
+            // A first-ever launch with an empty cache runs anonymous for that
+            // session (anonymous still shows arrivals); it is keyed from the
+            // next launch on. Fail-open throughout.
+            // See invariants #5 (one Arc<TflClient>), #6 (sync before stream).
+            let has_personal_key = saved_key.is_some();
+            let saved_key = pool_key::select_startup_key(saved_key, || {
+                pool_key::validated_cached_key(plugin_store.raw_get("pool_key_cache"))
+            });
+
             // Clone before consuming in the AppState HTTP client so we can also
             // thread the key into spawn_stream_task (and the watcher restarts).
             let stream_app_key = saved_key.clone();
@@ -768,6 +825,18 @@ pub fn run() {
             // stream sees. `stream_app_key` is no longer threaded into the
             // stream task — drop it.
             let _ = stream_app_key;
+
+            // Pool-key cache refresh — fire-and-forget on the ambient runtime,
+            // AFTER the stream is already spawned so it never gates startup.
+            // Only when there is no personal key (a user with their own key
+            // never needs the pool). Writes the freshest key to the store for
+            // the NEXT launch; does not touch the already-built client.
+            if !has_personal_key {
+                let refresh_handle = app.handle().clone();
+                tauri::async_runtime::spawn(async move {
+                    refresh_pool_key_cache(refresh_handle).await;
+                });
+            }
 
             // Pre-warm the stop-points cache so the first settings search is
             // instant rather than paying ~1-2s for the 16 MB /StopPoint/Mode/tube

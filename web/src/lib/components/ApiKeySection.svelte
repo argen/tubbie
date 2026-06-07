@@ -14,9 +14,11 @@
       // The key must never be loaded into the renderer heap unless the user
       // explicitly triggers a "reveal" action (post-MVP).
       hasStoredAppKey = await hasAppKey();
-      appKeyStatus = hasStoredAppKey
-        ? 'Using your TfL API key'
-        : 'Using anonymous access (50 requests/min)';
+      // Phase 1 pool-key: the happy path is invisible. When the user has no
+      // personal key, tubbie connects via a built-in key automatically — say
+      // nothing about keys or quotas (a pool key may be active, and quota math
+      // only alarms). Status is shown only once the user sets their own key.
+      appKeyStatus = hasStoredAppKey ? 'Using your TfL API key' : null;
     } catch {
       appKeyStatus = 'Could not load API key status';
     }
@@ -60,13 +62,13 @@
     <p class="settings__api-status" aria-live="polite">{appKeyStatus}</p>
   {/if}
   <p class="settings__api-hint">
-    Optional. Register at
+    Optional — tubbie works out of the box. To use your own TfL key, register at
     <a
       href="https://api-portal.tfl.gov.uk"
       target="_blank"
       rel="noopener noreferrer"
       class="settings__link">api-portal.tfl.gov.uk</a
-    >. Anonymous access allows 50 req/min.
+    >.
   </p>
   <div class="settings__api-input-row">
     <input
