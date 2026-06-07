@@ -720,21 +720,30 @@ pub async fn save_app_key(
     save_app_key_inner(key, &state).await
 }
 
-// SECURITY: M7 TODO — implemented. `load_app_key` is restricted to the
-// "settings" webview window via a runtime window-label check. Any invocation
-// from the "main" window (or any other window) is rejected with a permission
-// error before reaching `load_app_key_inner`. This closes MEDIUM-2.
+// SECURITY (MEDIUM-2): the TfL API key is a **Rust-only secret** — no renderer
+// has a path to read its value.
 //
-// Why here, not in the capability JSON? Tauri v2 capability files control
-// plugin permissions (`core:*`, `store:*`). Custom `#[tauri::command]`
-// handlers have no plugin-level ACL; per-window restriction is enforced
-// in the handler body by inspecting the calling `WebviewWindow::label()`.
+// History: the key-reading UI once lived in a separate "settings" webview
+// window, and `load_app_key` was gated to that window's label as a process /
+// origin boundary. As of PR2 the Settings UI is an in-frame panel in the
+// "main" window and the "settings" window is never created — so this gate is
+// now an INERT BACKSTOP: it rejects every caller (no window is labelled
+// "settings"). It is deliberately kept, not deleted: it is the last line of
+// defence if someone ever reintroduces a renderer call path. The primary
+// protection is now that the renderer has no `loadAppKey` wrapper at all
+// (see web/src/lib/ipc/commands.ts) and never loads the value.
 //
-// The companion `has_app_key` (boolean only) intentionally stays unrestricted
-// so the main window can display "configure your key" prompts without having
-// access to the key value itself.
+// Why enforce in the handler, not the capability JSON? Tauri v2 capability
+// files control plugin permissions (`core:*`, `store:*`); custom
+// `#[tauri::command]` handlers have no plugin-level ACL, so the check lives in
+// the handler body via `WebviewWindow::label()`.
+//
+// `has_app_key` (boolean only) intentionally stays unrestricted so the renderer
+// can show "configure your key" prompts without access to the value.
 
-/// Returns `true` when the given window label is the settings window.
+/// Returns `true` when the given window label is the (now-retired) settings
+/// window. Since no window carries this label anymore, this returns `false` for
+/// every real caller — see the SECURITY note above; the guard is a backstop.
 ///
 /// `pub(crate)` so the unit test in `commands::tests` can assert the guard
 /// directly without constructing a real `WebviewWindow`.
@@ -748,10 +757,12 @@ pub(crate) fn window_label_is_settings(label: &str) -> bool {
 ///
 /// # Security
 ///
-/// Restricted to the `"settings"` webview window. Any call from the `"main"`
-/// window is rejected with `Err("permission denied: ...")` before the key
-/// is read. This ensures the key never crosses the IPC boundary into the main
-/// board renderer — where a supply-chain-injected script could exfiltrate it.
+/// Backstop guard: rejects any caller whose window label is not `"settings"`.
+/// No window carries that label anymore (Settings is in-frame as of PR2), so in
+/// practice this rejects **every** caller and the command is unreachable by
+/// design. The renderer has no `loadAppKey` wrapper, so the key value never
+/// crosses the IPC boundary into any webview. Kept as defence-in-depth against a
+/// future reintroduction of a renderer call path.
 #[tauri::command]
 pub async fn load_app_key(
     window: tauri::WebviewWindow,

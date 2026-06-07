@@ -13,8 +13,11 @@
  *   2. The layout registers a listener for the `open-settings` event.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { render } from '@testing-library/svelte';
+import { render, screen } from '@testing-library/svelte';
+import { get } from 'svelte/store';
+import { createRawSnippet } from 'svelte';
 import { resetMockHandlers, mockInvoke } from '$lib/ipc/mock.js';
+import { settingsOpen } from '$lib/stores/settingsView.js';
 
 // Board module mock — inline spy so no hoisting issues.
 vi.mock('$lib/stores/board.js', () => {
@@ -107,6 +110,12 @@ vi.mock('@tauri-apps/api/core', () => ({
   invoke: (cmd: string, args: Record<string, unknown>) => mockInvoke(cmd, args),
 }));
 
+// SettingsView (mounted when settingsOpen is true) pulls in AboutSection, which
+// calls getVersion on mount.
+vi.mock('@tauri-apps/api/app', () => ({
+  getVersion: () => Promise.resolve('1.0.0'),
+}));
+
 // Record event listener registrations so we can assert the layout wires up
 // the `open-settings` tray event.
 const listenSpy = vi.fn((_eventName: string, _handler: (e: { payload: unknown }) => void) =>
@@ -122,14 +131,22 @@ import Layout from '../../../routes/+layout.svelte';
 
 const childStub = (() => undefined) as unknown as import('svelte').Snippet;
 
+// A children snippet that renders a stable, identifiable board marker — lets us
+// assert the board subtree is NOT torn down when the Settings overlay mounts.
+const boardMarker = createRawSnippet(() => ({
+  render: () => `<div data-testid="board-marker">board</div>`,
+}));
+
 describe('+layout.svelte — single-window bootstrap (Settings is in-frame)', () => {
   beforeEach(() => {
     resetMockHandlers();
     listenSpy.mockClear();
+    settingsOpen.set(false);
   });
 
   afterEach(() => {
     vi.clearAllMocks();
+    settingsOpen.set(false);
   });
 
   it('always calls startBoardSubscription on mount (no window-label skip)', async () => {
@@ -144,10 +161,29 @@ describe('+layout.svelte — single-window bootstrap (Settings is in-frame)', ()
     expect(__spy).toHaveBeenCalledOnce();
   });
 
-  it('registers an `open-settings` event listener for the tray menu', async () => {
+  it('the `open-settings` tray listener actually opens the panel (not just registered)', async () => {
     render(Layout, { props: { children: childStub } });
     await new Promise((r) => setTimeout(r, 50));
 
-    expect(listenSpy).toHaveBeenCalledWith('open-settings', expect.any(Function));
+    // Find the registered handler and invoke it — proves the effect, not just
+    // that listen() was called.
+    const call = listenSpy.mock.calls.find((c) => c[0] === 'open-settings');
+    expect(call).toBeTruthy();
+    const handler = call![1];
+    expect(get(settingsOpen)).toBe(false);
+    handler({ payload: undefined });
+    expect(get(settingsOpen)).toBe(true);
+  });
+
+  it('mounts the Settings overlay when settingsOpen is true, without tearing down the board', async () => {
+    settingsOpen.set(true);
+    render(Layout, { props: { children: boardMarker } });
+    await new Promise((r) => setTimeout(r, 50));
+
+    // Overlay mounted…
+    expect(screen.getByRole('dialog', { name: /settings panel/i })).toBeTruthy();
+    // …and the board subtree is still rendered underneath (invariant #7: the
+    // overlay is a sibling of {@render children()}, never a replacement).
+    expect(screen.getByTestId('board-marker')).toBeTruthy();
   });
 });

@@ -72,10 +72,16 @@
 </script>
 
 <div class="popover-root mode-{$displayMode}">
-  <div class="popover-content">
+  <!-- `inert` while Settings is open: the board stays MOUNTED underneath
+       (invariant #7 — no re-fetch/re-warm) but is removed from the tab order and
+       the a11y tree, so the overlay's role="dialog" aria-modal is actually
+       enforced (focus can't Tab out behind it). -->
+  <div class="popover-content" inert={$settingsOpen}>
     {@render children()}
   </div>
-  <Attribution />
+  <div class="attribution-host" inert={$settingsOpen}>
+    <Attribution />
+  </div>
   {#if $settingsOpen}
     <!-- In-frame Settings panel. Absolutely positioned inside popover-root so
          it inherits the window's rounded clip (overflow:hidden) and covers the
@@ -92,6 +98,12 @@
     min-height: 0;
     overflow-y: auto;
     padding-bottom: 24px; /* reserve space for the absolute Attribution footer */
+  }
+
+  /* `display: contents` so the inert wrapper adds no box — Attribution keeps
+     its absolute positioning relative to .popover-root. */
+  .attribution-host {
+    display: contents;
   }
 
   .settings-overlay {

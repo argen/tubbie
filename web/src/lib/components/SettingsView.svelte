@@ -18,7 +18,7 @@
     cancelSaveStateTimer,
     resyncFormFromConfig,
   } from '$lib/stores/settingsForm.js';
-  import { onDestroy, onMount } from 'svelte';
+  import { onDestroy, onMount, tick } from 'svelte';
 
   // Settings is an in-frame panel rendered over the board (PR2) — no longer a
   // separate webview window. This component owns:
@@ -29,8 +29,16 @@
   //     stale field values)
   //   - flushing the pending debounced persist when the panel closes/unmounts
 
+  let backBtn = $state<HTMLButtonElement>();
+
   onMount(() => {
     resyncFormFromConfig();
+    // Move focus into the panel on open (W3C APG dialog pattern). The Back
+    // button is the natural landing spot — the primary "get out" control, first
+    // in reading order. The board behind is marked `inert` in +layout.svelte, so
+    // this plus the inert background gives real modality (focus can't Tab out
+    // behind the overlay). Focus is returned to the gear on close by Board.svelte.
+    void tick().then(() => backBtn?.focus());
   });
 
   // Esc closes the panel from anywhere (window-scoped, like the board's search
@@ -90,6 +98,7 @@
     <button
       type="button"
       class="settings__back-btn"
+      bind:this={backBtn}
       onclick={closeAndFlush}
       aria-label="Back to arrivals board"
     >
