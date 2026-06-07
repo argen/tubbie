@@ -10,6 +10,7 @@
   import DisplayPrefsSection from '$lib/components/DisplayPrefsSection.svelte';
   import ApiKeySection from '$lib/components/ApiKeySection.svelte';
   import UpdatesSection from '$lib/components/UpdatesSection.svelte';
+  import AboutSection from '$lib/components/AboutSection.svelte';
   import {
     saveState,
     flushPending,
@@ -130,6 +131,8 @@
     <ApiKeySection />
 
     <UpdatesSection />
+
+    <AboutSection />
   </div>
 </div>
 

@@ -1,10 +1,33 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { board, boardError, isLoading } from '$lib/stores/board.js';
   import { config, configError } from '$lib/stores/config.js';
   import Board from '$lib/components/Board.svelte';
+  import FirstRunPrompt from '$lib/components/FirstRunPrompt.svelte';
   import { getLineStatus, openSettingsWindow, setTrayDisruption } from '$lib/ipc/commands.js';
   import { anyDisrupted } from '$lib/utils/status.js';
   import type { Board as BoardT, LineStatus } from '$lib/ipc/types.js';
+
+  // First-run prompt: shown once, until the user picks a station or dismisses.
+  // Persisted in localStorage (a UI nicety flag, not app config) so it never
+  // gates the board and survives normal launches.
+  const ONBOARDED_KEY = 'tubbie:onboarded';
+  let showFirstRun = $state(false);
+  onMount(() => {
+    try {
+      showFirstRun = localStorage.getItem(ONBOARDED_KEY) !== 'true';
+    } catch {
+      showFirstRun = false;
+    }
+  });
+  function completeOnboarding(): void {
+    showFirstRun = false;
+    try {
+      localStorage.setItem(ONBOARDED_KEY, 'true');
+    } catch {
+      // localStorage unavailable — worst case the prompt reappears next launch.
+    }
+  }
 
   let statuses = $state<LineStatus[]>([]);
   // True when at least one line's status fetch failed this cycle while others
@@ -72,6 +95,10 @@
 <svelte:head>
   <title>tubbie — TfL Arrivals</title>
 </svelte:head>
+
+{#if showFirstRun}
+  <FirstRunPrompt onDone={completeOnboarding} />
+{/if}
 
 {#if $configError && $board === null}
   <div class="config-error" role="alert">
