@@ -12,6 +12,14 @@
     "core:window:allow-start-dragging",
     "core:window:allow-set-fullscreen",
     "core:window:allow-is-fullscreen",
-    "store:default"
+    "store:default",
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        { "url": "https://tfl.gov.uk/*" },
+        { "url": "https://api-portal.tfl.gov.uk/*" },
+        { "url": "https://github.com/argen/tubbie*" }
+      ]
+    }
   ]
 }

@@ -349,6 +349,23 @@
     border-color: var(--fg);
   }
 
+  /* External links (About, API-key portal). `:global` so AboutSection.svelte
+     and ApiKeySection.svelte share one on-brand treatment — amber, underlined —
+     instead of falling back to the browser's default blue. The click itself is
+     routed through the opener plugin (`openExternal`); these are styling only. */
+  :global(.settings__link) {
+    color: var(--fg);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    opacity: 0.85;
+    cursor: pointer;
+  }
+
+  :global(.settings__link:hover),
+  :global(.settings__link:focus-visible) {
+    opacity: 1;
+  }
+
   .settings__save-state {
     font-family: var(--font-ui);
     font-size: 0.8rem;

@@ -34,6 +34,7 @@ reqwest = { workspace = true }
 # Tray-title projection derives a chrono::Duration for the canonical
 # tfl_domain::format::format_time_to_station ETA formatter.
 chrono = { workspace = true }
+tauri-plugin-opener = "2"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

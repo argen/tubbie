@@ -26,8 +26,12 @@ describe('AboutSection', () => {
     const tfl = screen.getByRole('link', { name: /tfl open data/i }) as HTMLAnchorElement;
     expect(source.href).toContain('github.com/argen/tubbie');
     expect(tfl.href).toContain('tfl.gov.uk');
-    // External links must be safe.
-    expect(source.rel).toContain('noopener');
+    // The href is kept for semantics (copy-link, screen readers), but the click
+    // is intercepted and routed to the system browser via the opener plugin —
+    // so there is no window.opener relationship and no target="_blank" to guard.
+    // The behavioural "opens via opener" contract is pinned in
+    // links-open-external.dom.test.ts.
+    expect(source.getAttribute('target')).toBeNull();
   });
 
   it('carries the required TfL Open Data attribution', () => {
