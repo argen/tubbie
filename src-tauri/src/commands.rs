@@ -720,21 +720,30 @@ pub async fn save_app_key(
     save_app_key_inner(key, &state).await
 }
 
-// SECURITY: M7 TODO — implemented. `load_app_key` is restricted to the
-// "settings" webview window via a runtime window-label check. Any invocation
-// from the "main" window (or any other window) is rejected with a permission
-// error before reaching `load_app_key_inner`. This closes MEDIUM-2.
+// SECURITY (MEDIUM-2): the TfL API key is a **Rust-only secret** — no renderer
+// has a path to read its value.
 //
-// Why here, not in the capability JSON? Tauri v2 capability files control
-// plugin permissions (`core:*`, `store:*`). Custom `#[tauri::command]`
-// handlers have no plugin-level ACL; per-window restriction is enforced
-// in the handler body by inspecting the calling `WebviewWindow::label()`.
+// History: the key-reading UI once lived in a separate "settings" webview
+// window, and `load_app_key` was gated to that window's label as a process /
+// origin boundary. As of PR2 the Settings UI is an in-frame panel in the
+// "main" window and the "settings" window is never created — so this gate is
+// now an INERT BACKSTOP: it rejects every caller (no window is labelled
+// "settings"). It is deliberately kept, not deleted: it is the last line of
+// defence if someone ever reintroduces a renderer call path. The primary
+// protection is now that the renderer has no `loadAppKey` wrapper at all
+// (see web/src/lib/ipc/commands.ts) and never loads the value.
 //
-// The companion `has_app_key` (boolean only) intentionally stays unrestricted
-// so the main window can display "configure your key" prompts without having
-// access to the key value itself.
+// Why enforce in the handler, not the capability JSON? Tauri v2 capability
+// files control plugin permissions (`core:*`, `store:*`); custom
+// `#[tauri::command]` handlers have no plugin-level ACL, so the check lives in
+// the handler body via `WebviewWindow::label()`.
+//
+// `has_app_key` (boolean only) intentionally stays unrestricted so the renderer
+// can show "configure your key" prompts without access to the value.
 
-/// Returns `true` when the given window label is the settings window.
+/// Returns `true` when the given window label is the (now-retired) settings
+/// window. Since no window carries this label anymore, this returns `false` for
+/// every real caller — see the SECURITY note above; the guard is a backstop.
 ///
 /// `pub(crate)` so the unit test in `commands::tests` can assert the guard
 /// directly without constructing a real `WebviewWindow`.
@@ -748,10 +757,12 @@ pub(crate) fn window_label_is_settings(label: &str) -> bool {
 ///
 /// # Security
 ///
-/// Restricted to the `"settings"` webview window. Any call from the `"main"`
-/// window is rejected with `Err("permission denied: ...")` before the key
-/// is read. This ensures the key never crosses the IPC boundary into the main
-/// board renderer — where a supply-chain-injected script could exfiltrate it.
+/// Backstop guard: rejects any caller whose window label is not `"settings"`.
+/// No window carries that label anymore (Settings is in-frame as of PR2), so in
+/// practice this rejects **every** caller and the command is unreachable by
+/// design. The renderer has no `loadAppKey` wrapper, so the key value never
+/// crosses the IPC boundary into any webview. Kept as defence-in-depth against a
+/// future reintroduction of a renderer call path.
 #[tauri::command]
 pub async fn load_app_key(
     window: tauri::WebviewWindow,
@@ -776,21 +787,6 @@ pub async fn has_app_key(state: State<'_, AppState>) -> Result<bool, String> {
     has_app_key_inner(&state).await
 }
 
-/// Open (or focus) the Settings webview window.
-///
-/// Creates the window on first call. Subsequent calls focus the already-open
-/// window rather than stacking a second instance. This is the only way for
-/// the main window to bring up Settings — it can no longer navigate to
-/// `/settings` via SPA routing, since the `load_app_key` capability is
-/// restricted to the `"settings"` window's webview.
-///
-/// Window is not modal. Closing it does not close the app. The stream task
-/// is not affected (it is owned by `AppState`, not by any window).
-#[tauri::command]
-pub async fn open_settings_window(app: tauri::AppHandle) -> Result<(), String> {
-    open_settings_window_impl(&app)
-}
-
 /// Set the menu-bar disruption indicator (Phase 3 menubar status). Swaps the
 /// tray icon to the monochrome "disrupted" variant when `disrupted` is true.
 /// Called from the frontend, which holds the live line statuses; the icon swap
@@ -799,38 +795,6 @@ pub async fn open_settings_window(app: tauri::AppHandle) -> Result<(), String> {
 #[tauri::command]
 pub fn set_tray_disruption(app: tauri::AppHandle, disrupted: bool) {
     crate::apply_tray_disruption(&app, disrupted);
-}
-
-/// Inner (non-async) implementation of settings-window open/focus.
-///
-/// Extracted so `lib.rs` can call it from the tray menu event handler
-/// (which is a sync closure). Returns `Err(String)` on Tauri builder failure.
-pub(crate) fn open_settings_window_impl(app: &tauri::AppHandle) -> Result<(), String> {
-    use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
-
-    // Focus the existing window if already open — avoids stacking.
-    if let Some(win) = app.get_webview_window("settings") {
-        let _ = win.show();
-        let _ = win.set_focus();
-        return Ok(());
-    }
-
-    // Create on demand. This mirrors the pattern used by other on-demand
-    // windows in Tauri v2 apps: declare the capability in capabilities/settings.json,
-    // create via builder on first use.
-    WebviewWindowBuilder::new(app, "settings", WebviewUrl::App("/settings".into()))
-        .title("Tubbie — Settings")
-        .inner_size(640.0, 700.0)
-        .min_inner_size(540.0, 400.0)
-        .resizable(true)
-        .decorations(true)
-        .transparent(false)
-        .always_on_top(false)
-        .skip_taskbar(false)
-        .visible(true)
-        .build()
-        .map(|_| ())
-        .map_err(|e| format!("failed to open settings window: {e}"))
 }
 
 /// Fetch the current status for a single TfL line.

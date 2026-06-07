@@ -13,7 +13,8 @@
   import { reducedMotion } from '$lib/stores/reducedMotion.js';
   import { displayMode } from '$lib/stores/displayMode.js';
   import { displayPrefs } from '$lib/stores/displayPrefs.js';
-  import { applyBoardSize, openSettingsWindow } from '$lib/ipc/commands.js';
+  import { applyBoardSize } from '$lib/ipc/commands.js';
+  import { openSettings, settingsOpen } from '$lib/stores/settingsView.js';
   import { config } from '$lib/stores/config.js';
   import { selectStation } from '$lib/stores/settingsForm.js';
   import type { Station } from '$lib/ipc/types.js';
@@ -54,6 +55,20 @@
   let searchOpen = $state(false);
   let searchToggleEl = $state<HTMLButtonElement>();
   let searchOverlayEl = $state<HTMLDivElement>();
+
+  // Settings gear — bound so focus can be returned here when the in-frame
+  // Settings panel closes (W3C APG dialog "focus return" contract). The panel
+  // moves focus into itself on open; Board owns the gear, so it restores focus
+  // when settingsOpen goes true → false.
+  let settingsBtnEl = $state<HTMLButtonElement>();
+  let prevSettingsOpen = false;
+  $effect(() => {
+    const open = $settingsOpen;
+    if (prevSettingsOpen && !open) {
+      settingsBtnEl?.focus();
+    }
+    prevSettingsOpen = open;
+  });
 
   function closeSearch(): void {
     searchOpen = false;
@@ -556,7 +571,8 @@
       <button
         type="button"
         class="board__settings-btn"
-        onclick={() => void openSettingsWindow()}
+        bind:this={settingsBtnEl}
+        onclick={openSettings}
         aria-label="Open settings"
         title="Settings"
       >

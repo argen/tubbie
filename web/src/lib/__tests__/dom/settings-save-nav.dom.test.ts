@@ -12,7 +12,7 @@ import { get } from 'svelte/store';
 import { mockInvoke, setMockHandler, resetMockHandlers, sampleConfig } from '$lib/ipc/mock.js';
 import { config, configError } from '$lib/stores/config.js';
 import { goto } from '$app/navigation';
-import SettingsPage from '../../../routes/settings/+page.svelte';
+import SettingsPage from '../../components/SettingsView.svelte';
 
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: (cmd: string, args: Record<string, unknown>) => mockInvoke(cmd, args),

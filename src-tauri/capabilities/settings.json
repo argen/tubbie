@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "settings",
-  "description": "Capability set for the Settings webview window. This window is the only context permitted to call load_app_key — the command that returns the raw TfL API key to the renderer. The main window intentionally does not have this capability (MEDIUM-2 / M7 TODO). save_app_key is also listed here for documentation completeness; it is not capability-gated at the Tauri layer because it is a write-only operation with no data-exfiltration risk.",
+  "description": "RETIRED WINDOW — kept as documentation, not a live grant. Settings moved in-frame (PR2); the 'settings' webview window is no longer created, so this capability set never applies to anything. It is retained to document the original MEDIUM-2 control: load_app_key (the command that returns the raw TfL API key) was gated to this window. The protection now rests on Rust-only custody instead — the renderer has NO loadAppKey wrapper at all, and load_app_key's window-label guard (commands.rs) is an inert backstop that rejects every caller. Do not delete this without also removing that guard and recording the change; do not assume webview-origin isolation for the key still exists.",
   "windows": ["settings"],
   "permissions": [
     "core:default",

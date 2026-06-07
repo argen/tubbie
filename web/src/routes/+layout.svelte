@@ -6,8 +6,9 @@
   import { initConfig, config, applyTheme } from '$lib/stores/config.js';
   import { initDisplayMode, displayMode } from '$lib/stores/displayMode.js';
   import { initDisplayPrefs } from '$lib/stores/displayPrefs.js';
+  import { settingsOpen } from '$lib/stores/settingsView.js';
   import Attribution from '$lib/components/Attribution.svelte';
-  import { openSettingsWindow } from '$lib/ipc/commands.js';
+  import SettingsView from '$lib/components/SettingsView.svelte';
 
   interface Props {
     children: Snippet;
@@ -19,30 +20,9 @@
   let cleanupTrayMenu: (() => void) | null = null;
 
   onMount(async () => {
-    // Detect which webview window this layout is mounted in.
-    // When the settings window loads `/settings` via SPA routing the same
-    // +layout.svelte wraps it. We must skip all board-window bootstrap
-    // (subscription, config init, display-mode init, tray listener) in that
-    // context to avoid:
-    //   • a double board://updated subscription that fights the main window
-    //   • initConfig() / initDisplayMode() running from the settings renderer
-    //   • a recursive tray://open-settings → openSettingsWindow() loop
-    // The settings page owns its own onMount and manages its own lifecycle.
-    let windowLabel = 'main';
-    try {
-      const { getCurrentWindow } = await import('@tauri-apps/api/window');
-      windowLabel = getCurrentWindow().label;
-    } catch {
-      // Not running under Tauri (vitest / plain `vite dev`) — assume main.
-    }
-
-    if (windowLabel === 'settings') {
-      // Settings window: skip all main-window bootstrap. The settings page
-      // component handles its own initialization.
-      return;
-    }
-
-    // --- Main window bootstrap only below this point ---
+    // There is now exactly one window ("main"). Settings used to run in its own
+    // webview window — it's now an in-frame overlay (see the SettingsView mount
+    // below), so the per-window-label bootstrap skip is gone.
 
     // Load the active display mode first so the popover-root has the
     // correct chrome class on first paint. This avoids a flash of
@@ -66,17 +46,13 @@
     // ensures whichever payload arrives second is the one the UI keeps.
     cleanupSubscription = await startBoardSubscription();
 
-    // Tray right-click menu "Settings…" → open the dedicated Settings window.
-    // The main window cannot navigate to /settings in-place because
-    // `load_app_key` is gated to the "settings" webview window only
-    // (MEDIUM-2 / M7 TODO fix). The Rust side now calls
-    // `open_settings_window_impl` directly from the tray event handler,
-    // so this frontend listener is kept only as a fallback for any
-    // in-page triggers that still emit `tray://open-settings`.
+    // Tray right-click "Settings…" → open the in-frame Settings panel. The
+    // Rust tray handler shows + focuses the main window and emits
+    // `open-settings`; we flip the store so the overlay mounts over the board.
     try {
       const { listen } = await import('@tauri-apps/api/event');
-      const unlisten = await listen('tray://open-settings', () => {
-        void openSettingsWindow();
+      const unlisten = await listen('open-settings', () => {
+        settingsOpen.set(true);
       });
       cleanupTrayMenu = unlisten;
     } catch {
@@ -89,17 +65,31 @@
     cleanupTrayMenu?.();
   });
 
-  // Reactively apply theme changes (from settings page)
+  // Reactively apply theme changes (from the Settings panel)
   $effect(() => {
     applyTheme($config.theme);
   });
 </script>
 
 <div class="popover-root mode-{$displayMode}">
-  <div class="popover-content">
+  <!-- `inert` while Settings is open: the board stays MOUNTED underneath
+       (invariant #7 — no re-fetch/re-warm) but is removed from the tab order and
+       the a11y tree, so the overlay's role="dialog" aria-modal is actually
+       enforced (focus can't Tab out behind it). -->
+  <div class="popover-content" inert={$settingsOpen}>
     {@render children()}
   </div>
-  <Attribution />
+  <div class="attribution-host" inert={$settingsOpen}>
+    <Attribution />
+  </div>
+  {#if $settingsOpen}
+    <!-- In-frame Settings panel. Absolutely positioned inside popover-root so
+         it inherits the window's rounded clip (overflow:hidden) and covers the
+         board + footer. The board stays mounted underneath (invariant #7). -->
+    <div class="settings-overlay">
+      <SettingsView />
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -108,5 +98,18 @@
     min-height: 0;
     overflow-y: auto;
     padding-bottom: 24px; /* reserve space for the absolute Attribution footer */
+  }
+
+  /* `display: contents` so the inert wrapper adds no box — Attribution keeps
+     its absolute positioning relative to .popover-root. */
+  .attribution-host {
+    display: contents;
+  }
+
+  .settings-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 60;
+    background: var(--bg);
   }
 </style>

@@ -1,40 +1,27 @@
 // @vitest-environment happy-dom
 /**
- * Tests that the root layout short-circuits its main-window bootstrap when
- * running inside the "settings" webview window.
+ * Root-layout bootstrap contract after Settings moved in-frame (PR2).
  *
- * Before this fix the layout unconditionally ran startBoardSubscription(),
- * initConfig(), initDisplayMode() and subscribed to tray://open-settings.
- * That was wrong when window.label === "settings" — it double-subscribed the
- * board stream, ran config init from the wrong context, and could trigger a
- * recursive openSettingsWindow() loop.
+ * Settings is no longer a separate "settings" webview window, so the layout no
+ * longer branches on `getCurrentWindow().label` to skip board bootstrap. There
+ * is exactly one window now, and it ALWAYS bootstraps. The tray "Settings…"
+ * item emits an `open-settings` event; the layout listens for it and flips the
+ * `settingsOpen` store, which mounts the in-frame Settings overlay.
  *
- * Fix: branch on getCurrentWindow().label at the top of onMount and skip all
- * board/config/display-mode wiring when the label is "settings".
- *
- * RED → GREEN contract:
- *   1. When window label is "settings" → startBoardSubscription is NOT called.
- *   2. When window label is "main"     → startBoardSubscription IS called.
+ * Contract:
+ *   1. startBoardSubscription IS called on mount (unconditionally).
+ *   2. The layout registers a listener for the `open-settings` event.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { render } from '@testing-library/svelte';
-import { resetMockHandlers, mockInvoke, mockListen } from '$lib/ipc/mock.js';
+import { render, screen } from '@testing-library/svelte';
+import { get } from 'svelte/store';
+import { createRawSnippet } from 'svelte';
+import { resetMockHandlers, mockInvoke } from '$lib/ipc/mock.js';
+import { settingsOpen } from '$lib/stores/settingsView.js';
 
-// ---------------------------------------------------------------------------
-// Window label — mutable so each test can set its own label.
-// ---------------------------------------------------------------------------
-let _windowLabel = 'main';
-
-vi.mock('@tauri-apps/api/window', () => ({
-  getCurrentWindow: () => ({ label: _windowLabel }),
-}));
-
-// ---------------------------------------------------------------------------
 // Board module mock — inline spy so no hoisting issues.
-// ---------------------------------------------------------------------------
 vi.mock('$lib/stores/board.js', () => {
   const spy = vi.fn(() => Promise.resolve(() => undefined));
-  // Expose via a named export so tests can read it.
   return {
     startBoardSubscription: spy,
     __spy: spy,
@@ -67,9 +54,26 @@ vi.mock('$lib/stores/board.js', () => {
 
 vi.mock('$lib/stores/config.js', () => ({
   initConfig: vi.fn(() => Promise.resolve()),
+  // Full BoardConfig shape — the layout now statically imports SettingsView,
+  // whose sections init `settingsForm` from `get(config)` (reads line_ids,
+  // directions, poll_seconds), so a partial stub would throw at module load.
   config: {
-    subscribe: (fn: (v: { theme: string }) => void) => {
-      fn({ theme: 'classic-amber' });
+    subscribe: (
+      fn: (v: {
+        theme: string;
+        station_id: string;
+        line_ids: string[];
+        directions: string[];
+        poll_seconds: number;
+      }) => void,
+    ) => {
+      fn({
+        theme: 'classic-amber',
+        station_id: '940GZZLUOXC',
+        line_ids: [],
+        directions: [],
+        poll_seconds: 30,
+      });
       return () => undefined;
     },
   },
@@ -102,68 +106,84 @@ vi.mock('$lib/stores/displayPrefs.js', () => ({
   },
 }));
 
-vi.mock('$lib/ipc/commands.js', () => ({
-  openSettingsWindow: vi.fn(() => Promise.resolve()),
-}));
-
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: (cmd: string, args: Record<string, unknown>) => mockInvoke(cmd, args),
 }));
 
+// SettingsView (mounted when settingsOpen is true) pulls in AboutSection, which
+// calls getVersion on mount.
+vi.mock('@tauri-apps/api/app', () => ({
+  getVersion: () => Promise.resolve('1.0.0'),
+}));
+
+// Record event listener registrations so we can assert the layout wires up
+// the `open-settings` tray event.
+const listenSpy = vi.fn((_eventName: string, _handler: (e: { payload: unknown }) => void) =>
+  Promise.resolve(() => undefined),
+);
 vi.mock('@tauri-apps/api/event', () => ({
   listen: (eventName: string, handler: (e: { payload: unknown }) => void) =>
-    mockListen(eventName, handler),
+    listenSpy(eventName, handler),
 }));
 
 // Import after all vi.mock() calls so mocks are registered first.
 import Layout from '../../../routes/+layout.svelte';
 
-describe('+layout.svelte — settings window short-circuit', () => {
+const childStub = (() => undefined) as unknown as import('svelte').Snippet;
+
+// A children snippet that renders a stable, identifiable board marker — lets us
+// assert the board subtree is NOT torn down when the Settings overlay mounts.
+const boardMarker = createRawSnippet(() => ({
+  render: () => `<div data-testid="board-marker">board</div>`,
+}));
+
+describe('+layout.svelte — single-window bootstrap (Settings is in-frame)', () => {
   beforeEach(() => {
     resetMockHandlers();
+    listenSpy.mockClear();
+    settingsOpen.set(false);
   });
 
   afterEach(() => {
     vi.clearAllMocks();
+    settingsOpen.set(false);
   });
 
-  it('does NOT call startBoardSubscription when window label is "settings"', async () => {
-    _windowLabel = 'settings';
-
+  it('always calls startBoardSubscription on mount (no window-label skip)', async () => {
     const { __spy } = (await import('$lib/stores/board.js')) as unknown as {
       __spy: ReturnType<typeof vi.fn>;
     };
     __spy.mockClear();
 
-    render(Layout, {
-      props: {
-        children: (() => undefined) as unknown as import('svelte').Snippet,
-      },
-    });
-
-    // Allow onMount microtasks to settle.
-    await new Promise((r) => setTimeout(r, 50));
-
-    expect(__spy).not.toHaveBeenCalled();
-  });
-
-  it('DOES call startBoardSubscription when window label is "main"', async () => {
-    _windowLabel = 'main';
-
-    const { __spy } = (await import('$lib/stores/board.js')) as unknown as {
-      __spy: ReturnType<typeof vi.fn>;
-    };
-    __spy.mockClear();
-
-    render(Layout, {
-      props: {
-        children: (() => undefined) as unknown as import('svelte').Snippet,
-      },
-    });
-
-    // Allow onMount microtasks to settle.
+    render(Layout, { props: { children: childStub } });
     await new Promise((r) => setTimeout(r, 50));
 
     expect(__spy).toHaveBeenCalledOnce();
+  });
+
+  it('the `open-settings` tray listener actually opens the panel (not just registered)', async () => {
+    render(Layout, { props: { children: childStub } });
+    await new Promise((r) => setTimeout(r, 50));
+
+    // Find the registered handler and invoke it — proves the effect, not just
+    // that listen() was called.
+    const call = listenSpy.mock.calls.find((c) => c[0] === 'open-settings');
+    expect(call).toBeTruthy();
+    const handler = call![1];
+    expect(get(settingsOpen)).toBe(false);
+    handler({ payload: undefined });
+    expect(get(settingsOpen)).toBe(true);
+  });
+
+  it('mounts the Settings overlay when settingsOpen is true, without tearing down the board', async () => {
+    settingsOpen.set(true);
+    render(Layout, { props: { children: boardMarker } });
+    await new Promise((r) => setTimeout(r, 50));
+
+    // Overlay mounted…
+    expect(screen.getByRole('dialog', { name: /settings panel/i })).toBeTruthy();
+    // …and the board subtree is still rendered underneath (invariant #7: the
+    // overlay is a sibling of {@render children()}, never a replacement).
+    expect(screen.getByTestId('board-marker')).toBeTruthy();
   });
 });

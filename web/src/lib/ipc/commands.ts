@@ -154,17 +154,14 @@ export async function saveAppKey(key: string | null): Promise<string> {
   return raw;
 }
 
-/** Load the stored TfL API key (`null` if none). */
-export async function loadAppKey(): Promise<string | null> {
-  const raw = await invoke<unknown>('load_app_key');
-  if (raw === null || typeof raw === 'string') return raw;
-  throw new TypeError('load_app_key: expected string | null');
-}
+// NOTE: there is deliberately no `loadAppKey` wrapper. The TfL API key is a
+// Rust-only secret — the renderer must never have a path to read its value.
+// The backend `load_app_key` command still exists (gated, as a backstop) but
+// the UI only ever needs `hasAppKey()` (presence) + `saveAppKey()` (write).
 
 /**
  * Returns true if a TfL API key has been stored, false otherwise.
- * Use this instead of loadAppKey when you only need to know presence —
- * the actual key value is never sent to the renderer.
+ * Exposes presence only — the actual key value is never sent to the renderer.
  */
 export async function hasAppKey(): Promise<boolean> {
   const raw = await invoke<unknown>('has_app_key');
@@ -172,20 +169,6 @@ export async function hasAppKey(): Promise<boolean> {
     throw new TypeError('has_app_key: expected boolean response');
   }
   return raw;
-}
-
-/**
- * Open (or focus) the Settings webview window.
- *
- * The Settings window is a separate OS window; the main board window cannot
- * navigate to /settings in-place because `load_app_key` is gated to the
- * "settings" window only (MEDIUM-2 / M7 TODO fix).
- *
- * Subsequent calls focus the already-open window rather than stacking a
- * second instance. Closing the Settings window does not close the app.
- */
-export async function openSettingsWindow(): Promise<void> {
-  await invoke<undefined>('open_settings_window');
 }
 
 /** Fetch the current status for a single TfL line. */

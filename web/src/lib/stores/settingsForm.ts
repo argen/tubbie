@@ -2,7 +2,7 @@
  * Shared state for the /settings page — form values, the debounced
  * persist, and the "Saving / Saved" chip status.
  *
- * Lifted out of `routes/settings/+page.svelte` so the section components
+ * Lifted out of `SettingsView.svelte` so the section components
  * (ApiKeySection / DisplayModeSection / DisplayPrefsSection are already
  * extracted; Station, Favorites, Lines, Directions, Poll, and Theme are
  * next) can read and write without prop drilling.

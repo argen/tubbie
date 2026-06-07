@@ -1,10 +1,12 @@
 // @vitest-environment happy-dom
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/svelte';
+import { get } from 'svelte/store';
 import Board from '$lib/components/Board.svelte';
 import { sampleBoard, sampleStaleBoard, mockInvoke } from '$lib/ipc/mock.js';
+import { settingsOpen } from '$lib/stores/settingsView.js';
 
-// Wire Tauri IPC mock (Board.svelte uses openSettingsWindow → invoke).
+// Wire Tauri IPC mock (Board.svelte uses invoke for applyBoardSize, etc.).
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: (cmd: string, args: Record<string, unknown>) => mockInvoke(cmd, args),
 }));
@@ -62,16 +64,17 @@ describe('Board', () => {
     expect(screen.getByText('BELSIZE PARK')).toBeTruthy();
   });
 
-  it('shows settings button (opens separate window, not href link)', () => {
-    // The settings button is now a <button> that calls openSettingsWindow()
-    // instead of an <a href="/settings"> — the Settings page runs in its own
-    // webview window (MEDIUM-2 / M7 TODO fix).
+  it('settings button opens the in-frame Settings panel (store, not a window)', async () => {
+    // The gear is a <button> that flips the `settingsOpen` store — Settings is
+    // an in-frame overlay now, not a separate webview window (PR2). It must NOT
+    // be an <a href="/settings"> (that route no longer exists).
+    settingsOpen.set(false);
     render(Board, { props: { board: sampleBoard } });
     const settingsBtn = screen.getByRole('button', { name: /settings/i });
-    expect(settingsBtn).toBeTruthy();
-    // Must NOT be a link — that would navigate the main window to /settings
-    // and break the per-window load_app_key capability gate.
     expect(settingsBtn.tagName.toLowerCase()).toBe('button');
+    expect(get(settingsOpen)).toBe(false);
+    await fireEvent.click(settingsBtn);
+    expect(get(settingsOpen)).toBe(true);
   });
 
   it('renders the arrivals region', () => {

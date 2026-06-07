@@ -4,7 +4,8 @@
   import { config, configError } from '$lib/stores/config.js';
   import Board from '$lib/components/Board.svelte';
   import FirstRunPrompt from '$lib/components/FirstRunPrompt.svelte';
-  import { getAllLineStatuses, openSettingsWindow, setTrayDisruption } from '$lib/ipc/commands.js';
+  import { getAllLineStatuses, setTrayDisruption } from '$lib/ipc/commands.js';
+  import { openSettings, settingsOpen } from '$lib/stores/settingsView.js';
   import { anyDisrupted } from '$lib/utils/status.js';
   import type { Board as BoardT, LineStatus } from '$lib/ipc/types.js';
 
@@ -105,13 +106,15 @@
   <FirstRunPrompt onDone={completeOnboarding} />
 {/if}
 
-{#if $configError && $board === null}
+{#if $configError && $board === null && !$settingsOpen}
+  <!-- Suppressed while the Settings panel is open — it renders its own
+       config-error banner, and this fixed-position one would otherwise paint
+       over the overlay (z-index:100 > overlay's 60). -->
   <div class="config-error" role="alert">
     <p class="config-error__message">{$configError}</p>
     <p class="config-error__hint">
-      <button type="button" class="config-error__link" onclick={() => void openSettingsWindow()}
-        >Open Settings</button
-      > to fix the configuration.
+      <button type="button" class="config-error__link" onclick={openSettings}>Open Settings</button> to
+      fix the configuration.
     </p>
   </div>
 {/if}
@@ -126,9 +129,7 @@
     <p class="error__hint">
       Check your connection and open Settings to verify the station configuration.
     </p>
-    <button type="button" class="error__settings-link" onclick={() => void openSettingsWindow()}
-      >Open Settings</button
-    >
+    <button type="button" class="error__settings-link" onclick={openSettings}>Open Settings</button>
   </div>
 {:else if $board !== null}
   <Board

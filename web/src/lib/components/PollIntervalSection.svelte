@@ -40,7 +40,7 @@
 <style>
   /* Range slider — only used in the poll-interval section. Shared rules
      (.settings__section, .settings__section-title) live as :global in
-     routes/settings/+page.svelte. */
+     SettingsView.svelte. */
 
   .settings__range-wrap {
     display: flex;

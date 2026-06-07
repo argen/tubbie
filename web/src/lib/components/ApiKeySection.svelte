@@ -129,7 +129,7 @@
   /* API-key-only rules. Shared rules (.settings__section, .settings__section-title,
      .settings__api-status, .settings__api-hint, .settings__btn,
      .settings__btn--secondary, .settings__link) live in
-     routes/settings/+page.svelte under :global(...) so this component doesn't
+     SettingsView.svelte under :global(...) so this component doesn't
      have to copy them. */
 
   .settings__api-hint--small {

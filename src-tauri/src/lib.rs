@@ -63,8 +63,8 @@ use commands::{
     add_favorite, apply_board_size, check_for_updates, find_nearest_stations,
     get_all_line_statuses, get_board, get_line_status, has_app_key, install_update, list_favorites,
     load_app_key, load_config, load_display_mode, load_display_prefs, load_update_prefs,
-    open_settings_window, open_settings_window_impl, remove_favorite, save_app_key, save_config,
-    save_display_mode, save_display_prefs, save_update_prefs, search_stations, set_tray_disruption,
+    remove_favorite, save_app_key, save_config, save_display_mode, save_display_prefs,
+    save_update_prefs, search_stations, set_tray_disruption,
 };
 use state::{AnyBoardService, AppState};
 #[cfg(target_os = "macos")]
@@ -418,6 +418,14 @@ fn restore_borderless_chrome(window: &tauri::WebviewWindow) {
 /// when the user toggles display mode at runtime.
 const TRAY_ID: &str = "tubbie-tray";
 
+/// Event emitted to the main window when the tray "Settings…" item is chosen.
+/// The renderer (`+layout.svelte`) listens for this exact string and flips the
+/// `settingsOpen` store to mount the in-frame Settings panel. **This literal is
+/// a cross-language contract** — the JS `listen('open-settings', …)` must match.
+/// `open_settings_event_name_is_stable` pins the Rust side; the layout DOM test
+/// pins the JS side.
+const OPEN_SETTINGS_EVENT: &str = "open-settings";
+
 /// Build the menu-bar tray icon (idempotent).
 ///
 /// Returns `Ok(())` immediately if a tray with [`TRAY_ID`] already exists —
@@ -453,11 +461,16 @@ fn build_tray(app: &tauri::AppHandle) -> Result<(), tauri::Error> {
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| {
             if event.id().as_ref() == "settings" {
-                // Open (or focus) the dedicated Settings window instead of
-                // navigating the main popover. The main window cannot call
-                // `load_app_key` — that capability is gated to "settings".
-                if let Err(e) = open_settings_window_impl(app) {
-                    eprintln!("[tubbie] failed to open settings from tray: {e}");
+                // Open the in-frame Settings panel: show + focus the main
+                // window, then emit `open-settings` so the renderer flips the
+                // settingsOpen store and the overlay mounts over the board.
+                // Settings is no longer a separate webview window.
+                if let Some(win) = app.get_webview_window("main") {
+                    let _ = win.show();
+                    let _ = win.set_focus();
+                    if let Err(e) = win.emit(OPEN_SETTINGS_EVENT, ()) {
+                        eprintln!("[tubbie] failed to emit {OPEN_SETTINGS_EVENT} from tray: {e}");
+                    }
                 }
             }
         })
@@ -1045,7 +1058,6 @@ pub fn run() {
             save_app_key,
             load_app_key,
             has_app_key,
-            open_settings_window,
             get_line_status,
             get_all_line_statuses,
             save_display_mode,
@@ -1064,4 +1076,18 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tubbie");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The tray "Settings…" item emits this event; the renderer listens for the
+    /// same literal in `+layout.svelte`. Pin it so a Rust-side rename can't
+    /// silently break the in-frame Settings open path (the JS side is pinned by
+    /// the `open-settings` assertion in `layout-settings-window.dom.test.ts`).
+    #[test]
+    fn open_settings_event_name_is_stable() {
+        assert_eq!(OPEN_SETTINGS_EVENT, "open-settings");
+    }
 }

@@ -61,7 +61,7 @@
 <style>
   /* Shared rules (`.settings__section`, `.settings__section-title`,
      `.settings__api-status`, `.settings__api-hint*`, `.settings__link`) live
-     in `routes/settings/+page.svelte` under `:global(...)`. */
+     in `SettingsView.svelte` under `:global(...)`. */
 
   .about__links {
     display: flex;

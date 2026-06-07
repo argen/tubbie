@@ -9,7 +9,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/svelte';
 import { get } from 'svelte/store';
 import { mockInvoke, setMockHandler, resetMockHandlers } from '$lib/ipc/mock.js';
 import { configError } from '$lib/stores/config.js';
-import SettingsPage from '../../../routes/settings/+page.svelte';
+import SettingsPage from '../../components/SettingsView.svelte';
 
 // Wire Tauri API mocks.
 vi.mock('@tauri-apps/api/core', () => ({
