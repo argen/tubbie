@@ -422,8 +422,8 @@ Gatekeeper interaction.
 
 ## Rollout status
 
-As of 2026-05-22 the M8 pipeline is **public**. v0.1.0 and v0.1.1
-shipped; v0.1.2 contains the D10 restart-after-install hotfix.
+As of 2026-05-22 the M8 pipeline is **public**. v0.1.0, v0.1.1, and
+v0.1.2 shipped; v1.0.0 is the first stable release.
 
 | Step | Status |
 |---|---|
@@ -437,6 +437,7 @@ shipped; v0.1.2 contains the D10 restart-after-install hotfix.
 | Phase 7 — cut v0.1.0 + fresh-account install smoke + v0.1.1 no-op auto-update smoke | **✓ v0.1.0 and v0.1.1 published.** Keystone test surfaced the D10 restart bug — bundle staged on disk but process never restarted. |
 | Phase 8 — flip repo public + apply branch protection | **✓ argen/tubbie public.** Branch protection: PR-review required, no force-push, no deletions, linear history. |
 | D10 hotfix — `app.restart()` after `download_and_install` + 5 s safety-timeout | **✓ v0.1.2** (this PR). v0.1.1 → v0.1.2 still needs a manual quit-and-reopen; later updates restart cleanly. |
+| v1.0.0 — first stable release (zero-config onboarding, network-wide status, station search from board, dot-matrix tray icon) | **✓ shipped.** |
 
 **Known carry-over:** anyone who installed v0.1.0 or v0.1.1 and ran
 the in-app updater on the broken code path needs to quit Tubbie

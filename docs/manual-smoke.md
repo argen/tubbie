@@ -66,6 +66,63 @@ every line-count tier and the multi-line corner cases:
   MUST NOT issue extra resize requests. The renderer-side dedupe
   (`lastSizeKey`) is what protects the main-thread Cocoa dispatch.
 
+## Station search from the board
+
+For changes to `StationSearch.svelte`, the board-header search overlay, or the
+debounced `search_stations` IPC call:
+
+- **Open search.** Click the search / change-station button in the board header.
+  A `StationSearch` input drops in below the header. The button's label changes
+  to "Close station search".
+- **Search and select.** Type a station name. Results appear after the debounce
+  window. Click a result — the board immediately begins loading arrivals for that
+  station and the search overlay closes.
+- **Keyboard dismiss.** Press Escape while the search is open — the overlay
+  closes without changing the station.
+- **Settings search unchanged.** The same `StationSearch` component in the
+  Settings "Station" section must still work independently.
+
+## First-run prompt
+
+For changes to `FirstRunPrompt.svelte` or the `onboarded` persistence logic:
+
+- **First launch (clean state).** With no `onboarded` flag in the config store,
+  the "Welcome to Tubbie" banner appears above the board. The board underneath
+  is already showing live arrivals (prompt is not a gate).
+- **Select station from prompt.** Pick a station in the prompt's search. The
+  station is saved, the prompt disappears, and the board updates.
+- **Dismiss with ×.** Click the × button. The prompt disappears and the
+  `onboarded` flag is set so it won't reappear.
+- **Dismiss with Escape.** Press Escape while the prompt is visible. Same
+  result as ×.
+- **Second launch.** Re-launch the app. The prompt must NOT reappear.
+
+## Service status (StatusPanel + StatusView)
+
+For changes to `get_all_line_statuses`, `StatusPanel.svelte`, `StatusView.svelte`,
+`utils/status.ts`, or the `line_status_cache` fan-out in `tfl-client`:
+
+- **Marquee ticker.** With at least one disrupted line active, the ticker at
+  the bottom of the board scrolls smoothly left and loops. Each disrupted line
+  shows its colour stripe, name, and worst-bucket label. "Good service on all
+  other lines" appears at the end of the loop. Under `prefers-reduced-motion`,
+  confirm the ticker is replaced by a static list.
+- **Toggle Status view.** Click the "Status" button in the board header. The
+  arrivals area is replaced by the full status view; the header button appears
+  pressed. Clicking again restores arrivals.
+- **Full status view content.** Each disrupted line should show a left colour
+  stripe, bold line name, severity sub-headline (e.g. "Minor Delays"), and
+  affected route segments ("Watford ↔ Harrow") or "Entire line" when no segments
+  are present. The disclosure `›` chevron expands the full disruption prose.
+  A "Good service on all other lines" bar appears when at least one line is
+  undisrupted. "Service status unavailable." appears if no data was returned.
+- **"All lines good" state.** With no network disruptions, the ticker shows
+  only the green-dot "Good service across the network" line (no marquee).
+  The full status view shows "All lines good" in the count label and no list.
+- **Refresh button.** In the full status view, click "Refresh". The "Updated X
+  min ago" footer label resets to "Updated just now". No crash; no reload of
+  the arrivals stream.
+
 ## Menubar tray icon
 
 For changes to the tray icon assets (`scripts/gen-tray-icons.py`,
