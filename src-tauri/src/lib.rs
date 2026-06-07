@@ -65,7 +65,7 @@ use commands::{
     get_line_status, has_app_key, install_update, list_favorites, load_app_key, load_config,
     load_display_mode, load_display_prefs, load_update_prefs, open_settings_window,
     open_settings_window_impl, remove_favorite, save_app_key, save_config, save_display_mode,
-    save_display_prefs, save_update_prefs, search_stations,
+    save_display_prefs, save_update_prefs, search_stations, set_tray_disruption,
 };
 use state::{AnyBoardService, AppState};
 #[cfg(target_os = "macos")]
@@ -525,6 +525,34 @@ pub(crate) fn set_tray_title(app: &tauri::AppHandle, title: Option<String>) {
         }
     }) {
         eprintln!("[tubbie] failed to dispatch tray title to main thread: {e}");
+    }
+}
+
+/// Swap the menu-bar tray icon between the normal roundel and the monochrome
+/// "disrupted" variant (Phase 3 menubar disruption indicator).
+///
+/// Both icons are `icon_as_template(true)` so macOS auto-tints them for
+/// light/dark/notch; the disrupted variant is a filled roundel (distinct
+/// silhouette), NOT a colored dot, so the template model is preserved.
+///
+/// **Dispatches to the macOS main thread** — `TrayIcon::set_icon` reaches
+/// `NSStatusItem` (Cocoa, main-thread-only; invariants #8/#9). Fire-and-forget;
+/// a no-op in window mode where `tray_by_id` is `None`. `set_icon` can reset
+/// the template flag, so we re-assert it after every swap.
+pub(crate) fn apply_tray_disruption(app: &tauri::AppHandle, disrupted: bool) {
+    let app_clone = app.clone();
+    if let Err(e) = app.run_on_main_thread(move || {
+        if let Some(tray) = app_clone.tray_by_id(TRAY_ID) {
+            let icon = if disrupted {
+                tauri::include_image!("icons/tray-icon-alert.png")
+            } else {
+                tauri::include_image!("icons/tray-icon.png")
+            };
+            let _ = tray.set_icon(Some(icon));
+            let _ = tray.set_icon_as_template(true);
+        }
+    }) {
+        eprintln!("[tubbie] failed to dispatch tray disruption icon to main thread: {e}");
     }
 }
 
@@ -1067,6 +1095,7 @@ pub fn run() {
             install_update,
             load_update_prefs,
             save_update_prefs,
+            set_tray_disruption,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tubbie");

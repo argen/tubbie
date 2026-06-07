@@ -196,6 +196,14 @@ export async function getLineStatus(lineId: string): Promise<LineStatus> {
   return raw;
 }
 
+/**
+ * Set the menu-bar disruption indicator (swaps the tray icon to the monochrome
+ * "disrupted" variant). No-op in window mode. Fire-and-forget.
+ */
+export async function setTrayDisruption(disrupted: boolean): Promise<void> {
+  await invoke<undefined>('set_tray_disruption', { disrupted });
+}
+
 /** UI-level display mode: floating window or menubar popover. */
 export type DisplayMode = 'window' | 'menubar';
 

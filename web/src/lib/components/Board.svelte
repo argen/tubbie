@@ -13,7 +13,7 @@
   import { displayPrefs } from '$lib/stores/displayPrefs.js';
   import { applyBoardSize, openSettingsWindow } from '$lib/ipc/commands.js';
   import LineGroup from './LineGroup.svelte';
-  import LineStatusTicker from './LineStatusTicker.svelte';
+  import StatusPanel from './StatusPanel.svelte';
 
   interface Props {
     board: Board;
@@ -21,9 +21,17 @@
     stationName?: string;
     /** Active line filter — when non-empty, the Board shows a "filtering" badge. */
     lineIds?: string[];
+    /** True when one or more lines' status could not be fetched this cycle. */
+    statusPartial?: boolean;
   }
 
-  const { board, statuses = [], stationName = '', lineIds = [] }: Props = $props();
+  const {
+    board,
+    statuses = [],
+    stationName = '',
+    lineIds = [],
+    statusPartial = false,
+  }: Props = $props();
 
   // Pretty-print a line id for the filter badge, preferring a matching
   // arrival's line_name (already in the board data) and falling back to the
@@ -456,8 +464,8 @@
     {/if}
   </div>
 
-  <!-- Line status ticker -->
-  <LineStatusTicker {statuses} />
+  <!-- Service status — worst-first, calm states (replaces the marquee ticker) -->
+  <StatusPanel {statuses} partial={statusPartial} />
 </main>
 
 <style>

@@ -783,6 +783,16 @@ pub async fn open_settings_window(app: tauri::AppHandle) -> Result<(), String> {
     open_settings_window_impl(&app)
 }
 
+/// Set the menu-bar disruption indicator (Phase 3 menubar status). Swaps the
+/// tray icon to the monochrome "disrupted" variant when `disrupted` is true.
+/// Called from the frontend, which holds the live line statuses; the icon swap
+/// itself hops to the macOS main thread inside `apply_tray_disruption`. No-op
+/// in window mode (no tray). Fire-and-forget — errors are logged, not returned.
+#[tauri::command]
+pub fn set_tray_disruption(app: tauri::AppHandle, disrupted: bool) {
+    crate::apply_tray_disruption(&app, disrupted);
+}
+
 /// Inner (non-async) implementation of settings-window open/focus.
 ///
 /// Extracted so `lib.rs` can call it from the tray menu event handler
