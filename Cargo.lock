@@ -4773,6 +4773,7 @@ name = "tubbie"
 version = "0.1.2"
 dependencies = [
  "async-trait",
+ "chrono",
  "futures",
  "objc2",
  "objc2-core-location",

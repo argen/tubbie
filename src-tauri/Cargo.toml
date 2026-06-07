@@ -31,6 +31,9 @@ futures = { workspace = true }
 thiserror = { workspace = true }
 async-trait = "0.1"
 reqwest = { workspace = true }
+# Tray-title projection derives a chrono::Duration for the canonical
+# tfl_domain::format::format_time_to_station ETA formatter.
+chrono = { workspace = true }
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
