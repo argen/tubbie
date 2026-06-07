@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   formatTimeToStation,
+  formatUpdatedAgo,
   isDue,
   revealDuration,
   shortPlatformName,
@@ -122,5 +123,25 @@ describe('truncate', () => {
   it('truncates with ellipsis when over maxLen', () => {
     expect(truncate('Hello World', 8)).toBe('Hello W…');
     expect(truncate('Abcdefghij', 5)).toBe('Abcd…');
+  });
+});
+
+describe('formatUpdatedAgo', () => {
+  const now = 1_000_000_000_000;
+  it('returns "" when never updated', () => {
+    expect(formatUpdatedAgo(null, now)).toBe('');
+    expect(formatUpdatedAgo(undefined, now)).toBe('');
+  });
+  it('says "just now" under 45s', () => {
+    expect(formatUpdatedAgo(now - 10_000, now)).toBe('just now');
+  });
+  it('rounds to minutes', () => {
+    expect(formatUpdatedAgo(now - 120_000, now)).toBe('2 min ago');
+  });
+  it('rounds to hours past 60 min', () => {
+    expect(formatUpdatedAgo(now - 2 * 3_600_000, now)).toBe('2 hr ago');
+  });
+  it('never goes negative (clock skew)', () => {
+    expect(formatUpdatedAgo(now + 5_000, now)).toBe('just now');
   });
 });

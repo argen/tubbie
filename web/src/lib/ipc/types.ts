@@ -193,10 +193,27 @@ export type SeverityBucket =
   | 'Other'
   | 'GoodService';
 
+/**
+ * A route segment affected by a disruption — mirrors the Rust `RouteSegment`
+ * struct added by the parallel backend agent. `from` and `to` are station
+ * names as returned by TfL. Empty `affected_segments` on a `StatusEntry`
+ * means the entire line is affected.
+ */
+export interface RouteSegment {
+  from: string;
+  to: string;
+}
+
 export interface StatusEntry {
   severity: number;
   description: string;
   bucket?: SeverityBucket;
+  /**
+   * Affected route segments for this status entry. Optional — older payloads
+   * without the field parse safely; treat as [] at the render site via
+   * `segmentsFor()`. Empty array → render "Entire line".
+   */
+  affected_segments?: RouteSegment[];
 }
 
 export interface LineStatus {

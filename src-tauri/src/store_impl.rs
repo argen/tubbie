@@ -113,6 +113,12 @@ pub struct KeychainBackedConfigStore {
     /// no inner store exists). Tests that exercise the clearing behaviour use
     /// `with_account_and_legacy_cleaner` to inject a custom closure.
     legacy_json_cleaner: Option<Arc<dyn Fn() + Send + Sync>>,
+    /// When true, `load_app_key`/`save_app_key` skip the macOS Keychain entirely
+    /// and use [`dev_app_key_from_env`] instead. Set to `cfg!(debug_assertions)`
+    /// in `new()` (the real app), and `false` in the test constructors so the
+    /// Keychain round-trip tests keep exercising the real Keychain. See
+    /// [`dev_app_key_from_env`] for why debug builds must avoid the Keychain.
+    keychain_bypass: bool,
 }
 
 /// Keychain service identifier. Matches `identifier` in `tauri.conf.json`.
@@ -122,6 +128,30 @@ const KEYCHAIN_SERVICE: &str = "app.tubbie";
 /// Default Keychain account name for the TfL app key (production).
 #[cfg(target_os = "macos")]
 const KEYCHAIN_ACCOUNT: &str = "tfl_app_key";
+
+/// Env var that supplies the TfL app key in debug builds.
+#[cfg(target_os = "macos")]
+const DEV_APP_KEY_ENV: &str = "TUBBIE_DEV_APP_KEY";
+
+/// Dev-only app-key source. **Debug builds of the desktop app never touch the
+/// macOS Keychain.**
+///
+/// Why: an unsigned `cargo tauri dev` binary gets a fresh code-signing identity
+/// on every rebuild, so the Keychain ACL granted via "Always Allow" never
+/// matches the next build — macOS re-prompts for the login password on every
+/// relaunch (i.e. on every Rust edit). Release builds are Developer-ID-signed,
+/// so the ACL is stable and the prompt appears at most once; there the Keychain
+/// path is used and this bypass is `cfg!(debug_assertions) == false`.
+///
+/// In debug we read an optional key from `TUBBIE_DEV_APP_KEY` instead. Empty or
+/// unset → `None` → anonymous TfL access (50 req/min), which the board
+/// tolerates; set it in your shell/`.env` to dev against a keyed quota.
+#[cfg(target_os = "macos")]
+fn dev_app_key_from_env() -> Option<String> {
+    std::env::var(DEV_APP_KEY_ENV)
+        .ok()
+        .filter(|k| !k.is_empty())
+}
 
 #[cfg(target_os = "macos")]
 impl KeychainBackedConfigStore {
@@ -137,6 +167,9 @@ impl KeychainBackedConfigStore {
             inner: Some(inner),
             account: KEYCHAIN_ACCOUNT.to_string(),
             legacy_json_cleaner: Some(legacy_json_cleaner),
+            // Debug builds never touch the Keychain (see `dev_app_key_from_env`);
+            // release builds are Developer-ID-signed and use it normally.
+            keychain_bypass: cfg!(debug_assertions),
         }
     }
 
@@ -153,6 +186,8 @@ impl KeychainBackedConfigStore {
             inner: None,
             account,
             legacy_json_cleaner: None,
+            // Tests exercise the real Keychain round-trip — never bypass.
+            keychain_bypass: false,
         }
     }
 
@@ -170,6 +205,7 @@ impl KeychainBackedConfigStore {
             inner: None,
             account,
             legacy_json_cleaner: Some(cleaner),
+            keychain_bypass: false,
         }
     }
 
@@ -222,6 +258,11 @@ impl ConfigStore for KeychainBackedConfigStore {
     // App key → Keychain.
 
     async fn load_app_key(&self) -> Result<Option<String>, String> {
+        // Debug builds never touch the Keychain — read the dev env key instead.
+        if self.keychain_bypass {
+            return Ok(dev_app_key_from_env());
+        }
+
         let account = self.account.clone();
 
         // Check Keychain first.
@@ -273,6 +314,14 @@ impl ConfigStore for KeychainBackedConfigStore {
     }
 
     async fn save_app_key(&self, key: Option<String>) -> Result<(), String> {
+        // Debug builds never touch the Keychain. The dev key comes from the
+        // environment (see `dev_app_key_from_env`), so a write is a no-op — the
+        // background pool-key refresh simply re-fetches on the next launch.
+        if self.keychain_bypass {
+            let _ = key;
+            return Ok(());
+        }
+
         let account = self.account.clone();
         tokio::task::spawn_blocking(move || keychain_save(KEYCHAIN_SERVICE, &account, key))
             .await
@@ -578,25 +627,40 @@ impl ConfigStore for StorePluginConfigStore {
 /// moment. The asymmetry is intentional and documented here to prevent a
 /// future reviewer from adding the clear "for consistency".
 #[cfg(target_os = "macos")]
+// The `return` in the debug branch is required: a second `#[cfg]`-gated block
+// follows it, so it can't be the bare tail expression.
+#[allow(clippy::needless_return)]
 pub fn keychain_load_with_legacy_fallback(
     plugin_store: &StorePluginConfigStore,
 ) -> Result<Option<String>, String> {
-    // Try Keychain first.
-    if let Some(key) = keychain_load(KEYCHAIN_SERVICE, KEYCHAIN_ACCOUNT)? {
-        return Ok(Some(key));
+    // Debug builds never touch the Keychain at startup — reading it here is the
+    // call that re-prompts on every `cargo tauri dev` relaunch. Use the dev env
+    // key instead (see `dev_app_key_from_env`). Release builds use the Keychain.
+    #[cfg(debug_assertions)]
+    {
+        let _ = plugin_store;
+        return Ok(dev_app_key_from_env());
     }
 
-    // Fall back to legacy JSON value for smooth upgrade path.
-    // Deferred clear: the next `load_app_key` IPC call will migrate and clear.
-    let legacy = plugin_store.raw_get("tfl_app_key").and_then(|v| {
-        if v.is_null() {
-            None
-        } else {
-            serde_json::from_value::<String>(v).ok()
+    #[cfg(not(debug_assertions))]
+    {
+        // Try Keychain first.
+        if let Some(key) = keychain_load(KEYCHAIN_SERVICE, KEYCHAIN_ACCOUNT)? {
+            return Ok(Some(key));
         }
-    });
 
-    Ok(legacy)
+        // Fall back to legacy JSON value for smooth upgrade path.
+        // Deferred clear: the next `load_app_key` IPC call will migrate and clear.
+        let legacy = plugin_store.raw_get("tfl_app_key").and_then(|v| {
+            if v.is_null() {
+                None
+            } else {
+                serde_json::from_value::<String>(v).ok()
+            }
+        });
+
+        Ok(legacy)
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -793,6 +857,65 @@ mod tests {
             "key should be None after clearing; got: {:?}",
             cleared.map(|_| "<redacted>")
         );
+    }
+
+    // -----------------------------------------------------------------------
+    // Debug Keychain bypass — dev builds never touch the Keychain
+    // -----------------------------------------------------------------------
+
+    /// With `keychain_bypass = true` (the debug-build state), `load_app_key`
+    /// MUST NOT read the Keychain and `save_app_key` MUST NOT write it — even
+    /// when a value exists at that account. This is what stops `cargo tauri dev`
+    /// from re-prompting for the login password on every rebuild.
+    ///
+    /// `TUBBIE_DEV_APP_KEY` is unset in the test environment, so the bypassed
+    /// load returns `None`. RED proof: remove the `if self.keychain_bypass`
+    /// early-returns and this fails — load returns the seeded Keychain value and
+    /// save overwrites it.
+    #[tokio::test]
+    async fn keychain_bypass_skips_keychain_for_load_and_save() {
+        let unique_account = format!(
+            "tfl_app_key_bypass_{}_{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_nanos()
+        );
+
+        // Seed the Keychain with a value at this account.
+        keychain_save(
+            KEYCHAIN_SERVICE,
+            &unique_account,
+            Some("real-keychain-value".to_string()),
+        )
+        .expect("seed Keychain");
+
+        // A store in bypass mode (mirrors what `new()` does in a debug build).
+        let mut store = KeychainBackedConfigStore::with_account(unique_account.clone());
+        store.keychain_bypass = true;
+
+        // load ignores the Keychain entirely → env value (unset → None).
+        let loaded = store.load_app_key().await.expect("load_app_key");
+        assert_eq!(
+            loaded, None,
+            "bypassed load must not read the Keychain (TUBBIE_DEV_APP_KEY unset → None)"
+        );
+
+        // save is a no-op → the seeded Keychain value is untouched.
+        store
+            .save_app_key(Some("would-overwrite".to_string()))
+            .await
+            .expect("save_app_key");
+        let direct = keychain_load(KEYCHAIN_SERVICE, &unique_account).expect("keychain_load");
+        assert_eq!(
+            direct.as_deref(),
+            Some("real-keychain-value"),
+            "bypassed save must not write the Keychain"
+        );
+
+        // Cleanup the seeded item directly (the store's save is a no-op now).
+        let _ = keychain_save(KEYCHAIN_SERVICE, &unique_account, None);
     }
 
     // -----------------------------------------------------------------------

@@ -1,19 +1,26 @@
 <script lang="ts">
-  import { onDestroy, onMount } from 'svelte';
+  import { onDestroy, onMount, tick } from 'svelte';
   import type { Arrival, Board, Direction, LineStatus } from '$lib/ipc/types.js';
   import {
     formatTime,
+    formatUpdatedAgo,
     prettyLineName,
     shortPlatformName,
     shortStationName,
   } from '$lib/utils/format.js';
+  import { disruptedLinesWorstFirst } from '$lib/utils/status.js';
   import { lastUpdateTs } from '$lib/stores/board.js';
   import { reducedMotion } from '$lib/stores/reducedMotion.js';
   import { displayMode } from '$lib/stores/displayMode.js';
   import { displayPrefs } from '$lib/stores/displayPrefs.js';
   import { applyBoardSize, openSettingsWindow } from '$lib/ipc/commands.js';
+  import { config } from '$lib/stores/config.js';
+  import { selectStation } from '$lib/stores/settingsForm.js';
+  import type { Station } from '$lib/ipc/types.js';
   import LineGroup from './LineGroup.svelte';
   import StatusPanel from './StatusPanel.svelte';
+  import StatusView from './StatusView.svelte';
+  import StationSearch from './StationSearch.svelte';
 
   interface Props {
     board: Board;
@@ -23,6 +30,10 @@
     lineIds?: string[];
     /** True when one or more lines' status could not be fetched this cycle. */
     statusPartial?: boolean;
+    /** Epoch ms of the last successful status fetch (for the freshness line). */
+    statusUpdatedAt?: number | null;
+    /** Manual status refresh (Status view "Refresh" button). May be async. */
+    onStatusRefresh?: () => void | Promise<void>;
   }
 
   const {
@@ -31,7 +42,52 @@
     stationName = '',
     lineIds = [],
     statusPartial = false,
+    statusUpdatedAt = null,
+    onStatusRefresh,
   }: Props = $props();
+
+  // Header view toggle: the board body shows either arrivals or the full
+  // Service-status view (the desktop equivalent of the iOS Status tab).
+  let view = $state<'arrivals' | 'status'>('arrivals');
+
+  // Station-search overlay — toggled by the magnifier button in the header.
+  let searchOpen = $state(false);
+  let searchToggleEl = $state<HTMLButtonElement>();
+  let searchOverlayEl = $state<HTMLDivElement>();
+
+  function closeSearch(): void {
+    searchOpen = false;
+    // Return focus to the toggle so keyboard / screen-reader users aren't
+    // dropped at the top of the document when the overlay unmounts.
+    searchToggleEl?.focus();
+  }
+
+  function handleStationSelect(station: Station): void {
+    selectStation(station);
+    closeSearch();
+  }
+
+  // When the overlay opens: move focus into the search input (so keyboard /
+  // screen-reader users land in the field) and bind a WINDOW-level Escape
+  // handler so Esc closes it regardless of where focus currently sits — not
+  // only when focus is already inside the overlay div.
+  $effect(() => {
+    if (!searchOpen) return;
+    void tick().then(() => {
+      searchOverlayEl?.querySelector<HTMLInputElement>('input')?.focus();
+    });
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') closeSearch();
+    };
+    window.addEventListener('keydown', onKey);
+    return (): void => {
+      window.removeEventListener('keydown', onKey);
+    };
+  });
+  // Disruption count drives the toggle's badge. Network-wide — matches the
+  // StatusView it opens (invariant #22: lineIds is a display-mask on arrivals
+  // only; the status badge reflects the full network picture).
+  const disruptionCount = $derived(disruptedLinesWorstFirst(statuses).length);
 
   // Pretty-print a line id for the filter badge, preferring a matching
   // arrival's line_name (already in the board data) and falling back to the
@@ -69,6 +125,10 @@
       second: '2-digit',
     }),
   );
+
+  // Freshness label for the Status view — reuses the ticking `now` above, so
+  // no extra timer. "" until the first status fetch lands.
+  const statusUpdatedLabel = $derived(formatUpdatedAgo(statusUpdatedAt, now.getTime()));
 
   // ---------------------------------------------------------------------------
   // Refresh pulse
@@ -417,6 +477,63 @@
 
       <button
         type="button"
+        bind:this={searchToggleEl}
+        class="board__settings-btn board__search-btn"
+        class:board__search-btn--active={searchOpen}
+        onclick={() => {
+          searchOpen = !searchOpen;
+        }}
+        aria-pressed={searchOpen}
+        aria-label={searchOpen ? 'Close station search' : 'Change station'}
+        title="Change station"
+      >
+        <svg
+          aria-hidden="true"
+          focusable="false"
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+      </button>
+
+      <button
+        type="button"
+        class="board__status-btn"
+        class:board__status-btn--active={view === 'status'}
+        onclick={() => (view = view === 'status' ? 'arrivals' : 'status')}
+        aria-pressed={view === 'status'}
+        aria-label={view === 'status' ? 'Hide service status' : 'Show service status'}
+        title="Service status"
+      >
+        <svg
+          aria-hidden="true"
+          focusable="false"
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+        </svg>
+        {#if disruptionCount > 0}
+          <span class="board__status-badge" aria-hidden="true">{disruptionCount}</span>
+        {/if}
+      </button>
+
+      <button
+        type="button"
         class="board__settings-btn"
         onclick={() => void openSettingsWindow()}
         aria-label="Open settings"
@@ -443,12 +560,36 @@
     </div>
   </header>
 
+  {#if searchOpen}
+    <!-- Station-search overlay — appears directly under the header. A
+         window-level Escape handler (see the $effect above) closes it from
+         anywhere, and the input is auto-focused on open. -->
+    <div
+      class="board__search-overlay"
+      bind:this={searchOverlayEl}
+      data-testid="board-search-overlay"
+    >
+      <StationSearch selectedId={$config.station_id} onSelect={handleStationSelect} />
+    </div>
+  {/if}
+
   <!-- Arrivals area: stacked by line. Each line group renders one
        direction column per direction, with the per-direction arrivals
        filtered to that line — so a Bakerloo + Jubilee shared platform
        at Baker Street shows up as separate Bakerloo and Jubilee groups
-       and the line-coloured stripe always matches the train. -->
-  <div class="board__platforms" aria-label="Arrivals by line" role="region">
+       and the line-coloured stripe always matches the train.
+
+       The arrivals tree stays MOUNTED in Status view and is hidden, not
+       unmounted — same "never re-mount the board" rule the rerender-count
+       test pins (no cache re-warm, instant toggle-back) — and `aria-hidden`
+       + `display:none` keep it out of the accessibility tree while hidden. -->
+  <div
+    class="board__platforms"
+    class:board__platforms--hidden={view === 'status'}
+    aria-hidden={view === 'status' ? 'true' : undefined}
+    aria-label="Arrivals by line"
+    role="region"
+  >
     {#each linesGrouped as group (group.lineId)}
       <LineGroup
         lineId={group.lineId}
@@ -464,8 +605,18 @@
     {/if}
   </div>
 
-  <!-- Service status — worst-first, calm states (replaces the marquee ticker) -->
-  <StatusPanel {statuses} partial={statusPartial} />
+  {#if view === 'status'}
+    <!-- Full Service-status view (desktop equivalent of the iOS Status tab). -->
+    <StatusView
+      {statuses}
+      partial={statusPartial}
+      updatedLabel={statusUpdatedLabel}
+      onRefresh={onStatusRefresh}
+    />
+  {:else}
+    <!-- Service status summary — worst-first, calm states (replaces the marquee). -->
+    <StatusPanel {statuses} partial={statusPartial} />
+  {/if}
 </main>
 
 <style>
@@ -475,6 +626,7 @@
     height: calc(100vh - 24px); /* 24px for Attribution footer */
     background: var(--bg);
     overflow: hidden;
+    position: relative;
   }
 
   /* Title bar (window mode only).
@@ -682,6 +834,77 @@
     border-color: var(--platform-label);
   }
 
+  /* Station-search toggle — same chrome as the cog/status buttons. */
+  .board__search-btn--active {
+    color: var(--fg);
+    opacity: 1;
+    border-color: var(--fg);
+    background: color-mix(in srgb, var(--fg) 10%, transparent);
+  }
+
+  /* Search overlay — absolutely positioned directly under the header, above
+     the board content. Uses dot-matrix CSS vars for visual consistency. */
+  .board__search-overlay {
+    position: absolute;
+    top: 52px; /* header min-height */
+    left: 0;
+    right: 0;
+    z-index: 50;
+    background: var(--settings-bg, var(--bg));
+    border-bottom: 1px solid var(--input-border);
+    padding: 0.75rem 1rem;
+  }
+
+  /* Service-status toggle — same chrome as the cog so the pair reads as a
+     control cluster. `--active` gives the pressed state a filled look. */
+  .board__status-btn {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--platform-label);
+    background: transparent;
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--row-divider);
+    border-radius: 2px;
+    transition: color 0.15s ease;
+    opacity: 0.7;
+    padding: 0;
+  }
+
+  .board__status-btn:hover,
+  .board__status-btn:focus {
+    color: var(--fg);
+    opacity: 1;
+    border-color: var(--platform-label);
+  }
+
+  .board__status-btn--active {
+    color: var(--fg);
+    opacity: 1;
+    border-color: var(--fg);
+    background: color-mix(in srgb, var(--fg) 10%, transparent);
+  }
+
+  .board__status-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    min-width: 15px;
+    height: 15px;
+    padding: 0 3px;
+    border-radius: 999px;
+    background: var(--stale-accent);
+    color: var(--bg);
+    font-family: var(--font-ui);
+    font-size: 0.65rem;
+    font-weight: 700;
+    line-height: 15px;
+    text-align: center;
+  }
+
   /* Platforms area: line groups stack vertically. Each LineGroup owns its
      own responsive grid of platform columns (auto-fit, minmax(180px,
      1fr)), so the only direction we ever need to scroll here is vertical
@@ -694,6 +917,12 @@
     overflow-y: auto;
     background: var(--row-divider);
     padding: 1px;
+  }
+
+  /* Status view: hide the (still-mounted) arrivals tree. `display: none`
+     overrides the flex above and removes it from the a11y tree. */
+  .board__platforms--hidden {
+    display: none;
   }
 
   .board__no-platforms {

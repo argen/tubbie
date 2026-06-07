@@ -196,6 +196,15 @@ export async function getLineStatus(lineId: string): Promise<LineStatus> {
   return raw;
 }
 
+/** Fetch the current status of EVERY TfL line (network-wide), worst-first. */
+export async function getAllLineStatuses(): Promise<LineStatus[]> {
+  const raw = await invoke<unknown>('get_all_line_statuses');
+  if (!Array.isArray(raw)) {
+    throw new TypeError('get_all_line_statuses: expected array response');
+  }
+  return raw.filter((item): item is LineStatus => isLineStatus(item));
+}
+
 /**
  * Set the menu-bar disruption indicator (swaps the tray icon to the monochrome
  * "disrupted" variant). No-op in window mode. Fire-and-forget.

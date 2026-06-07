@@ -620,6 +620,14 @@ pub(crate) async fn get_line_status_inner(
     Ok(status)
 }
 
+pub(crate) async fn get_all_line_statuses_inner(
+    state: &AppState,
+) -> Result<Vec<LineStatus>, String> {
+    crate::state::AnyBoardService::get_all_line_statuses(&*state.board_service)
+        .await
+        .map_err(|e| e.to_string())
+}
+
 // ---------------------------------------------------------------------------
 // Tauri command handlers (thin wrappers over the inner functions)
 // ---------------------------------------------------------------------------
@@ -834,6 +842,17 @@ pub async fn get_line_status(
     state: State<'_, AppState>,
 ) -> Result<LineStatus, String> {
     get_line_status_inner(&line_id, &state).await
+}
+
+/// Fetch the merged status for every TfL line across all surfaced modes
+/// (tube, DLR, Overground, Elizabeth line), sorted worst-first by severity
+/// then alphabetically by line id.
+///
+/// Shares the same 60 s line-status cache as `get_line_status` — no extra
+/// TfL traffic when the per-line ticker has already warmed it.
+#[tauri::command]
+pub async fn get_all_line_statuses(state: State<'_, AppState>) -> Result<Vec<LineStatus>, String> {
+    get_all_line_statuses_inner(&state).await
 }
 
 /// Persist the display mode (`"window"` or `"menubar"`) and apply it
@@ -2112,6 +2131,58 @@ mod tests {
             .await
             .expect_err("path traversal should be rejected");
         assert!(err.contains("validation:"), "error: {err}");
+    }
+
+    // -----------------------------------------------------------------------
+    // get_all_line_statuses
+    // -----------------------------------------------------------------------
+
+    #[tokio::test]
+    async fn get_all_line_statuses_inner_returns_all_lines_worst_first() {
+        // fixture_state() is backed by fixture files that include line-status
+        // JSON for tube, DLR, elizabeth-line, and overground — the same files
+        // exercised by the tfl-cache unit tests.
+        let state = fixture_state();
+        let statuses = get_all_line_statuses_inner(&state)
+            .await
+            .expect("get_all_line_statuses_inner should succeed with fixture data");
+
+        // Must include entries from every mode (tube has 11 lines, DLR 1,
+        // Elizabeth 1, Overground 6) — 19 total.  Assert non-empty and that
+        // the vector spans more than one mode by checking for known ids.
+        assert!(
+            !statuses.is_empty(),
+            "expected at least one LineStatus entry"
+        );
+        let ids: Vec<&str> = statuses.iter().map(|s| s.line_id.as_str()).collect();
+        assert!(
+            ids.contains(&"northern"),
+            "tube 'northern' should appear; got: {ids:?}"
+        );
+        assert!(ids.contains(&"dlr"), "dlr should appear; got: {ids:?}");
+
+        // Verify worst-first ordering: for each adjacent pair, the sort_rank
+        // of the earlier entry must be <= that of the later entry (lower rank
+        // = worse, so a[rank] <= b[rank] means a is at least as bad as b).
+        let worst_rank = |s: &tfl_domain::LineStatus| {
+            s.status
+                .iter()
+                .map(|e| e.bucket.sort_rank())
+                .min()
+                .unwrap_or(u8::MAX)
+        };
+        for pair in statuses.windows(2) {
+            let a = &pair[0];
+            let b = &pair[1];
+            assert!(
+                worst_rank(a) <= worst_rank(b),
+                "ordering violated: {:?} (sort_rank {:?}) appears before {:?} (sort_rank {:?})",
+                a.line_id,
+                worst_rank(a),
+                b.line_id,
+                worst_rank(b),
+            );
+        }
     }
 
     // -----------------------------------------------------------------------

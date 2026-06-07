@@ -156,6 +156,7 @@ const defaultHandlers: Record<string, MockInvokeHandler> = {
   has_app_key: () => false,
   open_settings_window: () => null,
   get_line_status: () => sampleLineStatus,
+  get_all_line_statuses: () => [sampleLineStatus],
   load_display_mode: () => 'window',
   save_display_mode: () => 'saved',
   load_display_prefs: () => ({ group_destinations: false }),
