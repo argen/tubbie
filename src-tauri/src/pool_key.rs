@@ -294,7 +294,7 @@ mod tests {
     fn key_pool_new_filters_invalid_entries() {
         let raw = vec![
             "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4".to_string(), // valid
-            "tooshort".to_string(),                          // invalid
+            "tooshort".to_string(),                         // invalid
             "b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5".to_string(), // valid
         ];
         let pool = KeyPool::new(&raw).expect("should have 2 valid keys");
@@ -432,8 +432,7 @@ mod tests {
             .timeout(Duration::from_millis(500))
             .build()
             .unwrap();
-        let result =
-            fetch_pool_keys_from_url(&client, "http://127.0.0.1:1/pool-keys.json").await;
+        let result = fetch_pool_keys_from_url(&client, "http://127.0.0.1:1/pool-keys.json").await;
         assert!(result.is_none(), "connection refused must fail-open (None)");
     }
 
