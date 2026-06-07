@@ -28,7 +28,6 @@
 </script>
 
 <fieldset class="theme-picker" aria-label="Select theme">
-  <legend class="theme-picker__legend">Theme</legend>
   <div class="theme-picker__swatches" role="group" aria-label="Theme options">
     {#each THEMES as theme (theme.id)}
       <button
@@ -37,7 +36,6 @@
         class:theme-picker__swatch--selected={selected === theme.id}
         style:background={theme.bg}
         style:color={theme.fg}
-        style:border-color={selected === theme.id ? theme.fg : 'transparent'}
         onclick={() => {
           handleSelect(theme.id);
         }}
@@ -61,15 +59,9 @@
     border: 1px solid var(--input-border);
     border-radius: 2px;
     padding: 0.75rem;
-  }
-
-  .theme-picker__legend {
-    font-family: var(--font-board);
-    font-size: 0.85rem;
-    color: var(--platform-label);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    padding: 0 0.3rem;
+    background: var(--bg);
+    margin: 0;
+    min-width: 0; /* let the fieldset shrink inside the settings column */
   }
 
   .theme-picker__swatches {
@@ -79,21 +71,32 @@
   }
 
   .theme-picker__swatch {
+    /* Reset the native macOS Aqua push-button chrome. Without this, WKWebView
+       paints its grey gradient over the inline `style:background` and the
+       swatch reads as an off-brand system button instead of a dot-matrix
+       board preview. `background`/`color` come from the per-theme inline
+       styles; `--input-bg` is only a fallback before they apply. */
+    appearance: none;
+    -webkit-appearance: none;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 0.25rem;
     padding: 0.6rem 0.5rem;
-    border: 2px solid transparent;
+    background: var(--input-bg);
+    border: 2px solid var(--row-divider);
     border-radius: 2px;
     cursor: pointer;
-    transition: border-color 0.1s ease;
+    transition:
+      border-color 0.1s ease,
+      box-shadow 0.1s ease;
     min-height: 64px;
   }
 
   .theme-picker__swatch:hover {
-    filter: brightness(1.2);
+    filter: brightness(1.25);
+    border-color: currentColor;
   }
 
   .theme-picker__swatch:focus-visible {
@@ -101,8 +104,14 @@
     outline-offset: 2px;
   }
 
+  /* Selected: frame + LED glow in the theme's own colour (currentColor is the
+     inline `style:color={theme.fg}`), so amber glows amber, orange glows
+     orange — matching the board's `.led-text` treatment. */
   .theme-picker__swatch--selected {
-    box-shadow: 0 0 6px currentColor;
+    border-color: currentColor;
+    box-shadow:
+      0 0 6px currentColor,
+      inset 0 0 8px color-mix(in srgb, currentColor 18%, transparent);
   }
 
   .theme-picker__swatch-label {
@@ -117,6 +126,10 @@
     font-family: var(--font-board);
     font-size: 1.1rem;
     letter-spacing: 0.05em;
+    /* LED glow in the swatch's own colour — mirrors the board's `.led-text`. */
+    text-shadow:
+      0 0 4px currentColor,
+      0 0 8px color-mix(in srgb, currentColor 40%, transparent);
   }
 
   @media (prefers-reduced-motion: reduce) {
