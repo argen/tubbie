@@ -6,6 +6,7 @@
  */
 import { invoke } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
+import { openUrl } from '@tauri-apps/plugin-opener';
 import {
   type Board,
   type BoardConfig,
@@ -409,4 +410,24 @@ export async function loadUpdatePrefs(): Promise<UpdatePrefs> {
 /** Persist auto-update preferences. */
 export async function saveUpdatePrefs(prefs: UpdatePrefs): Promise<void> {
   await invoke<undefined>('save_update_prefs', { prefs });
+}
+
+/**
+ * Open an external URL in the system default browser.
+ *
+ * A plain `<a target="_blank">` is a no-op inside the Tauri WKWebView, so every
+ * outbound link (TfL Open Data, GitHub releases, the TfL API portal) routes
+ * through the opener plugin instead. The set of permitted hosts is enforced by
+ * the `opener:allow-open-url` scope in `capabilities/default.json` — a URL
+ * outside that scope is rejected by the runtime, not silently opened.
+ *
+ * Failures (denied scope, opener missing in a non-Tauri context) are logged
+ * rather than thrown, so a dead link never breaks the surrounding UI.
+ */
+export async function openExternal(url: string): Promise<void> {
+  try {
+    await openUrl(url);
+  } catch (err: unknown) {
+    console.warn('[opener] failed to open external URL', url, err);
+  }
 }

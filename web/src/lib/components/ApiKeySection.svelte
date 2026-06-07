@@ -1,6 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { hasAppKey, saveAppKey } from '$lib/ipc/commands.js';
+  import { hasAppKey, saveAppKey, openExternal } from '$lib/ipc/commands.js';
+
+  const API_PORTAL_URL = 'https://api-portal.tfl.gov.uk';
 
   let appKey = $state('');
   let hasStoredAppKey = $state(false);
@@ -64,9 +66,11 @@
   <p class="settings__api-hint">
     Optional — tubbie works out of the box. To use your own TfL key, register at
     <a
-      href="https://api-portal.tfl.gov.uk"
-      target="_blank"
-      rel="noopener noreferrer"
+      href={API_PORTAL_URL}
+      onclick={(e) => {
+        e.preventDefault();
+        void openExternal(API_PORTAL_URL);
+      }}
       class="settings__link">api-portal.tfl.gov.uk</a
     >.
   </p>
@@ -124,17 +128,13 @@
 <style>
   /* API-key-only rules. Shared rules (.settings__section, .settings__section-title,
      .settings__api-status, .settings__api-hint, .settings__btn,
-     .settings__btn--secondary) live in routes/settings/+page.svelte under :global(...)
-     so this component doesn't have to copy them. */
+     .settings__btn--secondary, .settings__link) live in
+     routes/settings/+page.svelte under :global(...) so this component doesn't
+     have to copy them. */
 
   .settings__api-hint--small {
     font-size: 0.75rem;
     opacity: 0.5;
-  }
-
-  .settings__link {
-    color: var(--fg);
-    opacity: 0.9;
   }
 
   .settings__api-input-row {

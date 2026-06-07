@@ -10,6 +10,10 @@
    */
   import { onMount } from 'svelte';
   import { getVersion } from '@tauri-apps/api/app';
+  import { openExternal } from '$lib/ipc/commands.js';
+
+  const SOURCE_URL = 'https://github.com/argen/tubbie';
+  const TFL_OPEN_DATA_URL = 'https://tfl.gov.uk/info-for/open-data-users/';
 
   let version = $state('—');
 
@@ -31,15 +35,19 @@
 
   <div class="about__links">
     <a
-      href="https://github.com/argen/tubbie"
-      target="_blank"
-      rel="noopener noreferrer"
+      href={SOURCE_URL}
+      onclick={(e) => {
+        e.preventDefault();
+        void openExternal(SOURCE_URL);
+      }}
       class="settings__link">Source &amp; releases</a
     >
     <a
-      href="https://tfl.gov.uk/info-for/open-data-users/"
-      target="_blank"
-      rel="noopener noreferrer"
+      href={TFL_OPEN_DATA_URL}
+      onclick={(e) => {
+        e.preventDefault();
+        void openExternal(TFL_OPEN_DATA_URL);
+      }}
       class="settings__link">TfL Open Data</a
     >
   </div>

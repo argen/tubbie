@@ -713,6 +713,12 @@ pub(crate) async fn apply_display_mode_effects(
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_store::Builder::default().build())
+        // Opener plugin: lets the renderer open external URLs (TfL Open Data,
+        // GitHub releases, the TfL API portal) in the system browser. Plain
+        // `<a target="_blank">` is a no-op in a WKWebView, so the footer /
+        // About / API-key links were dead before this. Scoped to the exact
+        // hosts in `capabilities/default.json` (`opener:allow-open-url`).
+        .plugin(tauri_plugin_opener::init())
         // Updater plugin. PR-A wiring; `active: false` in `tauri.conf.json`
         // keeps it inert until PR-B lands the real pubkey + signing config.
         // Registered here so the test harness (`updater_plugin_registered.rs`)
