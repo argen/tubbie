@@ -36,8 +36,15 @@
 
   const { lineId, lineName, directions, maxRows, groupDestinations = false }: Props = $props();
 
+  // The template appends " Line", so strip any trailing standalone "line"
+  // the source name already carries. TfL's arrivals feed names the Elizabeth
+  // line "Elizabeth line" — without this it renders "Elizabeth line Line"
+  // ("ELIZABETH LINE LINE" once uppercased).
   const headerLabel = $derived(
-    lineName !== undefined && lineName.length > 0 ? lineName : prettyLineName(lineId),
+    (lineName !== undefined && lineName.length > 0 ? lineName : prettyLineName(lineId)).replace(
+      /\s+line$/i,
+      '',
+    ),
   );
   const accent = $derived(lineColorVar(lineId));
 </script>
