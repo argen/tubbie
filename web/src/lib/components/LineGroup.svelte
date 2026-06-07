@@ -36,9 +36,23 @@
 
   const { lineId, lineName, directions, maxRows, groupDestinations = false }: Props = $props();
 
+  // Modes/networks that are not "lines" — the DLR is a railway, the
+  // Overground (legacy aggregate id) a network. Appending " Line" reads
+  // wrong ("DLR Line"), so their name stands alone. The six named
+  // Overground lines (Mildmay, Windrush, …) ARE lines and keep the suffix.
+  const NON_LINE_IDS = new Set(['dlr', 'london-overground', 'overground']);
+
+  // Strip any trailing standalone "line" the source name already carries —
+  // TfL's arrivals feed names the Elizabeth line "Elizabeth line", which
+  // would otherwise render "Elizabeth line Line" ("ELIZABETH LINE LINE"
+  // once uppercased).
   const headerLabel = $derived(
-    lineName !== undefined && lineName.length > 0 ? lineName : prettyLineName(lineId),
+    (lineName !== undefined && lineName.length > 0 ? lineName : prettyLineName(lineId)).replace(
+      /\s+line$/i,
+      '',
+    ),
   );
+  const headerText = $derived(NON_LINE_IDS.has(lineId) ? headerLabel : `${headerLabel} Line`);
   const accent = $derived(lineColorVar(lineId));
 </script>
 
@@ -51,7 +65,7 @@
 >
   <header class="line-group__header" aria-hidden="true">
     <span class="line-group__swatch"></span>
-    <span class="line-group__name">{headerLabel} Line</span>
+    <span class="line-group__name">{headerText}</span>
   </header>
   <div class="line-group__platforms">
     {#each directions as dir (dir.key)}

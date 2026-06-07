@@ -66,43 +66,36 @@ every line-count tier and the multi-line corner cases:
   MUST NOT issue extra resize requests. The renderer-side dedupe
   (`lastSizeKey`) is what protects the main-thread Cocoa dispatch.
 
-## Menubar live-arrival (tray title)
+## Menubar tray icon
 
-For changes to `set_tray_title`, `tray_title::next_arrival_title`, or the
-title-update hook in `spawn_stream_task`. `TrayIcon::set_title` reaches
-`NSStatusItem` — a main-thread-only Cocoa call (invariants #8/#9), so this
-CANNOT be covered by `cargo test`; a wrong-thread dispatch crashes with
-`EXC_BREAKPOINT`, not a test failure.
+For changes to the tray icon assets (`scripts/gen-tray-icons.py`,
+`icons/tray-icon*.png`) or `apply_tray_disruption`. `TrayIcon::set_icon`
+reaches `NSStatusItem` — a main-thread-only Cocoa call (invariants #8/#9), so
+the swap CANNOT be covered by `cargo test`; a wrong-thread dispatch crashes
+with `EXC_BREAKPOINT`, not a test failure.
 
-- **Switch to menubar mode** at a busy station (King's Cross, Oxford
-  Circus). Within one poll the menu bar shows the icon **plus** a short
-  ETA beside it (`Due` / `1 min` / `N mins`) — the soonest train across
-  all platforms. **No crash** — a wrong-thread `set_title` would
-  `EXC_BREAKPOINT` here.
-- **Tray icon legibility.** The icon is a monochrome Underground-roundel
-  template (`icons/tray-icon.png` @1x + `@2x`). Confirm it reads as a
-  roundel (thin ring + horizontal bar), tints correctly on a **light**
-  AND **dark** menu bar, and stays crisp beside the notch and under
-  Reduce-Transparency — not a muddy blob. On a Retina Mac the @2x is what
-  shows.
-- **Disruption icon swap.** When a line in your selection is disrupted,
-  the tray icon swaps to the filled "alert" roundel
-  (`icons/tray-icon-alert.png`); back to the open ring when all clear.
-  Both are templates — confirm both tint on light/dark and that the swap
-  doesn't crash (`set_icon` is a main-thread Cocoa call, invariants
-  #8/#9). The swap is driven by the frontend statuses (scoped to your
-  line filter), so it still updates with the popover closed; it should
-  NOT re-dispatch every poll when the disruption state is unchanged.
-- **Watch it change buckets.** As the soonest train approaches, the title
-  steps `3 mins → 2 mins → 1 min → Due`. The dev log MUST NOT show a
-  `set_title` dispatch on every poll when the bucket is unchanged (the
-  `last_title` throttle): sit on a station whose soonest train is steady
-  and confirm the title isn't re-pushed each tick.
-- **Switch menubar → window.** The title vanishes with the tray (no
-  orphaned status item, no crash). Switching back, it reappears within a
-  poll.
-- **Empty board / all trains departed.** Title clears to the bare icon
-  (no stale number frozen beside it once arrivals drain).
-- **Sustained TfL failure (pull the network).** The title holds the last
-  good ETA (same stale behaviour as the board) and does not crash; it
-  refreshes once polling recovers.
+There is **no ETA text in the menu bar** — the tray is icon-only and the icon
+is the click target that opens/hides the popover. (The earlier menubar
+live-arrival title was removed: it read as confusing clutter.)
+
+- **Tray icon legibility.** The icon is an original monochrome **dot-matrix**
+  glyph (`icons/tray-icon.png` @1x + `@2x`) — a 5×3 LED dot grid, echoing the
+  departure-board UI; deliberately NOT the TfL roundel (a trademark). Confirm
+  it reads as a small dot grid (not a muddy blob), tints correctly on a
+  **light** AND **dark** menu bar, and stays crisp beside the notch and under
+  Reduce-Transparency. On a Retina Mac the @2x is what shows.
+- **Click to open.** Left-click the tray icon → the popover shows; click again
+  → it hides. No ETA or text appears beside the icon.
+- **Disruption icon swap.** When a line in your selection is disrupted, the
+  tray icon swaps to the dot-matrix **alert** glyph (an exclamation,
+  `icons/tray-icon-alert.png`); back to the dot grid when all clear. Both are
+  templates — confirm both tint on light/dark and that the swap doesn't crash
+  (`set_icon` is a main-thread Cocoa call, invariants #8/#9). The swap is
+  driven by the frontend statuses (scoped to your line filter), so it still
+  updates with the popover closed; it should NOT re-dispatch every poll when
+  the disruption state is unchanged.
+- **Switch menubar → window.** The tray icon disappears with no orphaned
+  status item and no crash; switching back, it reappears within a poll.
+- **Regenerate the assets.** After editing `scripts/gen-tray-icons.py`, run
+  `python3 scripts/gen-tray-icons.py` and re-check legibility at both sizes
+  and both menu-bar appearances.

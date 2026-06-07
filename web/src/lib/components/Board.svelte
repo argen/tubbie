@@ -118,6 +118,8 @@
     if (clockTimer !== null) clearInterval(clockTimer);
   });
 
+  // Seconds kept in both modes — the two-row menubar header puts the clock on
+  // its own row, so it no longer competes with the station name for width.
   const clockStr = $derived(
     now.toLocaleTimeString('en-GB', {
       hour: '2-digit',
@@ -166,6 +168,18 @@
   const displayName = $derived(
     stationName.length > 0 ? shortStationName(stationName).toUpperCase() : board.station_id,
   );
+
+  // Station-name size tier. The menubar popover is fixed-width, so scale the
+  // font by NAME LENGTH (not viewport) so long names ("Tottenham Court Road")
+  // fit on their full-width row without truncating. Window mode has the width,
+  // so it always uses the large tier.
+  const stationNameSize = $derived.by((): 'lg' | 'md' | 'sm' => {
+    if ($displayMode === 'window') return 'lg';
+    const n = displayName.length;
+    if (n <= 14) return 'lg';
+    if (n <= 20) return 'md';
+    return 'sm';
+  });
 
   // ---------------------------------------------------------------------------
   // Group arrivals by line, then by direction
@@ -443,11 +457,18 @@
     class="board__header"
     class:refresh-pulse={pulsing}
     class:board__header--stale={isStale}
+    class:board__header--menubar={$displayMode === 'menubar'}
     aria-label="Station header"
     data-tauri-drag-region
   >
     <div class="board__station-block" data-tauri-drag-region>
-      <h1 class="board__station-name led-accent" data-tauri-drag-region>
+      <h1
+        class="board__station-name led-accent"
+        class:board__station-name--lg={stationNameSize === 'lg'}
+        class:board__station-name--md={stationNameSize === 'md'}
+        class:board__station-name--sm={stationNameSize === 'sm'}
+        data-tauri-drag-region
+      >
         {displayName}
       </h1>
       {#if filterLabels.length > 0}
@@ -725,11 +746,35 @@
     border-bottom-color: var(--stale-accent);
   }
 
+  /* Menubar mode: the fixed ~380px popover can't fit name + clock + buttons on
+     one row, so stack into two — station name (full width, length-scaled) on
+     row 1, clock + buttons on row 2. Window mode keeps the single row (it has
+     the width). */
+  .board__header--menubar {
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: stretch;
+    row-gap: 0.3rem;
+  }
+  .board__header--menubar .board__header-right {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  /* Controls row: clock pinned left, button cluster pushed right. */
+  .board__header--menubar .board__clock {
+    margin-right: auto;
+    font-size: 1rem;
+    opacity: 0.85;
+  }
+
   .board__station-block {
     display: flex;
     flex-direction: column;
     gap: 0.1rem;
-    max-width: 70%;
+    /* Take the row's leftover space; `min-width: 0` lets the name ellipsise as
+       a last resort instead of forcing the row wider. Replaces the old
+       `max-width: 70%` cap, which truncated the name even when space existed. */
+    flex: 1 1 auto;
     min-width: 0;
   }
 
@@ -746,6 +791,18 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  /* Length-scaled size tiers (menubar mode; window mode is always --lg). The
+     popover is fixed-width, so the font scales by NAME LENGTH, not viewport. */
+  .board__station-name--lg {
+    font-size: 1.4rem;
+  }
+  .board__station-name--md {
+    font-size: 1.15rem;
+  }
+  .board__station-name--sm {
+    font-size: 1rem;
   }
 
   .board__line-filter {
@@ -844,15 +901,15 @@
 
   /* Search overlay — absolutely positioned directly under the header, above
      the board content. Uses dot-matrix CSS vars for visual consistency. */
+  /* In-flow bar that slides in flush below the header (which is taller in
+     menubar mode now it's two rows) and pushes the board down — no hardcoded
+     offset to drift out of sync with the header height. The search input's own
+     dropdown (position:absolute, z-index:100) overlays the board below it. */
   .board__search-overlay {
-    position: absolute;
-    top: 52px; /* header min-height */
-    left: 0;
-    right: 0;
-    z-index: 50;
+    flex-shrink: 0;
     background: var(--settings-bg, var(--bg));
-    border-bottom: 1px solid var(--input-border);
-    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--header-border);
+    padding: 0.6rem 1rem 0.7rem;
   }
 
   /* Service-status toggle — same chrome as the cog so the pair reads as a

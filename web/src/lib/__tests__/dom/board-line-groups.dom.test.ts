@@ -107,6 +107,11 @@ function directionLabelsFor(lineId: string): string[] {
   );
 }
 
+function headerNameFor(lineId: string): string {
+  const group = document.querySelector(`.line-group[data-line-id="${lineId}"]`);
+  return group?.querySelector('.line-group__name')?.textContent?.trim() ?? '';
+}
+
 describe('Board — per-arrival line grouping', () => {
   it('splits a mixed-line direction bucket into one LineGroup per line', () => {
     // King's Cross-style payload: backend returned ONE Westbound platform
@@ -269,6 +274,53 @@ describe('Board — per-arrival line grouping', () => {
     ) as HTMLElement | null;
     expect(windrushRow).not.toBeNull();
     expect(windrushRow!.style.getPropertyValue('--line-color')).toBe('var(--line-windrush)');
+  });
+
+  it('does not double the word "Line" when the backend line_name already ends in "line"', () => {
+    // TfL's arrivals feed gives the Elizabeth line a `line_name` of
+    // "Elizabeth line" (the word is part of the name). The header template
+    // appends " Line", so a naive render produced "Elizabeth line Line" →
+    // "ELIZABETH LINE LINE" after the uppercase transform. The header must
+    // carry the word exactly once.
+    const board = buildBoard([
+      platform('Eastbound', [
+        arrival('elizabeth-line', 'Elizabeth line', 'Eastbound', 'Abbey Wood', 'Platform 3'),
+      ]),
+    ]);
+
+    render(Board, { props: { board } });
+
+    expect(lineGroupIds()).toEqual(['elizabeth-line']);
+    expect(headerNameFor('elizabeth-line')).toBe('Elizabeth Line');
+  });
+
+  it('drops the " Line" suffix for modes that are not lines (DLR, Overground)', () => {
+    // The DLR is a railway, the Overground (legacy aggregate id) is a
+    // network — neither is a "line", so "DLR Line" / "Overground Line"
+    // read wrong. Their name stands alone.
+    const board = buildBoard([
+      platform('Eastbound', [arrival('dlr', 'DLR', 'Eastbound', 'Beckton', 'Platform 1')]),
+      platform('Northbound', [
+        arrival('overground', 'Overground', 'Northbound', 'Highbury & Islington', 'Platform 2'),
+      ]),
+    ]);
+
+    render(Board, { props: { board } });
+
+    expect(headerNameFor('dlr')).toBe('DLR');
+    expect(headerNameFor('overground')).toBe('Overground');
+  });
+
+  it('keeps the " Line" suffix for tube and named Overground lines', () => {
+    const board = buildBoard([
+      platform('Eastbound', [arrival('central', 'Central', 'Eastbound', 'Epping', 'Platform 1')]),
+      platform('Westbound', [arrival('mildmay', 'Mildmay', 'Westbound', 'Richmond', 'Platform 2')]),
+    ]);
+
+    render(Board, { props: { board } });
+
+    expect(headerNameFor('central')).toBe('Central Line');
+    expect(headerNameFor('mildmay')).toBe('Mildmay Line');
   });
 
   it('renders nothing meaningful for an empty board (no fake "unknown" group)', () => {
