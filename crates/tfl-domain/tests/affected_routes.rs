@@ -56,8 +56,7 @@ fn route_segment_round_trips() {
     let v = serde_json::to_value(&seg).expect("RouteSegment must serialize");
     assert_eq!(v["from"], "Harrow-on-the-Hill");
     assert_eq!(v["to"], "Watford");
-    let back: RouteSegment =
-        serde_json::from_value(v).expect("RouteSegment must re-deserialize");
+    let back: RouteSegment = serde_json::from_value(v).expect("RouteSegment must re-deserialize");
     assert_eq!(seg, back);
 }
 
@@ -71,7 +70,6 @@ fn tfl_line_status_no_disruption_has_no_routes() {
         "statusSeverityDescription": "Good Service"
     }
     "#;
-    let status: TflLineStatus =
-        serde_json::from_str(json).expect("TflLineStatus must deserialize");
+    let status: TflLineStatus = serde_json::from_str(json).expect("TflLineStatus must deserialize");
     assert!(status.disruption.is_none());
 }

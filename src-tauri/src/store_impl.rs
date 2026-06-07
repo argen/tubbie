@@ -148,7 +148,9 @@ const DEV_APP_KEY_ENV: &str = "TUBBIE_DEV_APP_KEY";
 /// tolerates; set it in your shell/`.env` to dev against a keyed quota.
 #[cfg(target_os = "macos")]
 fn dev_app_key_from_env() -> Option<String> {
-    std::env::var(DEV_APP_KEY_ENV).ok().filter(|k| !k.is_empty())
+    std::env::var(DEV_APP_KEY_ENV)
+        .ok()
+        .filter(|k| !k.is_empty())
 }
 
 #[cfg(target_os = "macos")]

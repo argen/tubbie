@@ -851,9 +851,7 @@ pub async fn get_line_status(
 /// Shares the same 60 s line-status cache as `get_line_status` — no extra
 /// TfL traffic when the per-line ticker has already warmed it.
 #[tauri::command]
-pub async fn get_all_line_statuses(
-    state: State<'_, AppState>,
-) -> Result<Vec<LineStatus>, String> {
+pub async fn get_all_line_statuses(state: State<'_, AppState>) -> Result<Vec<LineStatus>, String> {
     get_all_line_statuses_inner(&state).await
 }
 
@@ -2161,10 +2159,7 @@ mod tests {
             ids.contains(&"northern"),
             "tube 'northern' should appear; got: {ids:?}"
         );
-        assert!(
-            ids.contains(&"dlr"),
-            "dlr should appear; got: {ids:?}"
-        );
+        assert!(ids.contains(&"dlr"), "dlr should appear; got: {ids:?}");
 
         // Verify worst-first ordering: for each adjacent pair, the sort_rank
         // of the earlier entry must be <= that of the later entry (lower rank

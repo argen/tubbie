@@ -1377,9 +1377,7 @@ fn build_affected_segments(
         std::collections::HashSet::new();
     routes
         .iter()
-        .filter(|r| {
-            !r.origination_name.trim().is_empty() && !r.destination_name.trim().is_empty()
-        })
+        .filter(|r| !r.origination_name.trim().is_empty() && !r.destination_name.trim().is_empty())
         .filter_map(|r| {
             let a = r.origination_name.trim().to_string();
             let b = r.destination_name.trim().to_string();
