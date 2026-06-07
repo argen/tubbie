@@ -14,7 +14,7 @@ import Board from '$lib/components/Board.svelte';
 import { sampleBoard, mockInvoke, sampleStation } from '$lib/ipc/mock.js';
 
 // ---------------------------------------------------------------------------
-// Tauri IPC mock — Board.svelte uses invoke for openSettingsWindow, config etc.
+// Tauri IPC mock — Board.svelte uses invoke for applyBoardSize, config etc.
 // ---------------------------------------------------------------------------
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: (cmd: string, args: Record<string, unknown>) => mockInvoke(cmd, args),

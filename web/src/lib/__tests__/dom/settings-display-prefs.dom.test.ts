@@ -18,7 +18,7 @@ import { render, fireEvent, waitFor } from '@testing-library/svelte';
 import { get } from 'svelte/store';
 import { mockInvoke, setMockHandler, resetMockHandlers } from '$lib/ipc/mock.js';
 import { displayPrefs } from '$lib/stores/displayPrefs.js';
-import SettingsPage from '../../../routes/settings/+page.svelte';
+import SettingsPage from '../../components/SettingsView.svelte';
 
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: (cmd: string, args: Record<string, unknown>) => mockInvoke(cmd, args),

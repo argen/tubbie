@@ -16,7 +16,7 @@ import { mockInvoke, resetMockHandlers, sampleConfig, setMockHandler } from '$li
 import { config, configError } from '$lib/stores/config.js';
 import { board } from '$lib/stores/board.js';
 import { favorites, favoritesError } from '$lib/stores/favorites.js';
-import SettingsPage from '../../../routes/settings/+page.svelte';
+import SettingsPage from '../../components/SettingsView.svelte';
 import type { BoardConfig, Favorite } from '$lib/ipc/types.js';
 
 vi.mock('@tauri-apps/api/core', () => ({
