@@ -41,7 +41,9 @@ pub(crate) fn next_arrival_title(board: &Board, line_ids: &[String]) -> Option<S
         .flat_map(|p| p.arrivals.iter())
         .filter(|a| !filter_active || line_ids.iter().any(|id| id == &a.line_id))
         .min_by_key(|a| a.time_to_station)?;
-    Some(format_time_to_station(Duration::seconds(soonest.time_to_station)))
+    Some(format_time_to_station(Duration::seconds(
+        soonest.time_to_station,
+    )))
 }
 
 #[cfg(test)]
@@ -105,13 +107,19 @@ mod tests {
     fn picks_soonest_arrival_and_formats_it() {
         // 200s -> "3 mins", 40s -> "1 min"; soonest is 40s.
         let board = board_with(&[200, 40]);
-        assert_eq!(next_arrival_title(&board, ALL_LINES).as_deref(), Some("1 min"));
+        assert_eq!(
+            next_arrival_title(&board, ALL_LINES).as_deref(),
+            Some("1 min")
+        );
     }
 
     #[test]
     fn imminent_arrival_is_due() {
         let board = board_with(&[10]);
-        assert_eq!(next_arrival_title(&board, ALL_LINES).as_deref(), Some("Due"));
+        assert_eq!(
+            next_arrival_title(&board, ALL_LINES).as_deref(),
+            Some("Due")
+        );
     }
 
     #[test]
@@ -122,7 +130,10 @@ mod tests {
             { "name": "Northbound", "arrivals": [arrival_json(0, 300)] },
             { "name": "Southbound", "arrivals": [arrival_json(1, 30)] },
         ]));
-        assert_eq!(next_arrival_title(&board, ALL_LINES).as_deref(), Some("1 min"));
+        assert_eq!(
+            next_arrival_title(&board, ALL_LINES).as_deref(),
+            Some("1 min")
+        );
     }
 
     // -----------------------------------------------------------------------
@@ -153,7 +164,10 @@ mod tests {
     fn empty_selection_means_all_lines() {
         // No chip filter: the soonest across all lines wins (Bakerloo, 30s).
         let board = mixed_line_board();
-        assert_eq!(next_arrival_title(&board, ALL_LINES).as_deref(), Some("1 min"));
+        assert_eq!(
+            next_arrival_title(&board, ALL_LINES).as_deref(),
+            Some("1 min")
+        );
     }
 
     #[test]
