@@ -18,7 +18,8 @@
       "allow": [
         { "url": "https://tfl.gov.uk/*" },
         { "url": "https://api-portal.tfl.gov.uk/*" },
-        { "url": "https://github.com/argen/tubbie*" }
+        { "url": "https://github.com/argen/tubbie*" },
+        { "url": "x-apple.systempreferences:*" }
       ]
     }
   ]

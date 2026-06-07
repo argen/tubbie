@@ -29,12 +29,14 @@ const requestCurrentLocationMock = vi.fn(
     fix: sampleLocationFix,
   }),
 );
+const openExternalMock = vi.fn(async (_url: string): Promise<void> => undefined);
 
 vi.mock('$lib/ipc/commands.js', () => ({
   searchStations: (q: string) => searchStationsMock(q),
   findNearestStations: (lat: number, lon: number, limit: number) =>
     findNearestStationsMock(lat, lon, limit),
   requestCurrentLocation: () => requestCurrentLocationMock(),
+  openExternal: (url: string) => openExternalMock(url),
 }));
 
 describe('StationSearch — near me', () => {
@@ -42,6 +44,7 @@ describe('StationSearch — near me', () => {
     searchStationsMock.mockClear();
     findNearestStationsMock.mockClear();
     requestCurrentLocationMock.mockClear();
+    openExternalMock.mockClear();
     requestCurrentLocationMock.mockImplementation(async () => ({
       ok: true,
       fix: sampleLocationFix,
@@ -122,10 +125,33 @@ describe('StationSearch — near me', () => {
 
     const errorRow = await screen.findByTestId('station-search-location-error');
     expect(errorRow.getAttribute('data-error-kind')).toBe('PermissionDenied');
-    expect(errorRow.textContent ?? '').toMatch(/LOCATION OFF/);
+    // Denied/off permission must point the user at System Settings, NOT imply a
+    // transient signal problem ("NO SIGNAL — TRY AGAIN") — macOS won't re-prompt.
+    expect(errorRow.textContent ?? '').toMatch(/OPEN SETTINGS/i);
+    expect(errorRow.textContent ?? '').not.toMatch(/NO SIGNAL/i);
     // The error must NOT be a `role="alert"` toast — it lives inside the
     // listbox alongside the rest of the search affordance.
     expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('clicking a permission-denied row opens the Location Services settings pane', async () => {
+    requestCurrentLocationMock.mockImplementationOnce(async () => ({
+      ok: false,
+      error: { kind: 'PermissionDenied' },
+    }));
+
+    render(StationSearch, { props: { selectedId: '', onSelect: vi.fn() } });
+    const btn = screen.getByRole('button', { name: /find nearest stations/i });
+    await fireEvent.mouseDown(btn);
+
+    const errorRow = await screen.findByTestId('station-search-location-error');
+    await fireEvent.mouseDown(errorRow);
+    // Opens the macOS Location Services pane (does NOT retry — that would just
+    // time out again, since the permission is decided).
+    expect(openExternalMock).toHaveBeenCalledWith(
+      'x-apple.systempreferences:com.apple.preference.security?Privacy_LocationServices',
+    );
+    expect(requestCurrentLocationMock).toHaveBeenCalledTimes(1);
   });
 
   it('Timeout error row re-fires the request when clicked', async () => {

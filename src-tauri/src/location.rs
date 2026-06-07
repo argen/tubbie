@@ -220,8 +220,21 @@ fn on_did_change_authorization(manager: &CLLocationManager) {
         complete_with(Err(LocationError::PermissionDenied));
     } else if status == CLAuthorizationStatus::Restricted {
         complete_with(Err(LocationError::PermissionRestricted));
+    } else if status == CLAuthorizationStatus::NotDetermined {
+        // Undecided app: trigger the system prompt. This is the ONLY place we
+        // request authorization — driving it from the delegate (rather than a
+        // synchronous read in `start_request_on_main`) is what fixes the
+        // "denied permission times out instead of reporting PermissionDenied"
+        // bug: a fresh manager's `authorizationStatus` reads NotDetermined
+        // until this callback fires with the true value, so a synchronous read
+        // mis-classified an already-Denied app as NotDetermined and then sat on
+        // `requestWhenInUseAuthorization` (which shows no prompt for a decided
+        // app) until the 8s timeout. The user's choice re-fires this callback
+        // with Authorized (→ requestLocation) or Denied (→ PermissionDenied).
+        // `requestWhenInUseAuthorization` on an already-decided app is a no-op
+        // and does not re-fire, so there is no loop.
+        unsafe { manager.requestWhenInUseAuthorization() };
     }
-    // NotDetermined: the system prompt is still up; wait for the user.
 }
 
 /// Resolve the in-flight oneshot, drop the manager + delegate, and log
@@ -315,50 +328,53 @@ fn start_request_on_main() {
     let manager: Retained<CLLocationManager> = unsafe { CLLocationManager::new() };
     let delegate = TubbieLocationDelegate::new();
 
-    unsafe {
-        let proto: &ProtocolObject<dyn CLLocationManagerDelegate> =
-            ProtocolObject::from_ref(&*delegate);
-        manager.setDelegate(Some(proto));
-        // ~100 m is plenty to rank stations: we're not computing a route,
-        // we're picking the nearest of ~600 candidates.
-        manager.setDesiredAccuracy(100.0);
-    }
-
     if !unsafe { CLLocationManager::locationServicesEnabled_class() } {
         complete_with(Err(LocationError::ServicesDisabled));
         return;
     }
 
+    unsafe {
+        // ~100 m is plenty to rank stations: we're not computing a route,
+        // we're picking the nearest of ~600 candidates.
+        manager.setDesiredAccuracy(100.0);
+    }
+
     {
-        // Stash the owning handles before requesting — the request
-        // *can* fire its delegate synchronously if a cached fix is
-        // available, in which case `complete_with` is called and
-        // expects the slot populated.
+        // Stash the owning handles BEFORE wiring the delegate. Setting the
+        // delegate fires `locationManagerDidChangeAuthorization` (synchronously
+        // on macOS), and that callback looks the manager up in this slot to
+        // call `requestLocation` / `requestWhenInUseAuthorization`. It must
+        // already be populated when that fires.
         let mut st = state_slot().lock().expect("location state");
         st.manager = Some(AssertSend(manager));
         st.delegate = Some(AssertSend(delegate));
     }
 
-    // Re-borrow the manager via the slot so we can call into it without
-    // moving back out. We know it's `Some` because we just put it there.
-    let manager_ptr: Retained<CLLocationManager> = {
+    // Re-borrow the manager + delegate via the slot so we can wire them without
+    // moving back out. We know they're `Some` because we just put them there.
+    let (manager_ptr, delegate_ptr) = {
         let st = state_slot().lock().expect("location state");
-        st.manager.as_ref().expect("manager just stashed").0.clone()
+        (
+            st.manager.as_ref().expect("manager just stashed").0.clone(),
+            st.delegate
+                .as_ref()
+                .expect("delegate just stashed")
+                .0
+                .clone(),
+        )
     };
 
-    let status = unsafe { manager_ptr.authorizationStatus() };
-    if status == CLAuthorizationStatus::Denied {
-        complete_with(Err(LocationError::PermissionDenied));
-    } else if status == CLAuthorizationStatus::Restricted {
-        complete_with(Err(LocationError::PermissionRestricted));
-    } else if status == CLAuthorizationStatus::NotDetermined {
-        // Trigger the system prompt. The `didChangeAuthorization`
-        // callback is what calls `requestLocation` once the user
-        // chooses (or completes the request with the matching error
-        // variant if they decline).
-        unsafe { manager_ptr.requestWhenInUseAuthorization() };
-    } else {
-        // AuthorizedAlways / AuthorizedWhenInUse — go.
-        unsafe { manager_ptr.requestLocation() };
+    // Wire the delegate. We do NOT read `authorizationStatus` synchronously
+    // here — a fresh manager reports NotDetermined until the framework fires
+    // the initial `didChangeAuthorization` with the real value, so a sync read
+    // mis-classifies an already-Denied app as NotDetermined and then hangs on a
+    // (no-op) authorization prompt until the 8s timeout. Instead, the delegate
+    // callback `on_did_change_authorization` is the single source of truth: it
+    // fires once after the delegate is set (macOS 11+) and decides whether to
+    // fetch, prompt, or report the denial.
+    unsafe {
+        let proto: &ProtocolObject<dyn CLLocationManagerDelegate> =
+            ProtocolObject::from_ref(&*delegate_ptr);
+        manager_ptr.setDelegate(Some(proto));
     }
 }

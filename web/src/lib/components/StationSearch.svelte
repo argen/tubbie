@@ -5,9 +5,16 @@
     findNearestStations,
     requestCurrentLocation,
     searchStations,
+    openExternal,
   } from '$lib/ipc/commands.js';
   import { debounceAsync } from '$lib/utils/debounce.js';
   import { formatDistance, shortStationName } from '$lib/utils/format.js';
+
+  // Deep link to macOS System Settings → Privacy & Security → Location Services.
+  // Opened when location permission is off/denied so the user can fix it in one
+  // tap (macOS won't re-prompt an app whose permission is already decided).
+  const LOCATION_SETTINGS_URL =
+    'x-apple.systempreferences:com.apple.preference.security?Privacy_LocationServices';
 
   interface Props {
     selectedId: string;
@@ -170,11 +177,11 @@
   function errorRowLabel(error: LocationError): string {
     switch (error.kind) {
       case 'PermissionDenied':
-        return 'LOCATION OFF — TAP TO SEARCH';
+        return 'LOCATION OFF — OPEN SETTINGS';
       case 'PermissionRestricted':
-        return 'ENABLE IN SETTINGS';
+        return 'LOCATION RESTRICTED — OPEN SETTINGS';
       case 'ServicesDisabled':
-        return 'LOCATION SERVICES OFF';
+        return 'LOCATION SERVICES OFF — OPEN SETTINGS';
       case 'Timeout':
       case 'LowAccuracy':
         return 'NO SIGNAL — TRY AGAIN';
@@ -187,35 +194,32 @@
     }
   }
 
-  /** What clicking the error row should do. PermissionDenied focuses the
-   *  text input (the alternative the user has). The retry-prone errors
-   *  re-fire the location request. The terminal ones (Restricted, Disabled)
-   *  do nothing — the user has to take action in System Settings. */
-  function errorRowAction(error: LocationError): 'focus-search' | 'retry' | 'noop' {
+  /** What clicking the error row should do. The permission errors
+   *  (Denied / Restricted / ServicesDisabled) open the macOS Location Services
+   *  pane — macOS won't re-prompt an app whose permission is already decided,
+   *  so the only way to fix it is in System Settings. The retry-prone errors
+   *  (no fix obtained) re-fire the request. */
+  function errorRowAction(error: LocationError): 'open-settings' | 'retry' {
     switch (error.kind) {
       case 'PermissionDenied':
-        return 'focus-search';
+      case 'PermissionRestricted':
+      case 'ServicesDisabled':
+        return 'open-settings';
       case 'Timeout':
       case 'LowAccuracy':
       case 'AppBackground':
       case 'Internal':
         return 'retry';
-      case 'PermissionRestricted':
-      case 'ServicesDisabled':
-        return 'noop';
     }
   }
 
   function handleErrorRowClick(error: LocationError): void {
     const action = errorRowAction(error);
-    if (action === 'focus-search') {
-      nearMe = { kind: 'idle' };
-      listboxOpen = false;
-      inputEl?.focus();
-    } else if (action === 'retry') {
+    if (action === 'open-settings') {
+      void openExternal(LOCATION_SETTINGS_URL);
+    } else {
       void startNearMe();
     }
-    // 'noop': leave the row in place; user will go to Settings.
   }
 
   // Cmd+L (macOS) / Ctrl+L (Linux/Windows) — focus the search and trigger
