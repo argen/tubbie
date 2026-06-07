@@ -7,6 +7,7 @@
 #   - tauri.conf.json <-> Cargo.toml version lockstep
 #
 # Feature branches (feat/*, fix/*, chore/*) additionally run:
+#   - cargo fmt --all -- --check  (Rust formatting — CI's rust job runs this first)
 #   - cargo test --workspace
 #   - cd web && npm run verify   (lint + format:check + typecheck + test)
 #   - cargo clippy --workspace --all-targets -- -D warnings
@@ -15,6 +16,12 @@
 # 4 prettier + 5 typecheck errors past `npm test` because vitest
 # doesn't care about either; only the full verify gate catches them.
 # Cost is ~10s extra on push. Worth it.
+#
+# Why the `cargo fmt --check` gate: a 6-PR stack landed with rustfmt
+# drift that the local gate waved through (it ran test/clippy/web but
+# not Rust fmt), so CI's `cargo fmt --all -- --check` red-flagged all
+# six. `npm run verify` already covers web formatting; this is the
+# Rust mirror. Fail-fast first, matching CI's order.
 #
 # To skip in an emergency: `git push --no-verify`. Doc-only branches
 # (docs/*) skip the full gate by design; the always-on checks still
@@ -32,6 +39,7 @@ branch="$(git rev-parse --abbrev-ref HEAD)"
 case "${branch}" in
   feat/*|fix/*|chore/*)
     echo "[pre-push] running full local gate for ${branch}"
+    cargo fmt --all -- --check
     cargo test --workspace
     ( cd web && npm run verify --silent )
     cargo clippy --workspace --all-targets -- -D warnings
@@ -42,6 +50,7 @@ case "${branch}" in
   *)
     # Unknown branch shape — default to running the full gate.
     echo "[pre-push] non-standard branch ${branch} — running full gate"
+    cargo fmt --all -- --check
     cargo test --workspace
     ( cd web && npm run verify --silent )
     cargo clippy --workspace --all-targets -- -D warnings
