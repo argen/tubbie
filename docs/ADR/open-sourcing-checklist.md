@@ -1,6 +1,6 @@
 # ADR: Open-sourcing Checklist
 
-**Status:** Proposed
+**Status:** Implemented (argen/tubbie flipped public 2026-05-22; see [public-distribution.md](./public-distribution.md) Phase 8)
 
 ## Context
 
@@ -44,4 +44,4 @@ Before flipping the repository to public, all of the following must be satisfied
 
 ## Status
 
-Proposed — not yet actioned. Revisit after M7.
+Implemented — argen/tubbie flipped public 2026-05-22 as part of the v0.1.0 release. See [`public-distribution.md`](./public-distribution.md) Phase 8 for the as-built record.

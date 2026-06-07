@@ -3,14 +3,14 @@
   Tubbie
 </h1>
 
-> A desktop dot-matrix arrivals board for the London Underground, DLR, London Overground, and Elizabeth line, powered by [TfL's Unified API](https://api.tfl.gov.uk). Built with Tauri v2, SvelteKit, and Rust.
+> A desktop dot-matrix arrivals board for the London Underground, DLR, London Overground, and Elizabeth line, powered by [TfL's Unified API](https://api.tfl.gov.uk). Works out of the box — no TfL account needed. Built with Tauri v2, SvelteKit, and Rust.
 
 [![CI](https://github.com/argen/tubbie/actions/workflows/ci.yml/badge.svg)](https://github.com/argen/tubbie/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Platform: macOS](https://img.shields.io/badge/platform-macOS-lightgrey)
 
 <p align="center">
-  <img src="docs/assets/screenshot.png" alt="Tubbie showing live northbound and southbound arrivals at Warren Street" width="720" />
+  <img src="docs/assets/screenshot.png" alt="Tubbie in window mode showing live arrivals at Bank, grouped by line — Northern, Central, Waterloo &amp; City, and DLR — above a network service-status ticker" width="720" />
 </p>
 
 ## What it is
@@ -19,12 +19,15 @@ Tubbie replicates the classic amber LED dot-matrix boards found on Underground p
 
 ## Features
 
+- **Zero-config onboarding** — live arrivals on first launch, no TfL account or API key required; personal key in Settings always takes priority
 - Real-time arrivals for any London Underground, DLR, Overground, or Elizabeth-line station, grouped by line and direction
+- **Network-wide service status** — worst-first disruption panel (marquee ticker) and a full Status view covering every TfL line, with affected route segments ("Watford ↔ Harrow" / "Entire line") and expandable disruption detail
+- **Change station from the board** — search bar drops in from the header without opening Settings
+- **Menu-bar mode** with a dot-matrix tray icon (original glyph, not the TfL roundel); switches to an alert variant when a watched line is disrupted; two-row header so long station names never truncate
 - Line and direction filters across all surfaced modes
 - Four visual themes (classic-amber, classic-orange, modern-white, high-contrast)
 - Dot-matrix typography with animated row entry, character-reveal, marquee ticker, and "Due" flash
-- Non-sensitive settings (station, filters, display mode) persisted across restarts in `config.json`
-- Anonymous TfL API access by default (50 req/min); optionally supply your own app key (500 req/min)
+- Settings persisted across restarts; first-run prompt to pick your station on first launch
 - Stale-data fallback: last-known arrivals shown when offline, with a visible badge
 
 ## Requirements
@@ -77,9 +80,11 @@ The `config.json` inside that directory holds the current station, line filters,
 
 ### TfL API key (optional)
 
-Anonymous access works out of the box (TfL allows 50 requests/minute without a key). If you plan to poll frequently or share a network with other anonymous callers, register a free key at [api-portal.tfl.gov.uk](https://api-portal.tfl.gov.uk) and enter it in the app's Settings screen. The key is stored via `tauri-plugin-store` alongside other config in `config.json` (plaintext JSON on disk). It is never committed or logged. A move to the macOS Keychain for proper credential isolation is planned — see SECURITY.md for details.
+Tubbie works without any configuration. At startup it reads a pooled key from a background cache — no visible prompt, no account required. If the pool is ever unavailable it falls back to anonymous access (TfL allows 50 requests/minute), so the board is never blocked waiting on a key.
 
-Alternatively, set `TFL_APP_KEY=<key>` in your shell environment before launching.
+To use your own key: register a free one at [api-portal.tfl.gov.uk](https://api-portal.tfl.gov.uk) and enter it in Settings → TfL API Key. Your personal key always overrides the pool. It is stored in the macOS Keychain and never committed or logged.
+
+For contributors running dev builds, set `TUBBIE_DEV_APP_KEY=<key>` in your shell — dev builds bypass the Keychain and read from that env var instead. (The underlying client also honours a `TFL_APP_KEY` environment variable at launch, if you'd rather not store a key at all.)
 
 ## Install
 
@@ -111,10 +116,10 @@ Releases run **locally** from the dev's Mac — there is no CI release workflow.
 
 ```sh
 source .envrc                  # if you don't use direnv
-just bump 0.1.1                # bumps tauri.conf.json + Cargo.toml in lockstep
+just bump 1.0.1                # bumps tauri.conf.json + Cargo.toml in lockstep
 # commit + merge the version bump on a PR to main
-just release v0.1.1            # preflight + build + sign + notarize + staple + manifest + tag + push + draft Release
-gh release edit v0.1.1 --draft=false   # publish after smoking from a clean macOS user account
+just release v1.0.1            # preflight + build + sign + notarize + staple + manifest + tag + push + draft Release
+gh release edit v1.0.1 --draft=false   # publish after smoking from a clean macOS user account
 ```
 
 `just release` chains the full pipeline. `scripts/preflight.sh` refuses to start if the tree is dirty, the branch isn't `main`, the version doesn't match the tag, or any signing prerequisite is missing.

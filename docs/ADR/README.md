@@ -14,8 +14,8 @@ To supersede an ADR: update its Status field; never renumber or rename.
 | 2  | [use-tauri-v2-for-mac-app](./use-tauri-v2-for-mac-app.md) | Accepted |
 | 3  | [pure-rust-core-with-trait-seams](./pure-rust-core-with-trait-seams.md) | Accepted |
 | 4  | [fixture-replay-testing](./fixture-replay-testing.md) | Accepted |
-| 5  | [open-sourcing-checklist](./open-sourcing-checklist.md) | Proposed |
+| 5  | [open-sourcing-checklist](./open-sourcing-checklist.md) | Implemented |
 | 6  | [northern-line-branch-inference](./northern-line-branch-inference.md) | Accepted |
-| 7  | [distribution-roadmap](./distribution-roadmap.md) | Proposed |
+| 7  | [distribution-roadmap](./distribution-roadmap.md) | Superseded by [public-distribution](./public-distribution.md) |
 | 8  | [crates-as-public-contract](./crates-as-public-contract.md) | Accepted |
 | 9  | [multi-mode-stop-points-cache](./multi-mode-stop-points-cache.md) | Accepted |
