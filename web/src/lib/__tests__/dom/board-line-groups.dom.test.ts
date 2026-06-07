@@ -294,6 +294,35 @@ describe('Board — per-arrival line grouping', () => {
     expect(headerNameFor('elizabeth-line')).toBe('Elizabeth Line');
   });
 
+  it('drops the " Line" suffix for modes that are not lines (DLR, Overground)', () => {
+    // The DLR is a railway, the Overground (legacy aggregate id) is a
+    // network — neither is a "line", so "DLR Line" / "Overground Line"
+    // read wrong. Their name stands alone.
+    const board = buildBoard([
+      platform('Eastbound', [arrival('dlr', 'DLR', 'Eastbound', 'Beckton', 'Platform 1')]),
+      platform('Northbound', [
+        arrival('overground', 'Overground', 'Northbound', 'Highbury & Islington', 'Platform 2'),
+      ]),
+    ]);
+
+    render(Board, { props: { board } });
+
+    expect(headerNameFor('dlr')).toBe('DLR');
+    expect(headerNameFor('overground')).toBe('Overground');
+  });
+
+  it('keeps the " Line" suffix for tube and named Overground lines', () => {
+    const board = buildBoard([
+      platform('Eastbound', [arrival('central', 'Central', 'Eastbound', 'Epping', 'Platform 1')]),
+      platform('Westbound', [arrival('mildmay', 'Mildmay', 'Westbound', 'Richmond', 'Platform 2')]),
+    ]);
+
+    render(Board, { props: { board } });
+
+    expect(headerNameFor('central')).toBe('Central Line');
+    expect(headerNameFor('mildmay')).toBe('Mildmay Line');
+  });
+
   it('renders nothing meaningful for an empty board (no fake "unknown" group)', () => {
     const board = buildBoard([]);
     render(Board, { props: { board } });
