@@ -278,7 +278,7 @@
 <style>
   /* Shared rules (`.settings__section`, `.settings__section-title`,
      `.settings__api-status`, `.settings__api-hint`, `.settings__btn*`)
-     live in `routes/settings/+page.svelte` under `:global(...)`. This
+     live in `SettingsView.svelte` under `:global(...)`. This
      component only adds rules specific to the toggle row. */
 
   .settings__toggle-row {

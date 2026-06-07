@@ -13,7 +13,8 @@
   import { reducedMotion } from '$lib/stores/reducedMotion.js';
   import { displayMode } from '$lib/stores/displayMode.js';
   import { displayPrefs } from '$lib/stores/displayPrefs.js';
-  import { applyBoardSize, openSettingsWindow } from '$lib/ipc/commands.js';
+  import { applyBoardSize } from '$lib/ipc/commands.js';
+  import { openSettings } from '$lib/stores/settingsView.js';
   import { config } from '$lib/stores/config.js';
   import { selectStation } from '$lib/stores/settingsForm.js';
   import type { Station } from '$lib/ipc/types.js';
@@ -556,7 +557,7 @@
       <button
         type="button"
         class="board__settings-btn"
-        onclick={() => void openSettingsWindow()}
+        onclick={openSettings}
         aria-label="Open settings"
         title="Settings"
       >

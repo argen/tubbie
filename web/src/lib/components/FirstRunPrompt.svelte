@@ -8,8 +8,15 @@
    */
   import StationSearch from '$lib/components/StationSearch.svelte';
   import { settingsForm, selectStation } from '$lib/stores/settingsForm.js';
-  import { openSettingsWindow } from '$lib/ipc/commands.js';
+  import { openSettings } from '$lib/stores/settingsView.js';
   import type { Station } from '$lib/ipc/types.js';
+
+  // Opening Settings from the first-run prompt dismisses the prompt first, so
+  // it doesn't linger behind the (overlaid) Settings panel.
+  function goToSettings(): void {
+    onDone();
+    openSettings();
+  }
 
   interface Props {
     /** Called when the user picks a station or dismisses — persists "onboarded". */
@@ -39,9 +46,7 @@
   <StationSearch selectedId={$settingsForm.stationId} onSelect={handleSelect} />
   <p class="firstrun__secondary">
     Prefer it in the menu bar? Choose a display mode in
-    <button type="button" class="firstrun__link" onclick={() => void openSettingsWindow()}>
-      Settings</button
-    >.
+    <button type="button" class="firstrun__link" onclick={goToSettings}> Settings</button>.
   </p>
 </div>
 

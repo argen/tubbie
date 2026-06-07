@@ -776,21 +776,6 @@ pub async fn has_app_key(state: State<'_, AppState>) -> Result<bool, String> {
     has_app_key_inner(&state).await
 }
 
-/// Open (or focus) the Settings webview window.
-///
-/// Creates the window on first call. Subsequent calls focus the already-open
-/// window rather than stacking a second instance. This is the only way for
-/// the main window to bring up Settings — it can no longer navigate to
-/// `/settings` via SPA routing, since the `load_app_key` capability is
-/// restricted to the `"settings"` window's webview.
-///
-/// Window is not modal. Closing it does not close the app. The stream task
-/// is not affected (it is owned by `AppState`, not by any window).
-#[tauri::command]
-pub async fn open_settings_window(app: tauri::AppHandle) -> Result<(), String> {
-    open_settings_window_impl(&app)
-}
-
 /// Set the menu-bar disruption indicator (Phase 3 menubar status). Swaps the
 /// tray icon to the monochrome "disrupted" variant when `disrupted` is true.
 /// Called from the frontend, which holds the live line statuses; the icon swap
@@ -799,38 +784,6 @@ pub async fn open_settings_window(app: tauri::AppHandle) -> Result<(), String> {
 #[tauri::command]
 pub fn set_tray_disruption(app: tauri::AppHandle, disrupted: bool) {
     crate::apply_tray_disruption(&app, disrupted);
-}
-
-/// Inner (non-async) implementation of settings-window open/focus.
-///
-/// Extracted so `lib.rs` can call it from the tray menu event handler
-/// (which is a sync closure). Returns `Err(String)` on Tauri builder failure.
-pub(crate) fn open_settings_window_impl(app: &tauri::AppHandle) -> Result<(), String> {
-    use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
-
-    // Focus the existing window if already open — avoids stacking.
-    if let Some(win) = app.get_webview_window("settings") {
-        let _ = win.show();
-        let _ = win.set_focus();
-        return Ok(());
-    }
-
-    // Create on demand. This mirrors the pattern used by other on-demand
-    // windows in Tauri v2 apps: declare the capability in capabilities/settings.json,
-    // create via builder on first use.
-    WebviewWindowBuilder::new(app, "settings", WebviewUrl::App("/settings".into()))
-        .title("Tubbie — Settings")
-        .inner_size(640.0, 700.0)
-        .min_inner_size(540.0, 400.0)
-        .resizable(true)
-        .decorations(true)
-        .transparent(false)
-        .always_on_top(false)
-        .skip_taskbar(false)
-        .visible(true)
-        .build()
-        .map(|_| ())
-        .map_err(|e| format!("failed to open settings window: {e}"))
 }
 
 /// Fetch the current status for a single TfL line.

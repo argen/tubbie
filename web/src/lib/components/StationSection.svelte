@@ -57,7 +57,7 @@
 <style>
   /* Station-only rules — current-station header + favorite-toggle star.
      Shared rules (.settings__section, .settings__section-title) live as
-     :global in routes/settings/+page.svelte. */
+     :global in SettingsView.svelte. */
 
   .settings__current-station {
     font-family: var(--font-ui);

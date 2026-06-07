@@ -84,7 +84,7 @@
 <style>
   /* Display-mode-only rules. Shared rules (.settings__section,
      .settings__section-title, .settings__api-hint, .settings__api-status)
-     live as :global in routes/settings/+page.svelte. */
+     live as :global in SettingsView.svelte. */
 
   .settings__display-mode {
     display: flex;

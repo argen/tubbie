@@ -63,8 +63,8 @@ use commands::{
     add_favorite, apply_board_size, check_for_updates, find_nearest_stations,
     get_all_line_statuses, get_board, get_line_status, has_app_key, install_update, list_favorites,
     load_app_key, load_config, load_display_mode, load_display_prefs, load_update_prefs,
-    open_settings_window, open_settings_window_impl, remove_favorite, save_app_key, save_config,
-    save_display_mode, save_display_prefs, save_update_prefs, search_stations, set_tray_disruption,
+    remove_favorite, save_app_key, save_config, save_display_mode, save_display_prefs,
+    save_update_prefs, search_stations, set_tray_disruption,
 };
 use state::{AnyBoardService, AppState};
 #[cfg(target_os = "macos")]
@@ -453,11 +453,16 @@ fn build_tray(app: &tauri::AppHandle) -> Result<(), tauri::Error> {
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| {
             if event.id().as_ref() == "settings" {
-                // Open (or focus) the dedicated Settings window instead of
-                // navigating the main popover. The main window cannot call
-                // `load_app_key` — that capability is gated to "settings".
-                if let Err(e) = open_settings_window_impl(app) {
-                    eprintln!("[tubbie] failed to open settings from tray: {e}");
+                // Open the in-frame Settings panel: show + focus the main
+                // window, then emit `open-settings` so the renderer flips the
+                // settingsOpen store and the overlay mounts over the board.
+                // Settings is no longer a separate webview window.
+                if let Some(win) = app.get_webview_window("main") {
+                    let _ = win.show();
+                    let _ = win.set_focus();
+                    if let Err(e) = win.emit("open-settings", ()) {
+                        eprintln!("[tubbie] failed to emit open-settings from tray: {e}");
+                    }
                 }
             }
         })
@@ -1045,7 +1050,6 @@ pub fn run() {
             save_app_key,
             load_app_key,
             has_app_key,
-            open_settings_window,
             get_line_status,
             get_all_line_statuses,
             save_display_mode,

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { configError } from '$lib/stores/config.js';
+  import { closeSettings } from '$lib/stores/settingsView.js';
   import StationSection from '$lib/components/StationSection.svelte';
   import FavoritesSection from '$lib/components/FavoritesSection.svelte';
   import LinesSection from '$lib/components/LinesSection.svelte';
@@ -19,26 +20,35 @@
   } from '$lib/stores/settingsForm.js';
   import { onDestroy, onMount } from 'svelte';
 
-  // The page is now a thin shell: the nine section components own their
-  // own state, handlers, and styles, all wired up through
-  // `$lib/stores/settingsForm`. This shell handles only:
+  // Settings is an in-frame panel rendered over the board (PR2) — no longer a
+  // separate webview window. This component owns:
   //   - the configError banner
-  //   - the header (back button + saving/saved chip)
-  //   - the form re-sync on mount (the module-scoped store outlives the
-  //     page, so navigation back to /settings without resyncing would
-  //     show stale field values)
-  //   - flushing the pending debounced persist on onDestroy + beforeunload
+  //   - the header (Back button + saving/saved chip)
+  //   - the form re-sync on open (the module-scoped settingsForm store outlives
+  //     this component, so re-opening Settings without resyncing would show
+  //     stale field values)
+  //   - flushing the pending debounced persist when the panel closes/unmounts
 
   onMount(() => {
     resyncFormFromConfig();
   });
 
-  // beforeunload fires when the window/tab closes or the user navigates
-  // away via the browser. In Tauri windowed mode this is the only signal
-  // we get before the renderer tears down — `onDestroy` covers SPA route
-  // changes back to "/", but a hard close goes through here.
+  // Esc closes the panel from anywhere (window-scoped, like the board's search
+  // overlay). Bound here rather than on the container so it fires regardless of
+  // where focus currently sits inside the panel.
+  function handleKeydown(e: KeyboardEvent): void {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      closeAndFlush();
+    }
+  }
+
+  // beforeunload fires on a hard window/tab close — the only signal before the
+  // renderer tears down in that path. onDestroy covers the normal close (panel
+  // toggled shut), this covers the app quitting with the panel open.
   if (typeof window !== 'undefined') {
     window.addEventListener('beforeunload', flushPending);
+    window.addEventListener('keydown', handleKeydown);
   }
 
   onDestroy(() => {
@@ -46,29 +56,20 @@
     cancelSaveStateTimer();
     if (typeof window !== 'undefined') {
       window.removeEventListener('beforeunload', flushPending);
+      window.removeEventListener('keydown', handleKeydown);
     }
   });
 
-  // Settings now runs in its own webview window. "Back" closes this window
-  // rather than SPA-navigating — the main board window stays open independently.
-  async function handleBack(): Promise<void> {
-    try {
-      const { getCurrentWindow } = await import('@tauri-apps/api/window');
-      await getCurrentWindow().close();
-    } catch {
-      // Fallback for non-Tauri contexts (vitest, plain vite dev).
-      // In a real browser `window.close()` only works if the window was
-      // opened by script; in Tauri it always works.
-      window.close();
-    }
+  // "Back" closes the in-frame panel (and flushes any pending debounced save so
+  // a fast close-after-edit never drops a write). The board is still mounted
+  // underneath, so this is an instant return with no re-fetch.
+  function closeAndFlush(): void {
+    flushPending();
+    closeSettings();
   }
 </script>
 
-<svelte:head>
-  <title>tubbie — Settings</title>
-</svelte:head>
-
-<div class="settings" aria-label="Settings page">
+<div class="settings" aria-label="Settings panel" role="dialog" aria-modal="true">
   {#if $configError}
     <div class="settings__config-error" role="alert" aria-live="assertive">
       <span class="settings__config-error-text">{$configError}</span>
@@ -89,7 +90,7 @@
     <button
       type="button"
       class="settings__back-btn"
-      onclick={handleBack}
+      onclick={closeAndFlush}
       aria-label="Back to arrivals board"
     >
       ← Back
@@ -140,7 +141,7 @@
   .settings {
     display: flex;
     flex-direction: column;
-    min-height: calc(100vh - 24px);
+    height: 100%;
     background: var(--bg);
     color: var(--fg);
   }

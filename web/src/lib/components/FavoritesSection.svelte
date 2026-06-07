@@ -77,7 +77,7 @@
 <style>
   /* Favorites list — only used here. Shared rules (.settings__section,
      .settings__section-title, .settings__api-hint, .settings__chip) live
-     as :global in routes/settings/+page.svelte. */
+     as :global in SettingsView.svelte. */
 
   .favorites__list {
     list-style: none;
