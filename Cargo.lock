@@ -1202,7 +1202,6 @@ dependencies = [
  "serde",
  "serde_json",
  "tempfile",
- "thiserror 2.0.18",
  "tokio",
 ]
 
@@ -4831,14 +4830,12 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "futures",
- "insta",
  "reqwest",
  "serde",
  "serde_json",
  "tempfile",
  "tfl-client",
  "tfl-domain",
- "thiserror 2.0.18",
  "tokio",
  "wiremock",
 ]
@@ -4848,11 +4845,9 @@ name = "tfl-client"
 version = "0.1.0"
 dependencies = [
  "chrono",
- "futures",
  "httpdate",
  "insta",
  "reqwest",
- "serde",
  "serde_json",
  "tempfile",
  "tfl-domain",
@@ -4879,13 +4874,11 @@ name = "tfl-ffi"
 version = "0.1.0"
 dependencies = [
  "futures",
- "once_cell",
  "serde",
  "serde_json",
  "tfl-board",
  "tfl-cache",
  "tfl-client",
- "tfl-domain",
  "thiserror 2.0.18",
  "tokio",
  "uniffi",
@@ -5250,7 +5243,6 @@ name = "tubbie"
 version = "1.1.0"
 dependencies = [
  "async-trait",
- "chrono",
  "futures",
  "objc2",
  "objc2-core-location",
@@ -5269,7 +5261,6 @@ dependencies = [
  "tfl-cache",
  "tfl-client",
  "tfl-domain",
- "thiserror 2.0.18",
  "tokio",
  "url",
  "wiremock",

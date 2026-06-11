@@ -12,10 +12,8 @@ live = []
 
 [dependencies]
 tfl-domain = { path = "../tfl-domain" }
-serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true, features = ["time"] }
-futures = { workspace = true }
 reqwest = { workspace = true }
 thiserror = { workspace = true }
 chrono = { workspace = true }
