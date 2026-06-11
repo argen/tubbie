@@ -10,6 +10,25 @@ members = [
 ]
 resolver = "2"
 
+# ---------------------------------------------------------------------------
+# Release profile — size-optimised. There was no [profile.release] before, so
+# release builds shipped the cargo defaults: unstripped (symbols inflate the
+# binary by megabytes), opt-level 3 (tuned for speed, not size), 16 codegen
+# units (less cross-unit optimisation), and no LTO. For a small desktop app
+# whose hot path is a 30 s network poll, size matters more than raw codegen.
+#
+# Measured on the macOS aarch64 `tubbie` binary: 18.0 MB → see PR description.
+#
+# `panic = "abort"` is deliberately NOT set: Tauri's command runtime relies on
+# unwinding to catch panics in command handlers instead of taking the whole
+# app down, so aborting would change crash semantics for a marginal extra win.
+# ---------------------------------------------------------------------------
+[profile.release]
+opt-level = "s"     # optimise for size (balanced; "z" is smaller but hurts the poll loop)
+lto = true          # fat LTO across crates — strips dead cross-crate code
+codegen-units = 1   # maximise optimisation/dedup at the cost of build time
+strip = true        # drop symbols — the single biggest win on an unstripped binary
+
 [workspace.dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
