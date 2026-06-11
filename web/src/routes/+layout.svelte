@@ -24,20 +24,22 @@
     // webview window — it's now an in-frame overlay (see the SettingsView mount
     // below), so the per-window-label bootstrap skip is gone.
 
-    // Load the active display mode first so the popover-root has the
-    // correct chrome class on first paint. This avoids a flash of
-    // popover styling inside a regular floating window.
-    await initDisplayMode();
+    // Three independent config reads, each a single Tauri IPC with no
+    // dependency on the others. Run them concurrently instead of three
+    // serial round-trips — this shortens the time before the board seed
+    // fires below. Each store still updates the instant its own IPC
+    // resolves, so the ordering guarantees that mattered are preserved:
+    //   • display mode → popover-root chrome class set before first paint
+    //     settles (avoids a flash of popover styling in a floating window);
+    //   • display prefs → first board render sees saved render flags
+    //     (group_destinations, …) rather than defaults that then jolt;
+    //   • config → theme + station settings.
+    // The two genuine *sequencing* constraints are kept explicit after the
+    // barrier: applyTheme runs once config has resolved, and the board
+    // subscription starts after config (see below).
+    await Promise.all([initDisplayMode(), initDisplayPrefs(), initConfig()]);
 
-    // Hydrate desktop display preferences (group_destinations, …) so the
-    // first board render sees the user's saved render flags rather than
-    // the default and then jolting after the IPC settles.
-    await initDisplayPrefs();
-
-    // Load config (provides theme + station settings)
-    await initConfig();
-
-    // Apply persisted theme immediately
+    // Apply persisted theme immediately (config has resolved above)
     applyTheme($config.theme);
 
     // Start listening to board://updated events from the Rust stream. Called
