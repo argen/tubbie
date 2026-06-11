@@ -235,6 +235,28 @@ body {
 }
 
 /* ------------------------------------------------------------
+   Antialiasing — chrome surfaces only.
+
+   The board, ticker and platform columns (--font-board) MUST stay
+   crisp: their dot-matrix faces are designed pixel-grid-aligned and
+   smoothing them blurs the LED look (hence `none` on body above).
+
+   The "chrome" views — Settings, Service status, the first-run
+   prompt — render readable body copy in --font-ui (Geist Mono /
+   system mono). At small sizes that text is noticeably nicer with
+   subpixel-grayscale smoothing, and these surfaces carry no
+   pixel-grid faces, so antialiasing here costs the aesthetic
+   nothing. Descendants inherit the smoothing hints.
+   ------------------------------------------------------------ */
+.settings,
+.statusview,
+.firstrun {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-smooth: auto;
+}
+
+/* ------------------------------------------------------------
    Popover / window root — the visible "chrome" around the board.
    In menubar mode the Tauri window is transparent + borderless,
    so the rounded corners and shadow come from CSS. In window
