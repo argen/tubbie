@@ -17,7 +17,7 @@ resolver = "2"
 # units (less cross-unit optimisation), and no LTO. For a small desktop app
 # whose hot path is a 30 s network poll, size matters more than raw codegen.
 #
-# Measured on the macOS aarch64 `tubbie` binary: 18.0 MB → see PR description.
+# Measured on the macOS aarch64 `tubbie` binary: 18.0 MB → see PR.
 #
 # `panic = "abort"` is deliberately NOT set: Tauri's command runtime relies on
 # unwinding to catch panics in command handlers instead of taking the whole
