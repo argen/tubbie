@@ -1,0 +1,58 @@
+[package]
+name = "tfl-ffi"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Tubbie SwiftUI rewrite — FFI binding spike (B.1). Bridges tfl-domain/client/board to Swift via uniffi."
+
+[lib]
+name = "tfl_ffi"
+# `cdylib` is required for the host bindgen scan (uniffi reads the dylib's
+# scaffolding section to emit Swift sources). `staticlib` is what the iOS
+# app bundle links against in B.2 — see the long comment in
+# `src-tauri/Cargo.toml` about why a `cdylib` for `aarch64-apple-ios`
+# fails at link time (rustc tries to resolve Swift's `extern "C"` symbols
+# before xcodebuild's later phase has compiled them; the static archive
+# defers resolution to the final app-link).
+#
+# B.2 NOTE: When wiring this crate into the Xcode build, cross-compile with
+# `--crate-type staticlib` only — keep `cdylib` for host bindgen alone.
+# `lib` is required so workspace tests in `tests/` can import the crate.
+crate-type = ["cdylib", "staticlib", "lib"]
+
+[[bin]]
+# `cargo run --bin uniffi-bindgen` is the canonical bindgen entrypoint per
+# uniffi's own examples (firefox-ios, the swift-async demo).
+name = "uniffi-bindgen"
+required-features = ["uniffi/cli"]
+
+[features]
+# Default keeps the bindgen CLI feature off so plain `cargo build -p tfl-ffi`
+# stays lean. The bindgen entrypoint requires `--features uniffi/cli`; the
+# panic-safety probe requires `--features panic-probe` (off by default so the
+# export does not compile into iOS production builds even by accident).
+default = []
+# Enables `trigger_panic_for_testing` — host-only, never set on iOS targets.
+panic-probe = []
+
+[dependencies]
+tfl-domain = { path = "../tfl-domain" }
+tfl-client = { path = "../tfl-client" }
+tfl-cache = { path = "../tfl-cache" }
+tfl-board = { path = "../tfl-board" }
+
+uniffi = { version = "0.31", features = ["tokio"] }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "time", "sync"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+futures = { workspace = true }
+once_cell = "1"
+
+[build-dependencies]
+uniffi = { version = "0.31", features = ["build"] }
+
+[dev-dependencies]
+# `start_paused = true` for tokio runtime startup measurement and
+# `tokio::time::Instant` for elapsed-bound assertions in the panic-safety test.
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "time", "sync", "test-util"] }

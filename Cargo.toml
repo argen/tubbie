@@ -5,6 +5,7 @@ members = [
     "crates/tfl-cache",
     "crates/tfl-board",
     "crates/fixture-recorder",
+    "crates/tfl-ffi",
     "src-tauri",
 ]
 resolver = "2"
