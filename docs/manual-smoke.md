@@ -2,7 +2,7 @@
 
 Visual smoke testing is required for the changes called out below;
 production timing differs from any single dev interaction. **Run with
-`cargo tauri dev`.**
+`./dev`** (the one-command launcher — no global Tauri CLI needed).
 
 The pipeline tests in `cargo test --workspace` cover the Rust side, and
 `cd web && npm test` covers the frontend — but neither catches "the
