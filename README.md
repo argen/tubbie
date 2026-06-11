@@ -37,17 +37,18 @@ Tubbie replicates the classic amber LED dot-matrix boards found on Underground p
 | macOS | 11 (Big Sur) or later |
 | Node.js | 24 (see `web/.nvmrc`) |
 | Rust | stable (see `rust-toolchain.toml`) |
-| just | 1.x |
 | Xcode Command Line Tools | any recent |
 
-Install Rust via [rustup](https://rustup.rs/). Install `just` via `cargo install just` or `brew install just`.
+Install Rust via [rustup](https://rustup.rs/). That's all you need — the Tauri
+CLI and Vite are pulled in locally on first run, so there's no global tooling
+to install (no `cargo install tauri-cli`, no global `vite`). `just` is optional;
+it's only a thin wrapper over the scripts below.
 
 ## Clone (for local dev)
 
 ```sh
 git clone git@github.com:argen/tubbie.git
 cd tubbie
-cd web && npm install && cd ..
 ```
 
 End users don't need to clone — see the **Install** section below for the signed-DMG path.
@@ -55,10 +56,13 @@ End users don't need to clone — see the **Install** section below for the sign
 ## Local dev
 
 ```sh
-just dev
+./dev
 ```
 
-Starts the SvelteKit dev server at `http://localhost:5173` and the Tauri shell concurrently. Hot-reload is active for both the frontend and backend.
+One command. It installs web dependencies on first run (including the local
+Tauri CLI), then starts the SvelteKit dev server at `http://localhost:5173` and
+the Tauri shell together with hot-reload for both the frontend and backend.
+(`just dev` does the same thing if you prefer `just`.)
 
 ## Commands
 
