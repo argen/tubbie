@@ -36,7 +36,6 @@ default = []
 panic-probe = []
 
 [dependencies]
-tfl-domain = { path = "../tfl-domain" }
 tfl-client = { path = "../tfl-client" }
 tfl-cache = { path = "../tfl-cache" }
 tfl-board = { path = "../tfl-board" }
@@ -47,7 +46,6 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 futures = { workspace = true }
-once_cell = "1"
 
 [build-dependencies]
 uniffi = { version = "0.31", features = ["build"] }
