@@ -73,10 +73,12 @@ describe('dropArrivalsForLinesNotServing', () => {
     expect(dropArrivalsForLinesNotServing(new Set(['mildmay']), 'TEST', arrivals)).toHaveLength(1);
   });
 
-  it('drops a cross-mode phantom (different family)', () => {
+  it('drops a cross-mode phantom (different family) and warns once', () => {
     const arrivals = [makeArrival({ line_id: 'bakerloo' }), makeArrival({ line_id: 'windrush' })];
     const kept = dropArrivalsForLinesNotServing(new Set(['mildmay']), 'TEST', arrivals);
     expect(kept.map((a) => a.line_id)).toEqual(['windrush']);
+    // The drop warning is our only signal of upstream data drift (#10).
+    expect(console.warn).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -123,6 +125,37 @@ describe('dropOffAxisPredictions', () => {
     const arrivals = [
       makeArrival({ line_id: 'mildmay', direction: 'Inbound', platform_name: 'Platform 1' }),
       makeArrival({ line_id: 'mildmay', direction: 'Outbound', platform_name: 'Platform 2' }),
+    ];
+    expect(dropOffAxisPredictions(arrivals)).toHaveLength(2);
+  });
+
+  it('pins the axis from a lone compass prefix (1-vs-0) and drops a bare-platform phantom', () => {
+    // One NB-prefixed metropolitan arrival pins N/S; a peer on an unlabelled
+    // platform tagged Westbound is the phantom the axis pin is there to catch.
+    const arrivals = [
+      makeArrival({
+        line_id: 'metropolitan',
+        direction: 'Northbound',
+        platform_name: 'Northbound - Platform 1',
+      }),
+      makeArrival({ line_id: 'metropolitan', direction: 'Westbound', platform_name: 'Platform 3' }),
+    ];
+    const kept = dropOffAxisPredictions(arrivals);
+    expect(kept.map((a) => a.direction)).toEqual(['Northbound']);
+  });
+
+  it('passes both through on a 1-vs-1 prefix tie (no strict majority)', () => {
+    const arrivals = [
+      makeArrival({
+        line_id: 'metropolitan',
+        direction: 'Northbound',
+        platform_name: 'Northbound - Platform 1',
+      }),
+      makeArrival({
+        line_id: 'metropolitan',
+        direction: 'Westbound',
+        platform_name: 'Westbound - Platform 2',
+      }),
     ];
     expect(dropOffAxisPredictions(arrivals)).toHaveLength(2);
   });
