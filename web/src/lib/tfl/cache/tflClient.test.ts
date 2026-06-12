@@ -109,6 +109,33 @@ describe('single-flight', () => {
       expect(http.callCount('stop-points', mode)).toBe(1);
     }
   });
+
+  it('coalesces a caller that arrives while the fan-out is suspended mid-fetch', async () => {
+    // A manually-released gate keeps the first fan-out's tube fetch suspended, so
+    // the third search genuinely arrives mid-flight — this catches a regression
+    // that moved the `refreshInFlight` assignment after an await (which the
+    // synchronous test above would not).
+    let release = (): void => undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const http = new RecordHttp();
+    seedModes(http, {});
+    const tube = modeBody([synthStation('940GZZLUA', { modes: ['tube'], lines: ['central'] })]);
+    http.putHandler('stop-points', 'tube', async () => {
+      await gate;
+      return tube;
+    });
+    const c = client(http);
+
+    const first = c.searchStations('a');
+    await Promise.resolve(); // let the first fan-out start and suspend on the gate
+    const second = c.searchStations('a');
+    release();
+    await Promise.all([first, second]);
+
+    expect(http.callCount('stop-points', 'tube')).toBe(1);
+  });
 });
 
 // ---------------------------------------------------------------------------

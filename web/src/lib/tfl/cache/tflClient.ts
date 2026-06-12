@@ -322,6 +322,11 @@ export class TflClient {
       // Parse failure is not a retryable mode failure — contribute nothing.
       return {};
     }
+    // Per-element parse is intentionally lenient: `parseStation` is total (it
+    // defaults malformed fields rather than throwing), so a junk entry becomes a
+    // `Station` with an empty id that `isCanonicalStationId` drops downstream —
+    // the same surfaced result as Rust's whole-mode parse-failure path, without
+    // discarding the mode's good stations.
     return { stations: body.map(parseStation) };
   }
 
