@@ -27,7 +27,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https://api.tfl.gov.uk; img-src 'self' data:; font-src 'self'"
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https://api.tfl.gov.uk https://tubbie.brunobelcastro.com; img-src 'self' data:; font-src 'self'"
     },
     "macOSPrivateApi": true
   },

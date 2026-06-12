@@ -22,7 +22,14 @@ export default defineConfig({
         test: {
           name: 'unit',
           environment: 'node',
-          include: ['src/lib/__tests__/*.test.ts', 'src/lib/__tests__/*.spec.ts'],
+          // Co-located TS-core tests (src/lib/tfl/**) run here too: pure logic +
+          // Node-fs fixture loading, no DOM. This glob is what makes every later
+          // port phase's tests collectable.
+          include: [
+            'src/lib/__tests__/*.test.ts',
+            'src/lib/__tests__/*.spec.ts',
+            'src/lib/tfl/**/*.test.ts',
+          ],
         },
       },
       {
