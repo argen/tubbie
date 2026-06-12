@@ -19,3 +19,4 @@ To supersede an ADR: update its Status field; never renumber or rename.
 | 7  | [distribution-roadmap](./distribution-roadmap.md) | Superseded by [public-distribution](./public-distribution.md) |
 | 8  | [crates-as-public-contract](./crates-as-public-contract.md) | Accepted |
 | 9  | [multi-mode-stop-points-cache](./multi-mode-stop-points-cache.md) | Accepted |
+| 10 | [port-tfl-logic-to-typescript](./port-tfl-logic-to-typescript.md) | Accepted |
