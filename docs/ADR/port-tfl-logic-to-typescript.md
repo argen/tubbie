@@ -1,6 +1,6 @@
 # ADR: Port TfL logic from Rust into the TypeScript frontend
 
-**Status:** Accepted (transport sub-decision provisional — pending the Phase-0 runtime spike below)
+**Status:** Accepted (transport sub-decision refined by the Phase-0 spike below: TfL works with plain `fetch`; the `pool-keys.json` endpoint needs a CORS fix or must be fetched via `@tauri-apps/plugin-http`)
 
 ## Context
 
@@ -58,16 +58,51 @@ Desktop only removes the *dependency edges* (at the end of the port).
 
 ## Phase-0 runtime spike (transport verification)
 
-The transport sub-decision is provisional until confirmed from the running
-app's webview devtools (cannot be checked headlessly). Expected results:
+Verified 2026-06-12 via `curl` against the live endpoints (the webview shares the
+same network stack, so server-sent CORS headers are authoritative). Tested with
+and without an `Origin: http://tauri.localhost` request header.
 
-- `fetch('https://api.tfl.gov.uk/StopPoint/Mode/tube')` → 200, JSON body,
-  response header `access-control-allow-origin: *`.
-- `fetch('https://tubbie.brunobelcastro.com/pool-keys.json')` → 200 +
-  `{ schema_version: 1, keys: [...] }`.
-- An `?app_key=...` request issues **no** `OPTIONS` preflight.
+| Check | Result |
+| --- | --- |
+| `api.tfl.gov.uk/StopPoint/Mode/tube` | **200**, `content-type: application/json`, **`access-control-allow-origin: *`** ✅ |
+| `tubbie.brunobelcastro.com/pool-keys.json` | **200**, valid `{schema_version:1, keys:[6×32-hex]}` — but **NO `access-control-allow-origin` header** on GET or OPTIONS (Vercel route `/api/pool-keys`) ⚠️ |
+| `?app_key=…` request shape | simple GET, no custom request headers → **no preflight** triggered ✅ |
 
-_Result: pending — to be recorded here before the flag wiring lands (Phase 5)._
+**Finding — pool-keys CORS gap.** TfL itself is CORS-open (`ACAO: *`), so the bulk
+of the traffic works with plain `fetch`. But `pool-keys.json` returns no `ACAO`
+header, so a cross-origin webview `fetch` succeeds at the network layer yet the
+browser **blocks JavaScript from reading the body**. This is the exact CORS edge
+this ADR anticipated.
+
+**Resolution (decide in Phase 2, when transport lands).** Preferred: add
+`Access-Control-Allow-Origin: *` to the `/api/pool-keys` Vercel response in the
+`tubbie-web` repo — the keys are already public and the endpoint carries no
+session semantics (no `Set-Cookie`, no `Authorization` reflection), so `*` is
+correct and exposes nothing CORS wasn't already gating. The browser's model also
+forbids combining `*` with `Access-Control-Allow-Credentials: true`, so no
+cookie/token-riding read is possible. **Emit the header unconditionally (not
+gated on the request's `Origin`)** so a CDN/edge cache can't serve a variant
+without it — i.e. avoid a `Vary: Origin` mismatch. Fallback: fetch
+`pool-keys.json` through `@tauri-apps/plugin-http` (the named contingency) while
+keeping the TfL fetches on plain `fetch`. Either way the `TflHttp` / pool-key
+seam isolates the choice to one file.
+
+**Pool-key trust (Phase 2 implementer, note).** The `schema_version == 1` +
+32-hex checks are input-*shape* validation, not an authenticity guarantee.
+Authenticity rests on HTTPS transport integrity; a compromised `/api/pool-keys`
+origin (or DNS/CDN tampering) would hand the client attacker-controlled keys.
+This is an **accepted risk** in the current threat model — the keys carry no
+privilege (anonymous-tier TfL access), and a MITM able to tamper with the key
+list can equally tamper with the TfL responses themselves. No SRI/out-of-band
+check is planned. Also note that moving the fetch into the webview makes the
+endpoint URL and rotation logic visible in devtools/network inspection (the keys
+are already public, so the only exposure is endpoint hammering) — **confirm the
+rate-limit posture of `/api/pool-keys` before Phase 5 wiring.**
+
+**Still unverified (needs the running app):** that WKWebView's CSP actually
+permits the `connect-src` to `tubbie.brunobelcastro.com` at runtime — `curl`
+cannot exercise webview CSP enforcement. Confirm from devtools before Phase 5
+wiring.
 
 ## Consequences
 
