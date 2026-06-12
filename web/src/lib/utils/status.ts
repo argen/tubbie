@@ -11,24 +11,17 @@
  * adding a bucket is a deliberate cross-cutting change anyway.
  */
 import type { LineStatus, RouteSegment, SeverityBucket, StatusEntry } from '$lib/ipc/types.js';
+import { severityBucketSortRank } from '$lib/tfl/domain/status.js';
 
-/** Worst-first rank — lower = worse. Mirrors `SeverityBucket::sort_rank`. */
-const BUCKET_RANK: Record<SeverityBucket, number> = {
-  Closed: 0,
-  PartClosure: 1,
-  SevereDelays: 2,
-  ReducedService: 3,
-  MinorDelays: 4,
-  Information: 5,
-  Other: 6,
-  GoodService: 7,
-};
+const GOOD_RANK = severityBucketSortRank('GoodService');
 
-const GOOD_RANK = BUCKET_RANK.GoodService;
-
-/** Numeric worst-first rank for a bucket; unknown/missing → `Other`. */
+/**
+ * Numeric worst-first rank for a bucket; unknown/missing → `Other`. The rank
+ * table is the single canonical one in `tfl/domain/status.ts` (invariant #25);
+ * this only adds the `undefined`→`Other` fallback for older payloads.
+ */
 export function bucketRank(bucket: SeverityBucket | undefined): number {
-  return bucket !== undefined ? BUCKET_RANK[bucket] : BUCKET_RANK.Other;
+  return severityBucketSortRank(bucket ?? 'Other');
 }
 
 /**
