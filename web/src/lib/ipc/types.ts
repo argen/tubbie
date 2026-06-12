@@ -30,6 +30,9 @@ export type Direction =
   | 'Outbound'
   | 'Unknown';
 
+/** Northern-line branch — mirrors tfl_domain::NorthernBranch (bare strings). */
+export type NorthernBranch = 'Bank' | 'CharingCross';
+
 /** A single train arrival prediction from TfL. */
 export interface Arrival {
   id: string;
@@ -38,6 +41,17 @@ export interface Arrival {
   line_id: string;
   line_name: string;
   direction: Direction;
+  /**
+   * Northern-line branch (via Bank vs via Charing Cross). Mirrors
+   * `Arrival.northern_branch` on the Rust struct.
+   *
+   * Dual-state by source — read it as `a.northern_branch ?? null`, never test
+   * `=== undefined`:
+   *  - `parseArrival` (TS core) always sets it: `null` for non-Northern / ambiguous.
+   *  - Current Rust IPC path omits it from the TS view, so it may be absent —
+   *    hence `?`. (Existing `Arrival` literals like `ipc/mock.ts` also omit it.)
+   */
+  northern_branch?: NorthernBranch | null;
   destination_name: string;
   towards: string;
   current_location: string;
@@ -88,6 +102,13 @@ export interface Station {
   lat: number;
   lon: number;
   lines: LineRef[];
+  /**
+   * Hub NaPTAN id (e.g. `HUBTCR`) on tube parents that share a station with
+   * non-tube modes. Mirrors `Station.hub_naptan_code`; optional and absent when
+   * the station has no hub partner. Carried by `parseStation` so the arrivals
+   * layer can query the hub rather than the tube child.
+   */
+  hub_naptan_code?: string;
 }
 
 // ---------------------------------------------------------------------------
