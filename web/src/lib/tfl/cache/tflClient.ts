@@ -352,6 +352,10 @@ export class TflClient {
       this.modes.map((mode) =>
         this.http
           .fetch('line-status', mode)
+          // Lenient per-entry parse, as in the stop-points path: `tflLineToLineStatus`
+          // is total, so a malformed line entry becomes a defaulted `LineStatus`
+          // (empty `line_id`) rather than dropping the whole mode. Harmless — no
+          // `getLineStatus` lookup matches an empty id, and it sorts as good service.
           .then((value) =>
             (Array.isArray(value) ? value : []).map((line) => tflLineToLineStatus(line)),
           )
