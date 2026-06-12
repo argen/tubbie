@@ -103,7 +103,10 @@ export async function fetchPoolKeys(
   try {
     response = await fetchImpl(url, { signal: controller.signal });
   } catch (e) {
-    console.warn('[tubbie:pool-key] network error: fail-open', e);
+    // Log only the error's name, never the raw error object — a thrown `fetch`
+    // error's `message` can echo the request URL, and a future caller could
+    // pass a credential-bearing URL even though today's pool-keys URL has none.
+    console.warn(`[tubbie:pool-key] network error (${errName(e)}): fail-open`);
     return null;
   } finally {
     clearTimeout(timer);
@@ -118,7 +121,7 @@ export async function fetchPoolKeys(
   try {
     payload = await response.json();
   } catch (e) {
-    console.warn('[tubbie:pool-key] JSON parse error: fail-open', e);
+    console.warn(`[tubbie:pool-key] JSON parse error (${errName(e)}): fail-open`);
     return null;
   }
 
@@ -138,4 +141,9 @@ export async function fetchPoolKeys(
     console.warn('[tubbie:pool-key] zero valid keys after filter: fail-open');
   }
   return pool;
+}
+
+/** A URL-free description of a thrown error for safe logging. */
+function errName(e: unknown): string {
+  return e instanceof Error ? e.name : 'unknown';
 }

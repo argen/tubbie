@@ -288,7 +288,7 @@ describe('FetchTflHttp', () => {
   // 429 cooldown gate (Rust invariant #5)
   // -------------------------------------------------------------------------
 
-  it('arms a process-wide cooldown gate that blocks a concurrent call', async () => {
+  it('arms a process-wide cooldown gate that holds the wire for the full window', async () => {
     vi.useFakeTimers();
     try {
       const fetchMock = vi
@@ -301,28 +301,47 @@ describe('FetchTflHttp', () => {
       });
 
       // First call: 429 with Retry-After 6s (> cap) → immediate RateLimited,
-      // arming the cooldown gate.
+      // arming the cooldown gate (deadline = now + 6s).
       await expect(c.fetch('arrivals', 'COOL')).rejects.toMatchObject({ kind: 'RateLimited' });
       expect(fetchMock).toHaveBeenCalledTimes(1);
 
-      // Second call: must block on the gate, never reaching the wire.
-      let settled = false;
-      const second = c.fetch('arrivals', 'COOL').then(
-        () => {
-          settled = true;
-        },
-        () => {
-          settled = true;
-        },
-      );
-      await Promise.resolve();
-      await Promise.resolve();
-      expect(settled).toBe(false);
-      expect(fetchMock).toHaveBeenCalledTimes(1);
-
-      // Drain the gate so the dangling promise resolves before the test ends.
-      await vi.advanceTimersByTimeAsync(6000);
+      // Second call blocks on the gate. Assert the observable — a wire hit —
+      // by advancing the clock to the boundary, not by flushing microtasks.
+      const second = c.fetch('arrivals', 'COOL').catch(() => undefined);
+      await vi.advanceTimersByTimeAsync(5999);
+      expect(fetchMock).toHaveBeenCalledTimes(1); // still gated at 5999 ms
+      await vi.advanceTimersByTimeAsync(1);
       await second;
+      expect(fetchMock).toHaveBeenCalledTimes(2); // gate released at 6000 ms
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('treats a sub-second-over Retry-After as within cap (whole-second truncation like Rust)', async () => {
+    vi.useFakeTimers();
+    try {
+      // Clock at .500 so an HTTP-date 6s boundary resolves to 5500 ms. Rust
+      // truncates to 5s (≤ cap → retry); a naive `> 5000ms` compare would
+      // wrongly fail fast. The retry must fire and succeed on the 200.
+      const clock = FakeClock.at(new Date('2026-04-24T12:00:00.500Z'));
+      const body = [{ id: 'ok' }];
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce(
+          resp(429, { headers: { 'retry-after': 'Fri, 24 Apr 2026 12:00:06 GMT' } }),
+        )
+        .mockResolvedValueOnce(resp(200, { body }));
+      const c = new FetchTflHttp({
+        baseUrl: 'http://mock/',
+        fetchImpl: fetchMock as unknown as typeof fetch,
+        clock,
+      });
+
+      const p = c.fetch('arrivals', 'EDGE');
+      await vi.advanceTimersByTimeAsync(5500); // honour the server Retry-After verbatim
+      expect(await p).toEqual(body);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
     } finally {
       vi.useRealTimers();
     }

@@ -189,6 +189,13 @@ type Attempt =
 
 export class FetchTflHttp implements TflHttp {
   private readonly baseUrl: string;
+  /**
+   * The static `app_key`. The Rust `AppKey` wrapper zeroizes on drop and
+   * redacts its `Debug`; neither is achievable for a GC'd JS string, so the
+   * defence here is by discipline instead: this field is only ever appended to
+   * a local request URL ({@link buildUrl}) and is never logged, thrown, or
+   * interpolated into a {@link TflError} message. Keep it that way.
+   */
   private readonly appKey: string | undefined;
   private readonly keyPool: KeyPool | undefined;
   private readonly fetchImpl: typeof fetch;
@@ -254,10 +261,11 @@ export class FetchTflHttp implements TflHttp {
     const remaining = this.cooldownUntil - this.clock.now().getTime();
     if (remaining > 0) {
       await sleep(remaining);
-      // Clear only after sleeping past it, so the next caller doesn't re-sleep
-      // an already-elapsed duration (mirrors the Rust gate semantics).
-      this.cooldownUntil = null;
     }
+    // Always clear once observed: a still-live gate has now been slept past, and
+    // an already-expired one was a no-op — either way it must not linger and
+    // make every future call re-check a stale deadline.
+    this.cooldownUntil = null;
   }
 
   /** Perform one GET, mapping the response (or throw) to an {@link Attempt}. */
@@ -309,8 +317,12 @@ export class FetchTflHttp implements TflHttp {
       const header = response.headers.get('retry-after');
       const afterMs = header !== null ? parseRetryAfter(header, this.clock.now()) : null;
       // Retry-After beyond the cap: give up now and arm the cooldown gate so
-      // concurrent callers don't hammer TfL during the window.
-      if (afterMs !== null && afterMs > RETRY_AFTER_CAP_SECS * 1000) {
+      // concurrent callers don't hammer TfL during the window. Compare on
+      // whole seconds — Rust truncates via `Duration::as_secs()` before the
+      // `> RETRY_AFTER_CAP_SECS` check, so a sub-second-over value (e.g. 5500ms
+      // from an HTTP-date against a clock with millis) must still retry, not
+      // fail fast.
+      if (afterMs !== null && Math.floor(afterMs / 1000) > RETRY_AFTER_CAP_SECS) {
         this.cooldownUntil = this.clock.now().getTime() + afterMs;
         return { ok: false, retry: false, err: TflError.rateLimited(afterMs) };
       }
