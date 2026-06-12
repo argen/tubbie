@@ -164,19 +164,80 @@ describe('per-line compass-axis gate on the platform prefix', () => {
 });
 
 describe('Northern-line branch', () => {
-  it('derives Bank / Charing Cross from the towards suffix', () => {
-    expect(
-      inferDirection('Southbound - Platform 1', 'inbound', 'northern', 'Morden via Bank', '')[1],
-    ).toBe('Bank');
-    expect(
-      inferDirection('Northbound - Platform 2', 'outbound', 'northern', 'Edgware via CX', '')[1],
-    ).toBe('CharingCross');
+  /** Branch component of inferDirection for a Northern train. */
+  function branch(towards: string): 'Bank' | 'CharingCross' | null {
+    return inferDirection('Platform 1', 'inbound', 'northern', towards, '')[1];
+  }
+
+  it('derives Bank from "via Bank"', () => {
+    expect(branch('Morden via Bank')).toBe('Bank');
+    expect(branch('High Barnet via Bank')).toBe('Bank');
   });
-  it('is null for non-Northern lines and ambiguous Northern services', () => {
+  it('derives Charing Cross from both the abbreviated and full forms', () => {
+    expect(branch('Edgware via CX')).toBe('CharingCross');
+    expect(branch('Battersea via CX')).toBe('CharingCross');
+    // Full spelling must map too — a regression here would silently null the branch.
+    expect(branch('Edgware via Charing Cross')).toBe('CharingCross');
+  });
+  it('is null for a Northern destination with no "via" suffix', () => {
+    expect(branch('High Barnet')).toBeNull();
+    expect(branch('Kennington')).toBeNull();
+  });
+  it('is null for non-Northern lines even with a "via" string', () => {
     expect(inferDirection('Platform 5', 'outbound', 'elizabeth', 'Abbey Wood', '')[1]).toBeNull();
     expect(
-      inferDirection('Southbound - Platform 1', 'inbound', 'northern', 'Kennington', '')[1],
+      inferDirection('Platform 1', 'inbound', 'victoria', 'Brixton via Bank', '')[1],
     ).toBeNull();
+  });
+  it('resolves direction from the platform prefix even when raw direction conflicts', () => {
+    // "Northbound - Platform 4" with raw direction "inbound": prefix wins
+    // (Northern allows N/S), branch still derived from towards.
+    const [dir, br] = inferDirection(
+      'Northbound - Platform 4',
+      'inbound',
+      'northern',
+      'High Barnet via Bank',
+      '',
+    );
+    expect(dir).toBe('Northbound');
+    expect(br).toBe('Bank');
+  });
+});
+
+// Per-needle coverage so a future typo in a towards-terminus string fails a TS
+// test (as it would the Rust suite), not just silently mis-buckets live data.
+describe('inferCompassFromTowards — per-terminus needles', () => {
+  const cases: [string, string, Direction][] = [
+    // Elizabeth westbound short-workings / termini
+    ['elizabeth', 'Maidenhead', 'Westbound'],
+    ['elizabeth', 'West Drayton', 'Westbound'],
+    ['elizabeth', 'West Ealing', 'Westbound'],
+    ['elizabeth', 'Ealing Broadway', 'Westbound'],
+    ['elizabeth', 'Gidea Park', 'Eastbound'],
+    ['elizabeth', 'Romford', 'Eastbound'],
+    // Circle
+    ['circle', 'Aldgate', 'Eastbound'],
+    ['circle', 'Tower Hill', 'Eastbound'],
+    ['circle', 'Edgware Road', 'Westbound'],
+    ['circle', 'Paddington', 'Westbound'],
+    // Hammersmith & City eastbound short-workings
+    ['hammersmith-city', 'Plaistow', 'Eastbound'],
+    ['hammersmith-city', 'East Ham', 'Eastbound'],
+    ['hammersmith-city', 'Whitechapel', 'Eastbound'],
+    ['hammersmith-city', 'Edgware Road', 'Westbound'],
+    // Bakerloo northbound short-workings
+    ['bakerloo', 'Stonebridge Park', 'Northbound'],
+    ['bakerloo', 'Willesden Junction', 'Northbound'],
+    ['bakerloo', "Queen's Park", 'Northbound'],
+    ['bakerloo', 'Harrow and Wealdstone', 'Northbound'],
+    ['bakerloo', 'Elephant & Castle', 'Southbound'],
+    // Waterloo & City
+    ['waterloo-city', 'Bank', 'Eastbound'],
+    ['waterloo-city', 'Waterloo', 'Westbound'],
+  ];
+  it.each(cases)('%s towards %s → %s', (lineId, towards, expected) => {
+    // Bare "Platform N" so the prefix branch never fires — isolates the towards table.
+    expect(dir('Platform 7', 'inbound', lineId, towards)).toBe(expected);
   });
 });
 
