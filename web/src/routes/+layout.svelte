@@ -46,7 +46,10 @@
     // after initConfig() so the seed fetch and the first stream tick can race
     // safely: board.ts's generated_at latest-wins discipline (invariant #7)
     // ensures whichever payload arrives second is the one the UI keeps.
-    cleanupSubscription = await startBoardSubscription();
+    // Pass the loaded config so the TS path (USE_TS_TFL) can seed its
+    // BoardStream; the Rust path ignores the argument. `$config` has resolved
+    // above (initConfig in the Promise.all barrier).
+    cleanupSubscription = await startBoardSubscription($config);
 
     // Tray right-click "Settings…" → open the in-frame Settings panel. The
     // Rust tray handler shows + focuses the main window and emits

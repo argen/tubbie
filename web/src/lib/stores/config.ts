@@ -7,6 +7,7 @@
 
 import { writable, get } from 'svelte/store';
 import { loadConfig, saveConfig } from '$lib/ipc/commands.js';
+import { setStreamConfig } from '$lib/stores/board.js';
 import type { BoardConfig } from '$lib/ipc/types.js';
 
 export const VALID_THEME_IDS = [
@@ -54,6 +55,10 @@ export async function updateConfig(partial: Partial<BoardConfig>): Promise<void>
   try {
     await saveConfig(updated);
     configError.set(null);
+    // Publish to the live TS BoardStream (no-op on the Rust path). This is the
+    // analogue of the Rust save_config → config watch-channel publish: a station
+    // change refreshes immediately (#2), filter/poll changes ride the diff.
+    setStreamConfig(updated);
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     configError.set(`Failed to save config: ${msg}`);
