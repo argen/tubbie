@@ -150,7 +150,11 @@ export class BoardStream {
       this.clearTimer();
       this.generation += 1;
     } else if (!hidden && this.paused) {
-      // → foreground: resume with an immediate refresh and a reset timer.
+      // → foreground: resume with an immediate refresh and a reset timer. If a
+      // refresh from before the pause is still pending, it resolves stale
+      // (generation was bumped at pause) and discards; any timer its `maybeArm`
+      // arms is immediately superseded by `refreshAndArm`'s `clearTimer`, so a
+      // single timer is maintained.
       this.paused = false;
       void this.refreshAndArm();
     }

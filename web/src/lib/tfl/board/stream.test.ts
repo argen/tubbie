@@ -121,6 +121,31 @@ describe('BoardStream', () => {
     stream.stop();
   });
 
+  it('discards an in-flight refresh when the station changes mid-flight (#2 cancellation)', async () => {
+    // Refresh for A hangs; refresh for B resolves immediately.
+    let releaseA: (b: Board) => void = () => undefined;
+    refreshImpl = (c) =>
+      c.station_id === 'A'
+        ? new Promise<Board>((r) => {
+            releaseA = r;
+          })
+        : Promise.resolve(makeBoard(c.station_id));
+
+    const stream = newStream(cfg('A'));
+    stream.start();
+    await Promise.resolve(); // refresh A enters and suspends
+
+    stream.setConfig(cfg('B')); // station change while A is in flight
+    await settle(); // B refreshes and emits
+
+    releaseA(makeBoard('A')); // the now-stale A result arrives late
+    await settle();
+
+    // A's board must never be emitted — only B's.
+    expect(onBoard.mock.calls.map((c) => (c[0] as Board).station_id)).toEqual(['B']);
+    stream.stop();
+  });
+
   it('does not refetch on a filter change; rides the next tick (#3)', async () => {
     const stream = newStream(cfg('A'));
     stream.start();
