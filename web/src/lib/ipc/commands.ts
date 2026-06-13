@@ -7,6 +7,8 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { openUrl } from '@tauri-apps/plugin-opener';
+import { useTsTfl } from '../tfl/flag.js';
+import { tflRuntime } from '../tfl/runtime.js';
 import {
   type Board,
   type BoardConfig,
@@ -40,6 +42,9 @@ import {
 
 /** Search for tube stations matching `query`. Debounced at the call site. */
 export async function searchStations(query: string): Promise<Station[]> {
+  if (useTsTfl()) {
+    return (await tflRuntime()).client.searchStations(query);
+  }
   const raw = await invoke<unknown>('search_stations', { query });
   if (!Array.isArray(raw)) {
     throw new TypeError(`search_stations: expected array, got ${typeof raw}`);
@@ -60,6 +65,9 @@ export async function findNearestStations(
   lon: number,
   limit: number,
 ): Promise<NearbyStation[]> {
+  if (useTsTfl()) {
+    return (await tflRuntime()).client.findNearestStations(lat, lon, limit);
+  }
   const raw = await invoke<unknown>('find_nearest_stations', { lat, lon, limit });
   if (!Array.isArray(raw)) {
     throw new TypeError(`find_nearest_stations: expected array, got ${typeof raw}`);
@@ -173,6 +181,9 @@ export async function hasAppKey(): Promise<boolean> {
 
 /** Fetch the current status for a single TfL line. */
 export async function getLineStatus(lineId: string): Promise<LineStatus> {
+  if (useTsTfl()) {
+    return (await tflRuntime()).client.getLineStatus(lineId);
+  }
   const raw = await invoke<unknown>('get_line_status', { lineId });
   if (!isLineStatus(raw)) {
     throw new TypeError('get_line_status: unexpected response shape');
@@ -182,6 +193,9 @@ export async function getLineStatus(lineId: string): Promise<LineStatus> {
 
 /** Fetch the current status of EVERY TfL line (network-wide), worst-first. */
 export async function getAllLineStatuses(): Promise<LineStatus[]> {
+  if (useTsTfl()) {
+    return (await tflRuntime()).client.getAllLineStatuses();
+  }
   const raw = await invoke<unknown>('get_all_line_statuses');
   if (!Array.isArray(raw)) {
     throw new TypeError('get_all_line_statuses: expected array response');
