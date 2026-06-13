@@ -89,7 +89,7 @@ referenced from tests and PRs — don't renumber.
    `WebviewWindow::set_size` reaches `NSWindow::setFrame:display:` — same
    Cocoa assertion as #8. Use the public async `apply_board_size_effects`
    wrapper; the Tauri command calls it after `validate_board_size`.
-   Validation runs *before* dispatch so a buggy renderer (NaN, infinity,
+   Validation runs _before_ dispatch so a buggy renderer (NaN, infinity,
    out-of-range) never reaches Cocoa. The renderer dedupes per tier
    (`lastSizeKey` in `Board.svelte`); don't re-issue the resize from any
    other component — the Board owns it.
@@ -110,7 +110,7 @@ referenced from tests and PRs — don't renumber.
     populates after the first emit. Disallowed arrivals log one warning
     per `(station, line)` per refresh on stderr with `[tfl-board]` —
     don't silence it, it's our only signal of upstream data drift.
-    **Compare on the line *family*, not the raw id.** TfL's station
+    **Compare on the line _family_, not the raw id.** TfL's station
     metadata and its arrivals feed disagree on the Overground id form
     (legacy `london-overground` vs the six named lines, and named-vs-named
     station-to-station). The filter folds every Overground id to one key
@@ -138,10 +138,10 @@ referenced from tests and PRs — don't renumber.
     `${line_id}|${platform_name}|${expected_arrival}` stays unique because
     backend-merged platforms differ on `platform_name`.
 
-24. **Drop arrivals whose destination is the queried station itself.** At
+12. **Drop arrivals whose destination is the queried station itself.** At
     a terminus (Edgware, Mill Hill East, Stanmore, …) every inbound
     prediction has `destination_name == station_name` because the train
-    physically terminates here. Showing them as "Northbound: Edgware" *at*
+    physically terminates here. Showing them as "Northbound: Edgware" _at_
     Edgware is a tautology. Filter
     `drop_arrivals_terminating_at_queried_station` runs after
     `drop_off_axis_predictions`, comparing strings case-insensitively
@@ -188,7 +188,7 @@ referenced from tests and PRs — don't renumber.
     silently-empty Overground board. The same migration applies to
     `Favorite.lines` on favorites load.
 
-23. **Elizabeth and the six named Overground lines surface as compass
+15. **Elizabeth and the six named Overground lines surface as compass
     directions, not Inbound/Outbound.** TfL labels Elizabeth and OG
     platforms as bare `"Platform 3"` and `direction` only carries
     `inbound` / `outbound`. Without help, an Elizabeth train at Liverpool
@@ -225,7 +225,7 @@ referenced from tests and PRs — don't renumber.
 17. **Hub fan-out dedupes by `hub_naptan_code` before parallel fetch.**
     `HUBKGX` is referenced by ~23 stations across tube + DLR + Elizabeth +
     Overground feeds; the naive enumerate-and-go fires 23 racers because
-    `hub_lines_cached` only caches *after* the first fetch resolves. Build
+    `hub_lines_cached` only caches _after_ the first fetch resolves. Build
     `stations_per_hub: HashMap<hub_id, Vec<usize>>` first — cuts a 757-fetch
     warm to 90 unique hubs.
     Test: `warm_stop_points_dedupes_hub_fetches_before_fan_out`.
@@ -243,7 +243,7 @@ referenced from tests and PRs — don't renumber.
 
 19. **`resolve_arrival_ids` and `allowed_line_ids_for` read
     `read_cache_any`, not `read_fresh_cache`.** The 15-min TTL controls
-    when the cache *refreshes*, not when it stops being *useful*. Past
+    when the cache _refreshes_, not when it stops being _useful_. Past
     TTL, `hub_naptan_code` and `lines` remain valid; the periodic task
     refreshes on its own schedule. Reading `read_fresh_cache` here loses
     hub-merge after expiry — Bank/Euston/Whitechapel siblings stop being
@@ -254,7 +254,7 @@ referenced from tests and PRs — don't renumber.
 
 20. **Stop-points cache is stale-while-revalidate; refresh is
     out-of-band.** `stop_points_cached` returns whatever's cached (fresh or
-    stale); only a *cold* cache blocks on the network. A periodic task in
+    stale); only a _cold_ cache blocks on the network. A periodic task in
     `lib.rs::run` calls `client.refresh_stop_points_cache()` every ~14 min
     (just under `STOP_POINTS_TTL`) — it runs the single-flighted fan-out
     via `refresh_stop_points_inner(force = true)`. The cold path uses the
@@ -273,7 +273,7 @@ referenced from tests and PRs — don't renumber.
     leaves a whole mode missing for the full 14-minute window. User
     symptom: "tube doesn't appear in search but DLR does".
 
-26. **Partial-warm stop-points entries use a short retry window, not the
+22. **Partial-warm stop-points entries use a short retry window, not the
     full TTL.** When the per-mode fan-out's retry budget for one mode is
     exhausted (invariant #21 didn't recover it) but other modes
     succeeded, `refresh_stop_points_inner` stamps the cache entry with
@@ -362,19 +362,31 @@ Commit-blocking: `cargo test --workspace` and `cd web && npm test` must be
 green. Pay particular attention to these files; add new regression tests
 to whichever fits when you discover a new failure mode.
 
-| File                                              | Covers                                                                                                                              |
-| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `src-tauri/src/commands.rs`                       | `save_config` → stream pipeline (#1–3); display-mode lock (#8); board-size validation (#9); favorites; legacy line-id migration (#14) |
-| `crates/tfl-board/src/service.rs`                 | Stream timing (immediate refresh on station change, no refresh on filter change, last_ok lifecycle); terminus filter (#24); line-not-served filter (#10) |
-| `crates/tfl-board/tests/board_service_tests.rs`   | End-to-end fixture refresh; phantom-line + Overground regression coverage; `build_board_preserves_distinct_arrivals_with_same_id`   |
-| `crates/tfl-board/src/filter.rs`                  | `apply_filters_does_not_filter_by_line_id` — frontend-only mask contract (#22)                                                      |
-| `crates/tfl-cache/src/client_tests.rs`           | Multi-mode fan-out (#12); SWR caching (#19–20); hub-fan-out dedupe (#17); search-stations whitelist (#13); per-mode retry (#21); subset client; multi-mode interchange dedupe (#18); single-flight concurrent warm proof |
+| File                                                        | Covers                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src-tauri/src/commands.rs`                                 | `save_config` → stream pipeline (#1–3); display-mode lock (#8); board-size validation (#9); favorites; legacy line-id migration (#14)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `crates/tfl-board/src/service.rs`                           | Stream timing (immediate refresh on station change, no refresh on filter change, last_ok lifecycle); terminus filter (#24); line-not-served filter (#10)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `crates/tfl-board/tests/board_service_tests.rs`             | End-to-end fixture refresh; phantom-line + Overground regression coverage; `build_board_preserves_distinct_arrivals_with_same_id`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `crates/tfl-board/src/filter.rs`                            | `apply_filters_does_not_filter_by_line_id` — frontend-only mask contract (#22)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `crates/tfl-cache/src/client_tests.rs`                      | Multi-mode fan-out (#12); SWR caching (#19–20); hub-fan-out dedupe (#17); search-stations whitelist (#13); per-mode retry (#21); subset client; multi-mode interchange dedupe (#18); single-flight concurrent warm proof                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | `crates/tfl-cache/src/multi_mode_hub_completeness_tests.rs` | The nine canonical multi-mode interchanges in `CANONICAL_MULTI_MODE_HUBS` (TCR, Bank, Liverpool Street, Stratford, Canary Wharf, Whitechapel, Paddington, Farringdon, Bond Street) must each merge their non-tube modes into `Station.lines` after warm. Defends against the "Elizabeth missing at TCR / DLR missing at Bank" recurrence — easy to undo if you don't have the fixture-shape contract pinned. Plus a Belsize-Park negative pinning that hubless stations don't over-inherit. Adding a hub: append to `CANONICAL_MULTI_MODE_HUBS` in `cache.rs`, add a matching `#[tokio::test]` here, and bump `SCENARIO_COUNT` in the count assertion. The 9 canonical positive scenarios are loaded from `tests/fixtures/hub-vectors.json` (single source of truth, shared with iOS-side `tfl-ffi` live test and the Swift `HubVectorTests`). The Belsize-Park negative pin remains hand-coded in this file. `hub_vectors_json_agrees_with_canonical_multi_mode_hubs_const` is the test that pins the JSON↔const consistency invariant. |
-| `tests/fixtures/hub-vectors.json`                           | Single source of truth for the 9 canonical hub scenarios. Consumed by `multi_mode_hub_completeness_tests.rs`, the iOS-side `tfl-ffi` live test, and the Swift `HubVectorTests`. Editing this file affects all three consumers; run `cargo test -p tfl-cache` and the iOS suite after any change. |
-| `crates/tfl-cache/tests/live_hub_completeness.rs` | Layer 2 of the harness — hits real TfL. Same scenarios as above but against `api.tfl.gov.uk`, gated on `feature = "live"`. Catches live drift (TfL temporarily 404'ing a hub, a feed dropping a line) that the fixture layer cannot see. Run via `cargo test -p tfl-cache --features live --test live_hub_completeness`. The iOS-side `bump-core` recipe runs this automatically when invoked with `live=1` for a SHA touching `tfl-*` crates. |
-| `crates/tfl-client/tests/http_retry.rs`           | `app_key` query-param wiring; 429 cooldown; `ReqwestTflHttp` retry behavior |
-| `crates/tfl-domain/tests/compass_from_towards.rs` | Per-line `towards` → compass mapping (#23)                                                                                          |
-| `web/src/lib/__tests__/dom/`                      | Board store latest-wins (#7), debounce-coalesce, line-group rendering + line-stripe correctness (#11), OG line colours, settings UI (display-mode, favorites, OG chips), adaptive resize, board-error event, line-id display-filter (#22) |
+| `tests/fixtures/hub-vectors.json`                           | Single source of truth for the 9 canonical hub scenarios. Consumed by `multi_mode_hub_completeness_tests.rs`, the iOS-side `tfl-ffi` live test, the Swift `HubVectorTests`, **and now the ported TS suite `web/src/lib/tfl/cache/hubCompleteness.test.ts` (4th consumer)**. Editing this file affects all four consumers; run `cargo test -p tfl-cache`, `cd web && npm test`, and the iOS suite after any change.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `crates/tfl-cache/tests/live_hub_completeness.rs`           | Layer 2 of the harness — hits real TfL. Same scenarios as above but against `api.tfl.gov.uk`, gated on `feature = "live"`. Catches live drift (TfL temporarily 404'ing a hub, a feed dropping a line) that the fixture layer cannot see. Run via `cargo test -p tfl-cache --features live --test live_hub_completeness`. The iOS-side `bump-core` recipe runs this automatically when invoked with `live=1` for a SHA touching `tfl-*` crates.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `crates/tfl-client/tests/http_retry.rs`                     | `app_key` query-param wiring; 429 cooldown; `ReqwestTflHttp` retry behavior                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `crates/tfl-domain/tests/compass_from_towards.rs`           | Per-line `towards` → compass mapping (#23)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `web/src/lib/__tests__/dom/`                                | Board store latest-wins (#7), debounce-coalesce, line-group rendering + line-stripe correctness (#11), OG line colours, settings UI (display-mode, favorites, OG chips), adaptive resize, board-error event, line-id display-filter (#22); **TS-path wiring behind `USE_TS_TFL` (`tfl-flag-routing`, `tfl-stream-wiring` — flag-on AND flag-off contracts, Phase 5)**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+
+### TypeScript TfL core (`web/src/lib/tfl/`)
+
+The Rust→TS port (Phases 0–5) reproduces every `tfl-*` crate behaviour in the
+webview behind the `USE_TS_TFL` flag (default off). The invariants above now have
+a parallel TS test; the full invariant# → TS-test map is the living checklist
+[`docs/tfl-ts-parity.md`](docs/tfl-ts-parity.md) — **update it whenever you add or
+move an invariant.** Tests live beside their source as `web/src/lib/tfl/**/*.test.ts`
+(domain, transport, cache, board) and are collected by the `unit` vitest project.
+When you change a guarded behaviour, fix it in **both** the Rust crate (iOS
+contract) and the TS port, and keep both tests asserting against the shared
+`fixtures/` + `tests/fixtures/hub-vectors.json`.
 
 ## Verifying a change
 
@@ -418,7 +430,8 @@ Full background + break-glass procedures: [`docs/ADR/public-distribution.md`](do
 [`argen/tubbie-ios`](https://github.com/argen/tubbie-ios) via a SHA-pinned
 git submodule. Their public surface is a contract — see
 `docs/ADR/crates-as-public-contract.md`. Breaking changes need a paired PR
-+ submodule bump in tubbie-ios. Internal refactors are unaffected.
+
+- submodule bump in tubbie-ios. Internal refactors are unaffected.
 
 ## Known documentation debt
 
@@ -436,7 +449,7 @@ but tests the contract, not the reasoning behind the constants.
 
 **Seed-fetch race ordering in `web/src/lib/+layout.svelte`**
 `startBoardSubscription()` (which registers the `board://updated` and
-`board://error` listeners) is called *before* `getBoard()`. This ordering
+`board://error` listeners) is called _before_ `getBoard()`. This ordering
 is deliberate: it prevents the race where a `board://updated` event fires
 in the window between seed completion and listener registration. The race
 is resolved by the "latest-wins by `generated_at`" check in `applyBoard`
