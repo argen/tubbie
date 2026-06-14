@@ -104,7 +104,7 @@ export const CANONICAL_MULTI_MODE_HUBS: readonly {
   },
   { stationId: '940GZZLUCYF', expectedLines: ['jubilee', 'dlr', 'elizabeth'] },
   {
-    stationId: '940GZZLUWCL',
+    stationId: '940GZZLUWPL',
     expectedLines: ['district', 'hammersmith-city', 'elizabeth', 'mildmay', 'windrush'],
   },
   {
@@ -112,7 +112,7 @@ export const CANONICAL_MULTI_MODE_HUBS: readonly {
     expectedLines: ['bakerloo', 'circle', 'district', 'hammersmith-city', 'elizabeth'],
   },
   {
-    stationId: '940GZZLUFRD',
+    stationId: '940GZZLUFCN',
     expectedLines: ['circle', 'hammersmith-city', 'metropolitan', 'elizabeth'],
   },
   { stationId: '940GZZLUBND', expectedLines: ['central', 'jubilee', 'elizabeth'] },

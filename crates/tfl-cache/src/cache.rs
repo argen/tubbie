@@ -95,12 +95,12 @@ pub const CANONICAL_MULTI_MODE_HUBS: &[(&str, &[&str])] = &[
         "940GZZLUSTD",
         &["central", "jubilee", "dlr", "elizabeth", "mildmay"],
     ),
-    // Canary Wharf — Jubilee + DLR + Elizabeth via HUBCWX.
+    // Canary Wharf — Jubilee + DLR + Elizabeth via HUBCAW.
     ("940GZZLUCYF", &["jubilee", "dlr", "elizabeth"]),
     // Whitechapel — District, Hammersmith & City, + Elizabeth, Mildmay,
-    // Windrush via HUBWCL.
+    // Windrush via HUBZWL.
     (
-        "940GZZLUWCL",
+        "940GZZLUWPL",
         &[
             "district",
             "hammersmith-city",
@@ -122,9 +122,9 @@ pub const CANONICAL_MULTI_MODE_HUBS: &[(&str, &[&str])] = &[
         ],
     ),
     // Farringdon — Circle, Hammersmith & City, Metropolitan,
-    // + Elizabeth via HUBFFD.
+    // + Elizabeth via HUBZFD.
     (
-        "940GZZLUFRD",
+        "940GZZLUFCN",
         &["circle", "hammersmith-city", "metropolitan", "elizabeth"],
     ),
     // Bond Street — Central, Jubilee, + Elizabeth via HUBBDS. The
