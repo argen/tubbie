@@ -5,7 +5,6 @@
     formatTime,
     formatUpdatedAgo,
     prettyLineName,
-    shortPlatformName,
     shortStationName,
   } from '$lib/utils/format.js';
   import { disruptedLinesWorstFirst } from '$lib/utils/status.js';
@@ -253,14 +252,13 @@
     if (arrival.direction !== 'Unknown') {
       return { key: arrival.direction, label: arrival.direction };
     }
-    // Defensive fallback for the rare case where an arrival's direction
-    // didn't infer cleanly. Use the prefix of `platform_name` (TfL's raw
-    // string, e.g. "Inner Rail"), which the backend already used to
-    // populate Platform.name. Keys are namespaced so they can never
-    // collide with the canonical Direction enum keys.
-    const fallback = shortPlatformName(arrival.platform_name);
-    const safe = fallback.length > 0 ? fallback : 'Unknown';
-    return { key: `name:${safe}`, label: safe };
+    // Unknown-direction trains (e.g. Circle loop services on "Inner/Outer
+    // Rail" platforms, which the backend off-axis filter now deliberately
+    // spares) are bucketed as "Other" — matching buildBoard's Unknown→Other
+    // grouping. We must NOT re-derive a bucket from `platform_name`: a genuine
+    // off-axis phantom also keeps direction=Unknown, and its platform prefix
+    // would resurrect the fake compass column the backend just removed.
+    return { key: 'Unknown', label: 'Other' };
   }
 
   function compareDirections(a: DirectionBucket, b: DirectionBucket): number {

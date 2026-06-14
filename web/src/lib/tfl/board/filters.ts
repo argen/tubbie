@@ -92,7 +92,19 @@ export function dropOffAxisPredictions(arrivals: Arrival[]): Arrival[] {
   const kept: Arrival[] = [];
   for (const arrival of arrivals) {
     const axis = axisForLine.get(arrival.line_id);
-    if (axis === undefined || directionMatchesAxis(axis, arrival.direction)) {
+    // Keep on-axis compass directions. For `Unknown` the platform string is the
+    // tie-breaker: a bare platform ("Inner Rail", "Platform 3") is a
+    // genuinely-unplaceable real train (e.g. a Circle loop service) — keep it;
+    // the board buckets it as "Other". A compass-prefixed platform ("Northbound
+    // - Platform 2" on an E/W line) is the unsigned-starter phantom on a sibling
+    // platform — drop it. The perpendicular compass pair and `Inbound`/`Outbound`
+    // are always dropped.
+    const keep =
+      axis === undefined ||
+      (arrival.direction === 'Unknown'
+        ? !platformHasCompassPrefix(arrival.platform_name)
+        : directionMatchesAxis(axis, arrival.direction));
+    if (keep) {
       kept.push(arrival);
       continue;
     }
@@ -143,8 +155,26 @@ function inferAxis(ns: number, ew: number): CompassAxis | null {
   return null;
 }
 
-/** Does `direction` lie on `axis`? Inbound/Outbound/Unknown never do. */
+/** Does `direction` lie on the line's compass `axis`? The on-axis compass pair
+ * matches; the perpendicular pair, `Inbound`, `Outbound`, and `Unknown` do not.
+ * (The caller handles `Unknown` separately via the platform prefix.) */
 function directionMatchesAxis(axis: CompassAxis, direction: Direction): boolean {
   if (axis === 'EastWest') return direction === 'Eastbound' || direction === 'Westbound';
   return direction === 'Northbound' || direction === 'Southbound';
+}
+
+/**
+ * Does `platformName` begin with a compass prefix (`Northbound`, …)? Tells a
+ * phantom `Unknown` (mis-parked on a cross-axis compass platform) from a
+ * genuinely-unplaceable one (a loop service on "Inner/Outer Rail" or a bare
+ * "Platform N").
+ */
+function platformHasCompassPrefix(platformName: string): boolean {
+  const p = platformName.trim().toLowerCase();
+  return (
+    p.startsWith('northbound') ||
+    p.startsWith('southbound') ||
+    p.startsWith('eastbound') ||
+    p.startsWith('westbound')
+  );
 }

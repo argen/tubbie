@@ -493,14 +493,18 @@ enum TickOutcome {
 /// 3. **Tie / single arrival.** Skip the filter for the line — we
 ///    don't have enough signal to call a phantom.
 ///
-/// Once axes are pinned, we drop arrivals whose `direction` falls
-/// outside the line's axis. `Inbound`, `Outbound`, and `Unknown` are
-/// rejected on pinned lines — the frontend's `directionKeyAndLabel`
-/// fallback in `Board.svelte` would otherwise re-derive an off-axis
-/// bucket label from `platform_name` and re-introduce the phantom we
-/// just identified. One stderr warning is emitted per
-/// `(line_id, direction)` pair per refresh so upstream data drift
-/// stays observable.
+/// Once axes are pinned, we drop arrivals whose `direction` contradicts
+/// the line's axis: the perpendicular compass pair (a Northbound train on
+/// an E/W line) and `Inbound`/`Outbound` (the wrong *kind* for a
+/// compass-pinned line). `Unknown` is split by its platform string: a
+/// *compass-prefixed* platform ("Northbound - Platform 2" on an E/W line)
+/// is the unsigned-starter phantom on a sibling platform and is dropped,
+/// but a *bare* platform ("Inner Rail", "Platform 3") is a
+/// genuinely-unplaceable real train (e.g. a Circle loop service) and is
+/// kept — the board buckets it as "Other" (`Board.svelte` maps `Unknown`
+/// to "Other" rather than re-deriving a bucket from `platform_name`, which
+/// would otherwise resurrect a phantom). One stderr warning is emitted per
+/// `(line_id, direction)` pair per refresh so upstream drift stays observable.
 ///
 /// Lines with no whitelist and no inference signal (rare — would
 /// require zero compass-prefix arrivals at the station) are passed
@@ -566,7 +570,20 @@ fn drop_off_axis_predictions(arrivals: Vec<Arrival>) -> Vec<Arrival> {
             kept.push(arrival);
             continue;
         };
-        if direction_matches_line_axis_value(axis, arrival.direction) {
+        // Keep on-axis compass directions. For `Unknown` (no inferred
+        // direction) the platform string is the tie-breaker: a *bare* platform
+        // ("Inner Rail", "Platform 3") is a genuinely-unplaceable real train
+        // (e.g. a Circle loop service) — keep it; the board buckets it as
+        // "Other". A *compass-prefixed* platform ("Northbound - Platform 2" on
+        // an E/W line) is the unsigned-starter phantom on a sibling platform —
+        // drop it, so the frontend's platform_name bucketing can't resurrect a
+        // fake compass column. `Inbound`/`Outbound` and the perpendicular
+        // compass pair are always dropped.
+        let keep = match arrival.direction {
+            Direction::Unknown => !platform_has_compass_prefix(&arrival.platform_name),
+            dir => direction_matches_line_axis_value(axis, dir),
+        };
+        if keep {
             kept.push(arrival);
             continue;
         }
@@ -594,6 +611,18 @@ fn direction_matches_line_axis_value(axis: tfl_domain::CompassAxis, direction: D
             Direction::Northbound | Direction::Southbound
         )
     )
+}
+
+/// Does `platform_name` begin with a compass prefix (`Northbound`, …)? Used to
+/// tell a phantom `Unknown` (a train mis-parked on a cross-axis compass
+/// platform) from a genuinely-unplaceable one (a loop service on "Inner/Outer
+/// Rail" or a bare "Platform N").
+fn platform_has_compass_prefix(platform_name: &str) -> bool {
+    let p = platform_name.trim().to_ascii_lowercase();
+    p.starts_with("northbound")
+        || p.starts_with("southbound")
+        || p.starts_with("eastbound")
+        || p.starts_with("westbound")
 }
 
 /// Drop predictions whose destination is the queried station itself.
@@ -1539,6 +1568,44 @@ mod tests {
         assert_eq!(
             kept[0].destination_name, keep_me.destination_name,
             "the surviving arrival is the outbound (non-terminus) one"
+        );
+    }
+
+    // An Unknown-direction prediction on a strict-axis line (Circle is
+    // network-pinned E/W) is kept iff its platform carries no compass prefix:
+    // a bare "Inner Rail" loop service survives (the board buckets it "Other"),
+    // but a "Northbound - Platform 2" mis-park is the phantom and is dropped.
+    #[test]
+    fn off_axis_keeps_bare_unknown_drops_compass_prefixed_unknown() {
+        fn circle_unknown(platform: &str) -> Arrival {
+            Arrival {
+                id: "1".to_string(),
+                station_name: "Paddington".to_string(),
+                platform_name: platform.to_string(),
+                line_id: "circle".to_string(),
+                line_name: "Circle".to_string(),
+                direction: Direction::Unknown,
+                northern_branch: None,
+                destination_name: "Edgware Road".to_string(),
+                towards: "Circle Line".to_string(),
+                current_location: String::new(),
+                time_to_station: 60,
+                expected_arrival: chrono::DateTime::parse_from_rfc3339("2026-04-27T10:00:24Z")
+                    .unwrap()
+                    .with_timezone(&chrono::Utc),
+                naptan_id: "940GZZLUPAC".to_string(),
+            }
+        }
+
+        let kept = drop_off_axis_predictions(vec![
+            circle_unknown("Inner Rail - Platform 1"),
+            circle_unknown("Northbound - Platform 2"),
+        ]);
+        let platforms: Vec<&str> = kept.iter().map(|a| a.platform_name.as_str()).collect();
+        assert_eq!(
+            platforms,
+            vec!["Inner Rail - Platform 1"],
+            "bare-platform loop train kept, compass-prefixed phantom dropped"
         );
     }
 }
