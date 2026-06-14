@@ -126,6 +126,12 @@ impl KeyPool {
         (slot, &self.keys[slot])
     }
 
+    /// The validated keys, in fetch order. Used by the `get_pool_keys` command
+    /// to hand the (public) list to the renderer for the TypeScript data path.
+    pub(crate) fn keys(&self) -> &[String] {
+        &self.keys
+    }
+
     /// Number of valid keys in the pool.
     #[cfg(test)]
     pub(crate) fn len(&self) -> usize {
@@ -196,6 +202,31 @@ pub(crate) async fn fetch_one_pool_key(http_client: &reqwest::Client, url: &str)
     let pool = fetch_pool_keys_from_url(http_client, url).await?;
     let (_slot, key) = pool.pick();
     Some(key.to_string())
+}
+
+/// Fetch the full validated pool-key list for the renderer (the `USE_TS_TFL`
+/// TypeScript data path). Returns an empty `Vec` on any failure (fail-open) —
+/// the caller treats empty as "run unauthenticated".
+///
+/// Why this exists: the keys are **public** (published at [`POOL_KEYS_URL`],
+/// shared with iOS), so handing them to the webview leaks nothing. The webview
+/// can't read `POOL_KEYS_URL` itself — the endpoint sends no
+/// `Access-Control-Allow-Origin`, so a cross-origin `fetch` can't read the body
+/// — but the Rust shell's `reqwest` is immune to webview CORS. So Rust proxies
+/// the list. Builds its own short-lived client like `refresh_pool_key_cache`;
+/// `AppState` holds no shared `reqwest::Client`.
+pub(crate) async fn fetch_all_pool_keys(url: &str) -> Vec<String> {
+    let client = match reqwest::Client::builder().timeout(FETCH_TIMEOUT).build() {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("[tubbie:pool-key] client build error: {e}");
+            return Vec::new();
+        }
+    };
+    match fetch_pool_keys_from_url(&client, url).await {
+        Some(pool) => pool.keys().to_vec(),
+        None => Vec::new(),
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -386,6 +417,55 @@ mod tests {
         let (slot, key) = pool.pick();
         assert_eq!(slot, 0, "first pick must be slot 0");
         assert_eq!(key, "aaaabbbbccccddddaaaabbbbccccdddd");
+    }
+
+    // -----------------------------------------------------------------------
+    // `fetch_all_pool_keys` — full validated list for the renderer (TS path).
+    // -----------------------------------------------------------------------
+
+    #[tokio::test]
+    async fn fetch_all_pool_keys_returns_full_validated_list() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/pool-keys.json"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "schema_version": 1,
+                "keys": [
+                    "aaaabbbbccccddddaaaabbbbccccdddd",
+                    "1111222233334444111122223333444b",
+                    "not-a-valid-key"
+                ]
+            })))
+            .mount(&server)
+            .await;
+
+        let url = format!("{}/pool-keys.json", server.uri());
+        let keys = fetch_all_pool_keys(&url).await;
+
+        // The invalid entry is dropped; both valid keys come through in order.
+        assert_eq!(
+            keys,
+            vec![
+                "aaaabbbbccccddddaaaabbbbccccdddd".to_string(),
+                "1111222233334444111122223333444b".to_string(),
+            ]
+        );
+    }
+
+    #[tokio::test]
+    async fn fetch_all_pool_keys_returns_empty_on_server_error() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/pool-keys.json"))
+            .respond_with(ResponseTemplate::new(503))
+            .mount(&server)
+            .await;
+
+        let url = format!("{}/pool-keys.json", server.uri());
+        assert!(
+            fetch_all_pool_keys(&url).await.is_empty(),
+            "a failed fetch must fail-open to an empty list (unauthenticated)"
+        );
     }
 
     // -----------------------------------------------------------------------

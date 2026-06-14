@@ -61,10 +61,10 @@ use tokio::task::AbortHandle;
 use commands::request_current_location;
 use commands::{
     add_favorite, apply_board_size, check_for_updates, find_nearest_stations,
-    get_all_line_statuses, get_board, get_line_status, has_app_key, install_update, list_favorites,
-    load_app_key, load_config, load_display_mode, load_display_prefs, load_update_prefs,
-    remove_favorite, save_app_key, save_config, save_display_mode, save_display_prefs,
-    save_update_prefs, search_stations, set_tray_disruption,
+    get_all_line_statuses, get_board, get_line_status, get_pool_keys, has_app_key, install_update,
+    list_favorites, load_app_key, load_config, load_display_mode, load_display_prefs,
+    load_update_prefs, remove_favorite, save_app_key, save_config, save_display_mode,
+    save_display_prefs, save_update_prefs, search_stations, set_tray_disruption,
 };
 use state::{AnyBoardService, AppState};
 #[cfg(target_os = "macos")]
@@ -1060,6 +1060,7 @@ pub fn run() {
             has_app_key,
             get_line_status,
             get_all_line_statuses,
+            get_pool_keys,
             save_display_mode,
             load_display_mode,
             save_display_prefs,
