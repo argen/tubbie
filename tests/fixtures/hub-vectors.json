@@ -24,7 +24,14 @@
       "station_id": "940GZZLULVT",
       "hub_id": "HUBLVT",
       "name": "Liverpool Street",
-      "expected_lines": ["central", "circle", "hammersmith-city", "metropolitan", "elizabeth", "weaver"],
+      "expected_lines": [
+        "central",
+        "circle",
+        "hammersmith-city",
+        "metropolitan",
+        "elizabeth",
+        "weaver"
+      ],
       "negative": false,
       "notes": "Most multi-mode interchange in the canonical list: four tube lines + Elizabeth + Weaver (post-Nov-2024 Overground rename). Guards against legacy london-overground umbrella id sneaking back."
     },
@@ -47,20 +54,31 @@
       "notes": "Jubilee (tube) + DLR + Elizabeth — all three modalities via HUBCAW."
     },
     {
-      "id": "whitechapel_serves_district_hc_elizabeth_mildmay_windrush",
+      "id": "whitechapel_serves_district_hc_elizabeth_windrush",
       "station_id": "940GZZLUWPL",
       "hub_id": "HUBZWL",
       "name": "Whitechapel",
-      "expected_lines": ["district", "hammersmith-city", "elizabeth", "mildmay", "windrush"],
+      "expected_lines": [
+        "district",
+        "hammersmith-city",
+        "elizabeth",
+        "windrush"
+      ],
       "negative": false,
-      "notes": "Two named Overground lines (Mildmay + Windrush) on the same hub — defends against lazy-collapse of OG named lines back to a single sibling entry."
+      "notes": "Windrush (East London Line) is the Overground line at Whitechapel — NOT Mildmay (North London Line), which does not serve it (verified against live TfL 2026-06-14). The hub merges tube (District + H&C) + Elizabeth + one named Overground line. (The two-named-OG-lines case lives at Highbury & Islington — a candidate canonical hub if that coverage is wanted.)"
     },
     {
       "id": "paddington_serves_bakerloo_circle_district_hc_elizabeth",
       "station_id": "940GZZLUPAC",
       "hub_id": "HUBPAD",
       "name": "Paddington",
-      "expected_lines": ["bakerloo", "circle", "district", "hammersmith-city", "elizabeth"],
+      "expected_lines": [
+        "bakerloo",
+        "circle",
+        "district",
+        "hammersmith-city",
+        "elizabeth"
+      ],
       "negative": false,
       "notes": "Four tube lines on one parent + Elizabeth from sibling 910GPADTLL. Largest tube-line set in the canonical list."
     },
@@ -69,7 +87,12 @@
       "station_id": "940GZZLUFCN",
       "hub_id": "HUBZFD",
       "name": "Farringdon",
-      "expected_lines": ["circle", "hammersmith-city", "metropolitan", "elizabeth"],
+      "expected_lines": [
+        "circle",
+        "hammersmith-city",
+        "metropolitan",
+        "elizabeth"
+      ],
       "negative": false,
       "notes": "Three tube lines + Elizabeth via HUBZFD."
     },

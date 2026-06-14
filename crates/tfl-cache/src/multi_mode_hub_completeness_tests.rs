@@ -548,10 +548,12 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn whitechapel_includes_district_h_c_elizabeth_mildmay_windrush() {
-        // Two named Overground lines (Mildmay + Windrush) on the same hub.
-        // Defends against any future lazy-collapse of the OG named lines
-        // back to a single sibling entry that would lose one of them.
+    async fn whitechapel_includes_district_h_c_elizabeth_windrush() {
+        // Whitechapel's Overground line is Windrush (East London Line), NOT
+        // Mildmay (North London Line, which doesn't serve it). Merges tube
+        // (District + H&C) + Elizabeth + Windrush across the hub. (The
+        // two-named-OG-lines collapse guard belongs at Highbury & Islington —
+        // see the hub-vectors.json note — not here.)
         assert_hub_serves_all_expected_lines(
             "Whitechapel",
             &[
@@ -586,7 +588,7 @@ mod tests {
                         "stopPoints": [
                             synth_station(
                                 "910GWHCHPLOG", "HUBZWL", &["overground"],
-                                &["mildmay", "windrush"], 51.5194, -0.0612,
+                                &["windrush"], 51.5194, -0.0612,
                             ),
                         ],
                     }),
@@ -603,18 +605,12 @@ mod tests {
                             &["district", "hammersmith-city"],
                         ),
                         synth_hub_child("910GWHCHPL", &["elizabeth-line"], &["elizabeth"]),
-                        synth_hub_child("910GWHCHPLOG", &["overground"], &["mildmay", "windrush"]),
+                        synth_hub_child("910GWHCHPLOG", &["overground"], &["windrush"]),
                     ],
                 ),
             )],
             "940GZZLUWPL",
-            &[
-                "district",
-                "hammersmith-city",
-                "elizabeth",
-                "mildmay",
-                "windrush",
-            ],
+            &["district", "hammersmith-city", "elizabeth", "windrush"],
         )
         .await;
     }

@@ -97,17 +97,12 @@ pub const CANONICAL_MULTI_MODE_HUBS: &[(&str, &[&str])] = &[
     ),
     // Canary Wharf — Jubilee + DLR + Elizabeth via HUBCAW.
     ("940GZZLUCYF", &["jubilee", "dlr", "elizabeth"]),
-    // Whitechapel — District, Hammersmith & City, + Elizabeth, Mildmay,
-    // Windrush via HUBZWL.
+    // Whitechapel — District, Hammersmith & City, + Elizabeth and Windrush
+    // (East London Line) via HUBZWL. NOT Mildmay (North London Line — does not
+    // serve Whitechapel; verified against live TfL 2026-06-14).
     (
         "940GZZLUWPL",
-        &[
-            "district",
-            "hammersmith-city",
-            "elizabeth",
-            "mildmay",
-            "windrush",
-        ],
+        &["district", "hammersmith-city", "elizabeth", "windrush"],
     ),
     // Paddington — Bakerloo, Circle, District, Hammersmith & City,
     // + Elizabeth via HUBPAD.
