@@ -104,8 +104,10 @@ export const CANONICAL_MULTI_MODE_HUBS: readonly {
   },
   { stationId: '940GZZLUCYF', expectedLines: ['jubilee', 'dlr', 'elizabeth'] },
   {
+    // Whitechapel: Windrush (East London Line), NOT Mildmay (North London Line,
+    // which doesn't serve it) — verified against live TfL 2026-06-14.
     stationId: '940GZZLUWPL',
-    expectedLines: ['district', 'hammersmith-city', 'elizabeth', 'mildmay', 'windrush'],
+    expectedLines: ['district', 'hammersmith-city', 'elizabeth', 'windrush'],
   },
   {
     stationId: '940GZZLUPAC',
