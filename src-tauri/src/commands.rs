@@ -819,6 +819,20 @@ pub async fn get_all_line_statuses(state: State<'_, AppState>) -> Result<Vec<Lin
     get_all_line_statuses_inner(&state).await
 }
 
+/// Return the public TfL pool keys for the TypeScript data path (`USE_TS_TFL`).
+///
+/// The webview can't read `POOL_KEYS_URL` itself — the endpoint sends no
+/// `Access-Control-Allow-Origin`, so a cross-origin `fetch` is refused the body
+/// — but the Rust shell's `reqwest` is immune to webview CORS. So the shell
+/// proxies the (public, iOS-shared) keys to the renderer, which builds its
+/// round-robin `KeyPool` and appends `app_key` to its direct TfL fetches.
+/// Empty on any failure; the TS path then runs unauthenticated (fail-open).
+/// Not a secret: unlike the personal `app_key`, these are published.
+#[tauri::command]
+pub async fn get_pool_keys() -> Vec<String> {
+    crate::pool_key::fetch_all_pool_keys(crate::pool_key::POOL_KEYS_URL).await
+}
+
 /// Persist the display mode (`"window"` or `"menubar"`) and apply it
 /// live — tray icon appears/disappears, dock icon toggles, window chrome
 /// + size + always-on-top reconfigure, click-away behaviour tracks the

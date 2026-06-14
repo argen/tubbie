@@ -18,9 +18,10 @@
  */
 
 import { FetchTflHttp } from './transport/tflHttp.js';
-import { fetchPoolKeys, POOL_KEYS_URL } from './transport/poolKey.js';
+import { KeyPool, fetchPoolKeys, POOL_KEYS_URL } from './transport/poolKey.js';
 import { TflClient } from './cache/tflClient.js';
 import { BoardService } from './board/boardService.js';
+import { getPoolKeysFromShell } from '../ipc/poolKeys.js';
 
 /** Re-fan the stop-points cache just under its 15-minute TTL (Rust invariant #20). */
 export const STOP_POINTS_REFRESH_INTERVAL_MS = 14 * 60 * 1000;
@@ -52,7 +53,7 @@ async function buildRuntime(): Promise<TflRuntime> {
 
   // Pool keys are public and fail-open: a null pool just means unauthenticated
   // requests (the anonymous TfL budget), never a hard failure at boot.
-  const keyPool = await fetchPoolKeys(POOL_KEYS_URL);
+  const keyPool = await resolvePoolKeys();
   const http = new FetchTflHttp(keyPool !== null ? { keyPool } : {});
   const client = new TflClient(http);
   const service = new BoardService(client);
@@ -67,6 +68,24 @@ async function buildRuntime(): Promise<TflRuntime> {
   }, STOP_POINTS_REFRESH_INTERVAL_MS);
 
   return { client, service };
+}
+
+/**
+ * Resolve the pool keys, preferring the Rust shell. The shell fetches
+ * `POOL_KEYS_URL` via `reqwest` (immune to webview CORS) and hands back the
+ * public keys, so the desktop TS path is authenticated.
+ *
+ * The direct-fetch fallback is the **pure-web** key source (no shell): there the
+ * endpoint must serve `Access-Control-Allow-Origin` for the body to be read. On
+ * desktop the shell is the only source — if it transiently returns `[]`, the
+ * fallback fetch is refused by CORS and harmlessly fails open to `null`; it is
+ * not a meaningful second chance there. Either way `null` just means "run on the
+ * anonymous TfL budget".
+ */
+async function resolvePoolKeys(): Promise<KeyPool | null> {
+  const shellKeys = await getPoolKeysFromShell();
+  if (shellKeys.length > 0) return KeyPool.create(shellKeys);
+  return fetchPoolKeys(POOL_KEYS_URL);
 }
 
 function clearRefreshTimer(): void {
