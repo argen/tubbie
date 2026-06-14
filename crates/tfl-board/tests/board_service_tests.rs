@@ -728,15 +728,15 @@ async fn refresh_drops_off_axis_predictions_on_strict_axis_line() {
             && !hc_directions.contains(&Direction::Southbound),
         "phantom N/S H&C predictions must never bucket on an E/W-only line; got {hc_directions:?}"
     );
-    // The frontend's `directionKeyAndLabel` defensive fallback in
-    // `Board.svelte` re-derives a bucket label from `platform_name` when
-    // a prediction's direction is `Unknown` — for an H&C prediction with
-    // `platformName: "Northbound - Platform 2"`, that reverts the bucket
-    // back to "Northbound". Drop Unknown on strict-axis lines so the
-    // fallback never sees it.
+    // A *compass-prefixed* Unknown is still dropped: this fixture's H&C Unknown
+    // sits on `platformName: "Northbound - Platform 2"`, the sibling-platform
+    // phantom. (A *bare*-platform Unknown — a Circle "Inner Rail" loop service —
+    // is now KEPT and bucketed "Other"; see
+    // `off_axis_keeps_bare_unknown_drops_compass_prefixed_unknown` in
+    // `service.rs`. The drop here is specifically the compass-prefix case.)
     assert!(
         !hc_directions.contains(&Direction::Unknown),
-        "Unknown-direction H&C predictions must be dropped on a strict E/W line so the frontend platform_name fallback can't re-introduce a phantom bucket; got {hc_directions:?}"
+        "compass-prefixed Unknown H&C predictions must be dropped on a strict E/W line (sibling-platform phantom); got {hc_directions:?}"
     );
     assert_eq!(
         hc_directions.len(),

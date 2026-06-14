@@ -144,6 +144,71 @@ describe('dropOffAxisPredictions', () => {
     expect(kept.map((a) => a.direction)).toEqual(['Northbound']);
   });
 
+  it('keeps an Unknown-direction prediction on a pinned line (routes to Other, not dropped)', () => {
+    // Circle is network-pinned E/W. A loop train on an "Inner Rail" platform
+    // has no compass direction (Unknown) — it is a real train, not an off-axis
+    // phantom, so it must survive (the board buckets it as "Other"). Only a
+    // definite *perpendicular* compass direction is a phantom worth dropping.
+    const arrivals = [
+      makeArrival({
+        line_id: 'circle',
+        direction: 'Eastbound',
+        platform_name: 'Eastbound - Platform 2',
+      }),
+      makeArrival({
+        line_id: 'circle',
+        direction: 'Unknown',
+        platform_name: 'Inner Rail - Platform 1',
+      }),
+    ];
+    const kept = dropOffAxisPredictions(arrivals);
+    expect(kept).toHaveLength(2);
+    expect(kept.some((a) => a.direction === 'Unknown')).toBe(true);
+  });
+
+  it('drops an Unknown phantom whose platform carries a perpendicular compass prefix', () => {
+    // An H&C/Circle train mis-parked on a "Northbound" platform at an E/W
+    // station infers Unknown (the prefix is gated out by the line's axis), but
+    // the platform prefix marks it as the sibling-platform phantom — drop it,
+    // unlike the bare-platform loop train above.
+    const arrivals = [
+      makeArrival({
+        line_id: 'circle',
+        direction: 'Eastbound',
+        platform_name: 'Eastbound - Platform 2',
+      }),
+      makeArrival({
+        line_id: 'circle',
+        direction: 'Unknown',
+        platform_name: 'Northbound - Platform 1',
+      }),
+    ];
+    const kept = dropOffAxisPredictions(arrivals);
+    expect(kept.map((a) => a.direction)).toEqual(['Eastbound']);
+  });
+
+  it('drops Inbound/Outbound predictions on a compass-pinned line', () => {
+    // Inbound/Outbound is the wrong *kind* of direction for a compass-pinned
+    // line (Circle is E/W) — the unsigned-starter phantom. Only `Unknown`
+    // (no signal) gets the bare-platform benefit of the doubt, not in/out.
+    const arrivals = [
+      makeArrival({ line_id: 'circle', direction: 'Eastbound' }),
+      makeArrival({ line_id: 'circle', direction: 'Inbound', platform_name: 'Platform 1' }),
+      makeArrival({ line_id: 'circle', direction: 'Outbound', platform_name: 'Platform 2' }),
+    ];
+    expect(dropOffAxisPredictions(arrivals).map((a) => a.direction)).toEqual(['Eastbound']);
+  });
+
+  it('still drops a definite perpendicular-compass phantom on a pinned line', () => {
+    // The phantom-catch intent is preserved: a Northbound prediction on the
+    // E/W-pinned Circle is genuinely off-axis and dropped.
+    const arrivals = [
+      makeArrival({ line_id: 'circle', direction: 'Eastbound' }),
+      makeArrival({ line_id: 'circle', direction: 'Northbound' }),
+    ];
+    expect(dropOffAxisPredictions(arrivals).map((a) => a.direction)).toEqual(['Eastbound']);
+  });
+
   it('passes both through on a 1-vs-1 prefix tie (no strict majority)', () => {
     const arrivals = [
       makeArrival({

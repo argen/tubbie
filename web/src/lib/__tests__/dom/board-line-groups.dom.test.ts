@@ -139,6 +139,23 @@ describe('Board — per-arrival line grouping', () => {
     expect(directionLabelsFor('metropolitan')).toEqual(['Westbound']);
   });
 
+  it('buckets an Unknown-direction loop train under "Other", not a platform-derived label', () => {
+    // A Circle "Inner Rail" loop service infers direction=Unknown. The backend
+    // off-axis filter now keeps it (bare platform), and the frontend must bucket
+    // it as "Other" — never re-derive "Inner Rail" from platform_name (which for
+    // a genuine phantom would resurrect a fake compass column).
+    const board = buildBoard([
+      platform('Other', [
+        arrival('circle', 'Circle', 'Unknown', 'Edgware Road', 'Inner Rail - Platform 1'),
+      ]),
+    ]);
+
+    render(Board, { props: { board } });
+
+    expect(lineGroupIds()).toEqual(['circle']);
+    expect(directionLabelsFor('circle')).toEqual(['Other']);
+  });
+
   it('renders a 5-line interchange (Baker Street) with one group per line', () => {
     // Bakerloo + Jubilee share southbound platforms at Baker Street; the
     // backend returns them in one direction bucket. Verifies we don't

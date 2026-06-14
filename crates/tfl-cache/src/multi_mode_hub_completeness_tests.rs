@@ -499,7 +499,7 @@ mod tests {
                         "total": 1,
                         "stopPoints": [
                             synth_station(
-                                "940GZZLUCYF", "HUBCWX", &["tube"],
+                                "940GZZLUCYF", "HUBCAW", &["tube"],
                                 &["jubilee"], 51.5051, -0.0179,
                             ),
                         ],
@@ -511,7 +511,7 @@ mod tests {
                         "total": 1,
                         "stopPoints": [
                             synth_station(
-                                "940GZZDLCAW", "HUBCWX", &["dlr"],
+                                "940GZZDLCAW", "HUBCAW", &["dlr"],
                                 &["dlr"], 51.5051, -0.0179,
                             ),
                         ],
@@ -523,7 +523,7 @@ mod tests {
                         "total": 1,
                         "stopPoints": [
                             synth_station(
-                                "910GCANWRFE", "HUBCWX", &["elizabeth-line"],
+                                "910GCANWRFE", "HUBCAW", &["elizabeth-line"],
                                 &["elizabeth"], 51.5051, -0.0179,
                             ),
                         ],
@@ -531,9 +531,9 @@ mod tests {
                 ),
             ],
             &[(
-                "HUBCWX",
+                "HUBCAW",
                 synth_hub_doc(
-                    "HUBCWX",
+                    "HUBCAW",
                     vec![
                         synth_hub_child("940GZZLUCYF", &["tube"], &["jubilee"]),
                         synth_hub_child("940GZZDLCAW", &["dlr"], &["dlr"]),
@@ -561,7 +561,7 @@ mod tests {
                         "total": 1,
                         "stopPoints": [
                             synth_station(
-                                "940GZZLUWCL", "HUBWCL", &["tube"],
+                                "940GZZLUWPL", "HUBZWL", &["tube"],
                                 &["district", "hammersmith-city"], 51.5194, -0.0612,
                             ),
                         ],
@@ -573,7 +573,7 @@ mod tests {
                         "total": 1,
                         "stopPoints": [
                             synth_station(
-                                "910GWHCHPL", "HUBWCL", &["elizabeth-line"],
+                                "910GWHCHPL", "HUBZWL", &["elizabeth-line"],
                                 &["elizabeth"], 51.5194, -0.0612,
                             ),
                         ],
@@ -585,7 +585,7 @@ mod tests {
                         "total": 1,
                         "stopPoints": [
                             synth_station(
-                                "910GWHCHPLOG", "HUBWCL", &["overground"],
+                                "910GWHCHPLOG", "HUBZWL", &["overground"],
                                 &["mildmay", "windrush"], 51.5194, -0.0612,
                             ),
                         ],
@@ -593,12 +593,12 @@ mod tests {
                 ),
             ],
             &[(
-                "HUBWCL",
+                "HUBZWL",
                 synth_hub_doc(
-                    "HUBWCL",
+                    "HUBZWL",
                     vec![
                         synth_hub_child(
-                            "940GZZLUWCL",
+                            "940GZZLUWPL",
                             &["tube"],
                             &["district", "hammersmith-city"],
                         ),
@@ -607,7 +607,7 @@ mod tests {
                     ],
                 ),
             )],
-            "940GZZLUWCL",
+            "940GZZLUWPL",
             &[
                 "district",
                 "hammersmith-city",
@@ -690,7 +690,7 @@ mod tests {
                         "total": 1,
                         "stopPoints": [
                             synth_station(
-                                "940GZZLUFRD", "HUBFFD", &["tube"],
+                                "940GZZLUFCN", "HUBZFD", &["tube"],
                                 &["circle", "hammersmith-city", "metropolitan"],
                                 51.5203, -0.1053,
                             ),
@@ -703,7 +703,7 @@ mod tests {
                         "total": 1,
                         "stopPoints": [
                             synth_station(
-                                "910GFRNDXR", "HUBFFD", &["elizabeth-line"],
+                                "910GFRNDXR", "HUBZFD", &["elizabeth-line"],
                                 &["elizabeth"], 51.5203, -0.1053,
                             ),
                         ],
@@ -711,12 +711,12 @@ mod tests {
                 ),
             ],
             &[(
-                "HUBFFD",
+                "HUBZFD",
                 synth_hub_doc(
-                    "HUBFFD",
+                    "HUBZFD",
                     vec![
                         synth_hub_child(
-                            "940GZZLUFRD",
+                            "940GZZLUFCN",
                             &["tube"],
                             &["circle", "hammersmith-city", "metropolitan"],
                         ),
@@ -724,7 +724,7 @@ mod tests {
                     ],
                 ),
             )],
-            "940GZZLUFRD",
+            "940GZZLUFCN",
             &["circle", "hammersmith-city", "metropolitan", "elizabeth"],
         )
         .await;

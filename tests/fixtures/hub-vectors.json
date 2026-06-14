@@ -40,16 +40,16 @@
     {
       "id": "canary_wharf_serves_jubilee_dlr_elizabeth",
       "station_id": "940GZZLUCYF",
-      "hub_id": "HUBCWX",
+      "hub_id": "HUBCAW",
       "name": "Canary Wharf",
       "expected_lines": ["jubilee", "dlr", "elizabeth"],
       "negative": false,
-      "notes": "Jubilee (tube) + DLR + Elizabeth — all three modalities via HUBCWX."
+      "notes": "Jubilee (tube) + DLR + Elizabeth — all three modalities via HUBCAW."
     },
     {
       "id": "whitechapel_serves_district_hc_elizabeth_mildmay_windrush",
-      "station_id": "940GZZLUWCL",
-      "hub_id": "HUBWCL",
+      "station_id": "940GZZLUWPL",
+      "hub_id": "HUBZWL",
       "name": "Whitechapel",
       "expected_lines": ["district", "hammersmith-city", "elizabeth", "mildmay", "windrush"],
       "negative": false,
@@ -66,12 +66,12 @@
     },
     {
       "id": "farringdon_serves_circle_hc_metropolitan_elizabeth",
-      "station_id": "940GZZLUFRD",
-      "hub_id": "HUBFFD",
+      "station_id": "940GZZLUFCN",
+      "hub_id": "HUBZFD",
       "name": "Farringdon",
       "expected_lines": ["circle", "hammersmith-city", "metropolitan", "elizabeth"],
       "negative": false,
-      "notes": "Three tube lines + Elizabeth via HUBFFD."
+      "notes": "Three tube lines + Elizabeth via HUBZFD."
     },
     {
       "id": "bond_street_serves_central_jubilee_elizabeth",
