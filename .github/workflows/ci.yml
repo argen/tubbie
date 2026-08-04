@@ -92,10 +92,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-      - uses: EmbarkStudios/cargo-deny-action@bb137d7af7e4fb67e5f82a49c4fce4fad40782fe # v2.0.9
+      - uses: EmbarkStudios/cargo-deny-action@bb137d7af7e4fb67e5f82a49c4fce4fad40782fe # v2.0.20
         with:
           command: check
           arguments: --all-features
+          # The action runs in a musl container. Our rust-toolchain.toml
+          # pins `channel = "stable"`, which rustup resolves in there to
+          # stable-x86_64-unknown-linux-musl — a toolchain the image does
+          # not ship, so the job died before evaluating a single advisory.
+          # Setting rust-version makes the entrypoint run `rustup default`,
+          # which installs it.
+          rust-version: stable
 
   osv-scan:
     name: osv-scan
