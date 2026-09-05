@@ -1,11 +1,20 @@
 version: 2
+# open-pull-requests-limit: 0 disables routine version-update PRs on every
+# ecosystem — we only want to be paged for security fixes, not monthly minor
+# bumps. Dependabot *security* updates are NOT governed by this limit (they
+# ride the repo-level "Dependabot security updates" setting), so the
+# `*-security` groups below still fire for vulnerabilities. To re-enable
+# routine bumps, raise the limit back to 5/3.
+# NOTE: severity filtering (high/critical only, suppress low/medium) is not
+# expressible here — it lives in GitHub's Dependabot auto-triage rules
+# (Settings → Code security → Dependabot).
 updates:
   # Rust workspace
   - package-ecosystem: cargo
     directory: "/"
     schedule:
       interval: monthly
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 0
     target-branch: main
     labels: ["dependencies", "rust"]
     cooldown:
@@ -39,7 +48,7 @@ updates:
     directory: "/web"
     schedule:
       interval: monthly
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 0
     versioning-strategy: increase-if-necessary
     target-branch: main
     labels: ["dependencies", "web"]
@@ -62,7 +71,7 @@ updates:
     directory: "/"
     schedule:
       interval: monthly
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 0
     target-branch: main
     labels: ["dependencies", "ci"]
     commit-message:
