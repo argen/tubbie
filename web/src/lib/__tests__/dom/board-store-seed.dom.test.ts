@@ -18,8 +18,8 @@ import type { Board } from '$lib/ipc/types.js';
 
 // We control invoke behaviour via this module-level spy.
 // Using a plain function reference so mockImplementation typing is flexible.
-const invokeSpy = vi.fn(
-  (_cmd: string, _args?: Record<string, unknown>): Promise<unknown> => Promise.resolve(null),
+const invokeSpy = vi.fn((_cmd: string, _args?: Record<string, unknown>): Promise<unknown> =>
+  Promise.resolve(null),
 );
 
 vi.mock('@tauri-apps/api/core', () => ({

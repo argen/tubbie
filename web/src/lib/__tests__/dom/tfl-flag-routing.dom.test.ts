@@ -14,8 +14,8 @@ import type { LineStatus, NearbyStation, Station } from '$lib/ipc/types.js';
 
 // --- Boundary mocks (hoisted) ----------------------------------------------
 
-const invokeSpy = vi.fn(
-  (_cmd: string, _args?: Record<string, unknown>): Promise<unknown> => Promise.resolve([]),
+const invokeSpy = vi.fn((_cmd: string, _args?: Record<string, unknown>): Promise<unknown> =>
+  Promise.resolve([]),
 );
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: (cmd: string, args?: Record<string, unknown>) => invokeSpy(cmd, args),

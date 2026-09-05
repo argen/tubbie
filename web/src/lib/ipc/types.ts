@@ -22,13 +22,7 @@ export type DateTimeUtc = string;
 
 /** Direction enum — mirrors tfl_domain::Direction. */
 export type Direction =
-  | 'Northbound'
-  | 'Southbound'
-  | 'Eastbound'
-  | 'Westbound'
-  | 'Inbound'
-  | 'Outbound'
-  | 'Unknown';
+  'Northbound' | 'Southbound' | 'Eastbound' | 'Westbound' | 'Inbound' | 'Outbound' | 'Unknown';
 
 /** Northern-line branch — mirrors tfl_domain::NorthernBranch (bare strings). */
 export type NorthernBranch = 'Bank' | 'CharingCross';
