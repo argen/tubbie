@@ -17,8 +17,8 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { get } from 'svelte/store';
 import { emitMockEvent, mockListen, sampleBoard } from '$lib/ipc/mock.js';
 
-const invokeSpy = vi.fn(
-  (_cmd: string, _args?: Record<string, unknown>): Promise<unknown> => Promise.resolve(null),
+const invokeSpy = vi.fn((_cmd: string, _args?: Record<string, unknown>): Promise<unknown> =>
+  Promise.resolve(null),
 );
 
 vi.mock('@tauri-apps/api/core', () => ({

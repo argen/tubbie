@@ -32,8 +32,8 @@ function boardFor(stationId: string): Board {
   };
 }
 
-const refreshSpy = vi.fn(
-  (c: BoardConfig): Promise<Board> => Promise.resolve(boardFor(c.station_id)),
+const refreshSpy = vi.fn((c: BoardConfig): Promise<Board> =>
+  Promise.resolve(boardFor(c.station_id)),
 );
 vi.mock('$lib/tfl/runtime.js', () => ({
   tflRuntime: () => Promise.resolve({ client: {}, service: { refresh: refreshSpy } }),
