@@ -13,6 +13,10 @@
 
 [graph]
 all-features = true
+# Only the targets tubbie builds: the shipped macOS app and Linux CI. A new
+# target (e.g. Windows) re-enters its deps into the check instead of
+# inheriting a waiver.
+targets = ["aarch64-apple-darwin", "x86_64-unknown-linux-gnu"]
 
 [output]
 feature-depth = 1
@@ -48,6 +52,11 @@ ignore = [
   { id = "RUSTSEC-2024-0418", reason = "gtk-rs (gdk-pixbuf) unmaintained; pinned by Tauri 2.10." },
   { id = "RUSTSEC-2024-0419", reason = "gtk-rs (gtk-sys) unmaintained; pinned by Tauri 2.10." },
   { id = "RUSTSEC-2024-0420", reason = "gtk-rs (pango) unmaintained; pinned by Tauri 2.10." },
+  # ─── Added 2026-10-24, re-triage 2027-01-24 ───────────────────────
+  { id = "RUSTSEC-2026-0370", reason = "zvariant unmaintained; via zbus → tauri-plugin-opener (Linux D-Bus). No patched release." },
+  { id = "RUSTSEC-2026-0371", reason = "zbus_names unmaintained; via zbus → tauri-plugin-opener (Linux D-Bus). No patched release." },
+  { id = "RUSTSEC-2026-0372", reason = "zvariant_derive unmaintained; via zbus → tauri-plugin-opener (Linux D-Bus). No patched release." },
+  { id = "RUSTSEC-2026-0374", reason = "basic-toml unmaintained; build-time only via askama_derive → uniffi_bindgen. No patched release." },
 ]
 
 [licenses]
