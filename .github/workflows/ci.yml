@@ -44,7 +44,7 @@ jobs:
             | jq -e '[.. | objects | to_entries[]? | select(.key=="cookie") | .value.version]
                      | unique
                      | (length > 0)
-                       and all(startswith("0.7.") or startswith("0.8.") or startswith("1."))'
+                       and all(split(".")[:2] | map(tonumber) >= [0, 7])'
 
       - name: Lint
         run: npm run lint
