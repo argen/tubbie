@@ -22,7 +22,7 @@ tauri-plugin-store = "2"
 # floating on "2" risks a silent break on `cargo update`. Bump in lockstep
 # with the `tauri` crate after running the manifest-shape test
 # (`updater_manifest_shape.rs`, added in PR-B).
-tauri-plugin-updater = "=2.10.1"
+tauri-plugin-updater = "=2.14.1"
 
 serde = { workspace = true }
 serde_json = { workspace = true }
