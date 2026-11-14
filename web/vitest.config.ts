@@ -3,7 +3,6 @@ import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { resolve } from 'path';
 
 const alias = {
-  $lib: resolve(__dirname, 'src/lib'),
   '$app/navigation': resolve(__dirname, 'src/lib/__mocks__/app-navigation.ts'),
 };
 
