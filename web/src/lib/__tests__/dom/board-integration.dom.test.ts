@@ -6,7 +6,7 @@
  * emits a simulated board://updated event, and asserts the DOM updates.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { emitMockEvent, mockInvoke, mockListen, sampleBoard } from '$lib/ipc/mock.js';
+import { emitMockEvent, mockInvoke, mockListen, sampleBoard } from '#lib/ipc/mock.js';
 
 // Wire up Tauri API mocks before importing anything that uses them
 vi.mock('@tauri-apps/api/core', () => ({
@@ -18,7 +18,7 @@ vi.mock('@tauri-apps/api/event', () => ({
 }));
 
 // Mock reducedMotion
-vi.mock('$lib/stores/reducedMotion.js', () => ({
+vi.mock('#lib/stores/reducedMotion.js', () => ({
   reducedMotion: {
     subscribe: (fn: (v: boolean) => void) => {
       fn(false);
@@ -38,7 +38,7 @@ describe('Board — board://updated event integration', () => {
 
   it('can be imported and stores do not throw', async () => {
     // Import board store (which calls onBoardUpdated → mockListen)
-    const { board, startBoardSubscription } = await import('$lib/stores/board.js');
+    const { board, startBoardSubscription } = await import('#lib/stores/board.js');
     const cleanup = await startBoardSubscription();
 
     // Emit a board event
@@ -54,7 +54,7 @@ describe('Board — board://updated event integration', () => {
   });
 
   it('ignores malformed payloads', async () => {
-    const { board, startBoardSubscription } = await import('$lib/stores/board.js');
+    const { board, startBoardSubscription } = await import('#lib/stores/board.js');
     const cleanup = await startBoardSubscription();
 
     // Emit a valid board first

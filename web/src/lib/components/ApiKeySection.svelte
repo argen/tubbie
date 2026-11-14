@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { hasAppKey, saveAppKey, openExternal } from '$lib/ipc/commands.js';
+  import { hasAppKey, saveAppKey, openExternal } from '#lib/ipc/commands.js';
 
   const API_PORTAL_URL = 'https://api-portal.tfl.gov.uk';
 

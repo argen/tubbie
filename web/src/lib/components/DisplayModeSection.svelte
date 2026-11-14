@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
-  import { displayMode } from '$lib/stores/displayMode.js';
-  import { saveDisplayMode, type DisplayMode } from '$lib/ipc/commands.js';
+  import { displayMode } from '#lib/stores/displayMode.js';
+  import { saveDisplayMode, type DisplayMode } from '#lib/ipc/commands.js';
 
   let displayModeStatus = $state<string | null>(null);
   let displayModeStatusTimer: ReturnType<typeof setTimeout> | null = null;

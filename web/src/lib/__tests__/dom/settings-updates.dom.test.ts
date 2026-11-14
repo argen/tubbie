@@ -27,8 +27,8 @@
  */
 import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
 import { render, fireEvent, waitFor } from '@testing-library/svelte';
-import UpdatesSection from '$lib/components/UpdatesSection.svelte';
-import { mockInvoke, setMockHandler, resetMockHandlers, sampleUpdateInfo } from '$lib/ipc/mock.js';
+import UpdatesSection from '#lib/components/UpdatesSection.svelte';
+import { mockInvoke, setMockHandler, resetMockHandlers, sampleUpdateInfo } from '#lib/ipc/mock.js';
 
 // Event mock — registered listeners are kept in this map and the test
 // triggers them via `emitMockEvent`. Allows asserting that the Svelte

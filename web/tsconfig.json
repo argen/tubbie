@@ -1,5 +1,5 @@
 {
-  "extends": "./.svelte-kit/tsconfig.json",
+  "extends": "$app/tsconfig",
   "compilerOptions": {
     "strict": true,
     "noUncheckedIndexedAccess": true,
@@ -12,5 +12,7 @@
     "moduleResolution": "bundler",
     "module": "ESNext",
     "target": "ESNext"
-  }
+  },
+  "include": ["src", "tests", "*.ts", "*.js"],
+  "exclude": ["src/service-worker"]
 }

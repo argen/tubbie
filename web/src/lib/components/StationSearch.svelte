@@ -1,14 +1,14 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import type { LocationError, NearbyStation, Station } from '$lib/ipc/types.js';
+  import type { LocationError, NearbyStation, Station } from '#lib/ipc/types.js';
   import {
     findNearestStations,
     requestCurrentLocation,
     searchStations,
     openExternal,
-  } from '$lib/ipc/commands.js';
-  import { debounceAsync } from '$lib/utils/debounce.js';
-  import { formatDistance, shortStationName } from '$lib/utils/format.js';
+  } from '#lib/ipc/commands.js';
+  import { debounceAsync } from '#lib/utils/debounce.js';
+  import { formatDistance, shortStationName } from '#lib/utils/format.js';
 
   // Deep link to macOS System Settings → Privacy & Security → Location Services.
   // Opened when location permission is off/denied so the user can fix it in one

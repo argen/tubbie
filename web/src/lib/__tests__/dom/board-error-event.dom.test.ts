@@ -15,7 +15,7 @@
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { get } from 'svelte/store';
-import { emitMockEvent, mockListen, sampleBoard } from '$lib/ipc/mock.js';
+import { emitMockEvent, mockListen, sampleBoard } from '#lib/ipc/mock.js';
 
 const invokeSpy = vi.fn((_cmd: string, _args?: Record<string, unknown>): Promise<unknown> =>
   Promise.resolve(null),
@@ -30,7 +30,7 @@ vi.mock('@tauri-apps/api/event', () => ({
     mockListen(eventName, handler),
 }));
 
-import { board, boardError, isLoading, startBoardSubscription } from '$lib/stores/board.js';
+import { board, boardError, isLoading, startBoardSubscription } from '#lib/stores/board.js';
 
 function resetStores(): void {
   board.set(null);

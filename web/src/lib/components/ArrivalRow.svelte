@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { fade } from 'svelte/transition';
-  import type { Arrival } from '$lib/ipc/types.js';
+  import type { Arrival } from '#lib/ipc/types.js';
   import {
     formatTimeToStation,
     isDue,
@@ -9,9 +9,9 @@
     platformBadge,
     revealDuration,
     shortStationName,
-  } from '$lib/utils/format.js';
-  import { reducedMotion } from '$lib/stores/reducedMotion.js';
-  import { now } from '$lib/stores/clock.js';
+  } from '#lib/utils/format.js';
+  import { reducedMotion } from '#lib/stores/reducedMotion.js';
+  import { now } from '#lib/stores/clock.js';
 
   interface Props {
     arrival: Arrival;

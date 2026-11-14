@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { parseArrival } from '$lib/tfl/domain/arrival.js';
-import { loadFixture } from '$lib/tfl/fixtures.js';
+import { parseArrival } from '#lib/tfl/domain/arrival.js';
+import { loadFixture } from '#lib/tfl/fixtures.js';
 
 const VALID_DIRECTIONS = new Set([
   'Northbound',

@@ -1,13 +1,13 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { board, boardError, isLoading } from '$lib/stores/board.js';
-  import { config, configError } from '$lib/stores/config.js';
-  import Board from '$lib/components/Board.svelte';
-  import FirstRunPrompt from '$lib/components/FirstRunPrompt.svelte';
-  import { getAllLineStatuses, setTrayDisruption } from '$lib/ipc/commands.js';
-  import { openSettings, settingsOpen } from '$lib/stores/settingsView.js';
-  import { anyDisrupted } from '$lib/utils/status.js';
-  import type { Board as BoardT, LineStatus } from '$lib/ipc/types.js';
+  import { board, boardError, isLoading } from '#lib/stores/board.js';
+  import { config, configError } from '#lib/stores/config.js';
+  import Board from '#lib/components/Board.svelte';
+  import FirstRunPrompt from '#lib/components/FirstRunPrompt.svelte';
+  import { getAllLineStatuses, setTrayDisruption } from '#lib/ipc/commands.js';
+  import { openSettings, settingsOpen } from '#lib/stores/settingsView.js';
+  import { anyDisrupted } from '#lib/utils/status.js';
+  import type { Board as BoardT, LineStatus } from '#lib/ipc/types.js';
 
   // First-run prompt: shown once, until the user picks a station or dismisses.
   // Persisted in localStorage (a UI nicety flag, not app config) so it never

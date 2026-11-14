@@ -4,7 +4,7 @@ import {
   isSupportedLineId,
   lineFamilyKey,
   prettyLineName,
-} from '$lib/tfl/domain/lines.js';
+} from '#lib/tfl/domain/lines.js';
 
 // Ported from crates/tfl-domain/tests/line_family_key.rs (invariant #10).
 describe('lineFamilyKey', () => {

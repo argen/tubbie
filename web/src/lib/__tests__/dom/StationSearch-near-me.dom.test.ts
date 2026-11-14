@@ -9,14 +9,14 @@
 //   - PermissionDenied surfaces as a typed error row, not a toast
 //   - Retry path on Timeout re-fires the location request
 //
-// All Tauri IPC is mocked at the `$lib/ipc/commands.js` boundary so we
+// All Tauri IPC is mocked at the `#lib/ipc/commands.js` boundary so we
 // never touch the (macOS-only) native bridge.
 
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/svelte';
-import StationSearch from '$lib/components/StationSearch.svelte';
-import type { LocationError, LocationFix, NearbyStation, Station } from '$lib/ipc/types.js';
-import { sampleNearbyStations, sampleLocationFix } from '$lib/ipc/mock.js';
+import StationSearch from '#lib/components/StationSearch.svelte';
+import type { LocationError, LocationFix, NearbyStation, Station } from '#lib/ipc/types.js';
+import { sampleNearbyStations, sampleLocationFix } from '#lib/ipc/mock.js';
 
 const searchStationsMock = vi.fn(async (_q: string): Promise<Station[]> => []);
 const findNearestStationsMock = vi.fn(
@@ -31,7 +31,7 @@ const requestCurrentLocationMock = vi.fn(
 );
 const openExternalMock = vi.fn(async (_url: string): Promise<void> => undefined);
 
-vi.mock('$lib/ipc/commands.js', () => ({
+vi.mock('#lib/ipc/commands.js', () => ({
   searchStations: (q: string) => searchStationsMock(q),
   findNearestStations: (lat: number, lon: number, limit: number) =>
     findNearestStationsMock(lat, lon, limit),

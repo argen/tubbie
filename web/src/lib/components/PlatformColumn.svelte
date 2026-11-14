@@ -1,13 +1,13 @@
 <script lang="ts">
-  import type { Arrival, Platform } from '$lib/ipc/types.js';
+  import type { Arrival, Platform } from '#lib/ipc/types.js';
   import {
     formatTimeToStation,
     isDue,
     lineColorVar,
     shortPlatformName,
     shortStationName,
-  } from '$lib/utils/format.js';
-  import { now } from '$lib/stores/clock.js';
+  } from '#lib/utils/format.js';
+  import { now } from '#lib/stores/clock.js';
   import ArrivalRow from './ArrivalRow.svelte';
 
   interface Props {

@@ -8,9 +8,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/svelte';
 import { get } from 'svelte/store';
-import { mockInvoke } from '$lib/ipc/mock.js';
-import { settingsOpen } from '$lib/stores/settingsView.js';
-import FirstRunPrompt from '$lib/components/FirstRunPrompt.svelte';
+import { mockInvoke } from '#lib/ipc/mock.js';
+import { settingsOpen } from '#lib/stores/settingsView.js';
+import FirstRunPrompt from '#lib/components/FirstRunPrompt.svelte';
 
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: (cmd: string, args: Record<string, unknown>) => mockInvoke(cmd, args),

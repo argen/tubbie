@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { ThemeId } from '$lib/stores/config.js';
+  import type { ThemeId } from '#lib/stores/config.js';
 
   interface ThemeOption {
     id: ThemeId;

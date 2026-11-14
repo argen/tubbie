@@ -18,7 +18,7 @@
  * `schema_version === 1` is accepted; invalid keys are silently dropped.
  */
 
-import { isRecord, rArray, rNumber } from '$lib/tfl/domain/raw.js';
+import { isRecord, rArray, rNumber } from '#lib/tfl/domain/raw.js';
 
 /** Canonical pool-keys endpoint (shared with iOS). */
 export const POOL_KEYS_URL = 'https://tubbie.brunobelcastro.com/pool-keys.json';

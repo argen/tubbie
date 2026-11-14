@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { Arrival } from '$lib/ipc/types.js';
-import { groupByPlatform } from '$lib/tfl/domain/format.js';
+import type { Arrival } from '#lib/ipc/types.js';
+import { groupByPlatform } from '#lib/tfl/domain/format.js';
 
 function arrival(
   partial: Partial<Arrival> & { platform_name: string; time_to_station: number },

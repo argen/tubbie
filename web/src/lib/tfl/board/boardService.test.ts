@@ -5,7 +5,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { BoardConfig } from '$lib/ipc/types.js';
+import type { BoardConfig } from '#lib/ipc/types.js';
 import { FakeClock } from '../transport/clock.js';
 import { RecordHttp } from '../cache/recordHttp.js';
 import { TflClient } from '../cache/tflClient.js';

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { loadFixture } from '$lib/tfl/fixtures.js';
+import { loadFixture } from '#lib/tfl/fixtures.js';
 
 describe('loadFixture', () => {
   it('reads and parses a repo-root stop-points fixture', () => {

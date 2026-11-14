@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { settingsForm, updateForm, persistDebounced } from '$lib/stores/settingsForm.js';
-  import type { Direction } from '$lib/ipc/types.js';
+  import { settingsForm, updateForm, persistDebounced } from '#lib/stores/settingsForm.js';
+  import type { Direction } from '#lib/ipc/types.js';
 
   const DIRECTIONS: { id: Direction; label: string }[] = [
     { id: 'Northbound', label: 'Northbound' },

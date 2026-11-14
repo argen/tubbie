@@ -1,9 +1,9 @@
 <script lang="ts">
-  import StationSearch from '$lib/components/StationSearch.svelte';
-  import { board } from '$lib/stores/board.js';
-  import { favorites, addFavorite, removeFavorite } from '$lib/stores/favorites.js';
-  import { settingsForm, currentStationName, selectStation } from '$lib/stores/settingsForm.js';
-  import type { Station } from '$lib/ipc/types.js';
+  import StationSearch from '#lib/components/StationSearch.svelte';
+  import { board } from '#lib/stores/board.js';
+  import { favorites, addFavorite, removeFavorite } from '#lib/stores/favorites.js';
+  import { settingsForm, currentStationName, selectStation } from '#lib/stores/settingsForm.js';
+  import type { Station } from '#lib/ipc/types.js';
 
   /** True iff the currently-selected station is in the favorites list. */
   const isCurrentStationFavorited = $derived(

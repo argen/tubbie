@@ -6,7 +6,7 @@
  * source, used by every component); it is re-exported here so the domain layer
  * has a cohesive line API without a second copy of the table.
  */
-export { prettyLineName } from '$lib/utils/format.js';
+export { prettyLineName } from '#lib/utils/format.js';
 
 /**
  * TfL line ids we surface in the UI: the 11 tube lines + Elizabeth (both id

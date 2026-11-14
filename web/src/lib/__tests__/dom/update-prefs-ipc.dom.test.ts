@@ -23,14 +23,14 @@ import {
   installUpdate,
   loadUpdatePrefs,
   saveUpdatePrefs,
-} from '$lib/ipc/commands.js';
+} from '#lib/ipc/commands.js';
 import {
   mockInvoke,
   setMockHandler,
   resetMockHandlers,
   sampleUpdateInfo,
   sampleUpdatePrefsDefault,
-} from '$lib/ipc/mock.js';
+} from '#lib/ipc/mock.js';
 
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: (cmd: string, args: Record<string, unknown>) => mockInvoke(cmd, args),

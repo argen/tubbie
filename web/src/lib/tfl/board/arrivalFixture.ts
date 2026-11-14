@@ -4,7 +4,7 @@
  * Test support only.
  */
 
-import type { Arrival } from '$lib/ipc/types.js';
+import type { Arrival } from '#lib/ipc/types.js';
 
 export function makeArrival(opts: Partial<Arrival> = {}): Arrival {
   return {

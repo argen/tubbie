@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import type { Station } from '$lib/ipc/types.js';
+import type { Station } from '#lib/ipc/types.js';
 import { MAX_RADIUS_M, haversineM, rankNearest } from './nearest.js';
 
 function station(id: string, name: string, lat: number, lon: number): Station {

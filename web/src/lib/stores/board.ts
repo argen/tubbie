@@ -7,19 +7,19 @@
  * every subsequent event emission.
  *
  * Usage:
- *   import { board, boardError, isLoading } from '$lib/stores/board.js';
+ *   import { board, boardError, isLoading } from '#lib/stores/board.js';
  *   $board    // current Board | null
  *   $isLoading
  *   $boardError
  */
 
 import { writable, get } from 'svelte/store';
-import { onBoardUpdated, onBoardError, getBoard } from '$lib/ipc/commands.js';
-import type { Board, BoardConfig, BoardErrorPayload } from '$lib/ipc/types.js';
+import { onBoardUpdated, onBoardError, getBoard } from '#lib/ipc/commands.js';
+import type { Board, BoardConfig, BoardErrorPayload } from '#lib/ipc/types.js';
 import type { UnlistenFn } from '@tauri-apps/api/event';
-import { useTsTfl } from '$lib/tfl/flag.js';
-import { tflRuntime } from '$lib/tfl/runtime.js';
-import { BoardStream } from '$lib/tfl/board/stream.js';
+import { useTsTfl } from '#lib/tfl/flag.js';
+import { tflRuntime } from '#lib/tfl/runtime.js';
+import { BoardStream } from '#lib/tfl/board/stream.js';
 
 // ---------------------------------------------------------------------------
 // Exported stores

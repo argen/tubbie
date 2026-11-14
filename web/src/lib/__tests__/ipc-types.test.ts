@@ -9,8 +9,8 @@ import {
   type BoardConfig,
   type LineStatus,
   type Station,
-} from '$lib/ipc/types.js';
-import { sampleBoard, sampleConfig, sampleLineStatus, sampleStation } from '$lib/ipc/mock.js';
+} from '#lib/ipc/types.js';
+import { sampleBoard, sampleConfig, sampleLineStatus, sampleStation } from '#lib/ipc/mock.js';
 
 describe('IPC type guards', () => {
   // -----------------------------------------------------------------------

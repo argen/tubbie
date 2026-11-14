@@ -10,8 +10,8 @@
  * fixed buckets (mirrors `SeverityBucket::sort_rank`). That set is closed —
  * adding a bucket is a deliberate cross-cutting change anyway.
  */
-import type { LineStatus, RouteSegment, SeverityBucket, StatusEntry } from '$lib/ipc/types.js';
-import { severityBucketSortRank } from '$lib/tfl/domain/status.js';
+import type { LineStatus, RouteSegment, SeverityBucket, StatusEntry } from '#lib/ipc/types.js';
+import { severityBucketSortRank } from '#lib/tfl/domain/status.js';
 
 const GOOD_RANK = severityBucketSortRank('GoodService');
 

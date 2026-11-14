@@ -15,10 +15,10 @@
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/svelte';
-import { mockInvoke, setMockHandler, resetMockHandlers, sampleConfig } from '$lib/ipc/mock.js';
-import { config, configError } from '$lib/stores/config.js';
+import { mockInvoke, setMockHandler, resetMockHandlers, sampleConfig } from '#lib/ipc/mock.js';
+import { config, configError } from '#lib/stores/config.js';
 import SettingsPage from '../../components/SettingsView.svelte';
-import type { BoardConfig } from '$lib/ipc/types.js';
+import type { BoardConfig } from '#lib/ipc/types.js';
 
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: (cmd: string, args: Record<string, unknown>) => mockInvoke(cmd, args),

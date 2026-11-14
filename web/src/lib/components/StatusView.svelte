@@ -12,9 +12,9 @@
    *   - Single "Good service on all other lines" footer bar
    *   - Empty state "Service status unavailable."
    */
-  import type { LineStatus } from '$lib/ipc/types.js';
-  import { disruptedLinesWorstFirst, isDisrupted, segmentsFor } from '$lib/utils/status.js';
-  import { prettyLineName, lineColorVar } from '$lib/utils/format.js';
+  import type { LineStatus } from '#lib/ipc/types.js';
+  import { disruptedLinesWorstFirst, isDisrupted, segmentsFor } from '#lib/utils/status.js';
+  import { prettyLineName, lineColorVar } from '#lib/utils/format.js';
 
   interface Props {
     statuses: LineStatus[];

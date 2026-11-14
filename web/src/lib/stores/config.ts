@@ -6,9 +6,9 @@
  */
 
 import { writable, get } from 'svelte/store';
-import { loadConfig, saveConfig } from '$lib/ipc/commands.js';
-import { setStreamConfig } from '$lib/stores/board.js';
-import type { BoardConfig } from '$lib/ipc/types.js';
+import { loadConfig, saveConfig } from '#lib/ipc/commands.js';
+import { setStreamConfig } from '#lib/stores/board.js';
+import type { BoardConfig } from '#lib/ipc/types.js';
 
 export const VALID_THEME_IDS = [
   'classic-amber',

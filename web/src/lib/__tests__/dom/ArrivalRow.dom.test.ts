@@ -1,11 +1,11 @@
 // @vitest-environment happy-dom
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
-import ArrivalRow from '$lib/components/ArrivalRow.svelte';
-import type { Arrival } from '$lib/ipc/types.js';
+import ArrivalRow from '#lib/components/ArrivalRow.svelte';
+import type { Arrival } from '#lib/ipc/types.js';
 
 // Mock reducedMotion store to control animation behaviour
-vi.mock('$lib/stores/reducedMotion.js', () => ({
+vi.mock('#lib/stores/reducedMotion.js', () => ({
   reducedMotion: {
     subscribe: (fn: (v: boolean) => void) => {
       fn(false);

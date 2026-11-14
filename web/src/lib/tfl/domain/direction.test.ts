@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { Direction } from '$lib/ipc/types.js';
-import { inferDirection, lineCompassAxis } from '$lib/tfl/domain/direction.js';
+import type { Direction } from '#lib/ipc/types.js';
+import { inferDirection, lineCompassAxis } from '#lib/tfl/domain/direction.js';
 
 // Ported from crates/tfl-domain/tests/compass_from_towards.rs (invariant #23)
 // plus the priority-tier and off-axis cases from direction.rs.

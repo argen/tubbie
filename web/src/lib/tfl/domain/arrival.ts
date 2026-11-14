@@ -6,7 +6,7 @@
  * via `inferDirection` at ingest, so every downstream consumer sees one stable
  * id and a compass direction.
  */
-import type { Arrival } from '$lib/ipc/types.js';
+import type { Arrival } from '#lib/ipc/types.js';
 import { inferDirection } from './direction.js';
 import { canonicalizeLineId } from './lines.js';
 import { isRecord, rNumber, rString } from './raw.js';

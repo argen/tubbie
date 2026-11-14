@@ -7,10 +7,10 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/svelte';
 import { get } from 'svelte/store';
-import { mockInvoke, sampleConfig } from '$lib/ipc/mock.js';
-import { config } from '$lib/stores/config.js';
-import { settingsOpen } from '$lib/stores/settingsView.js';
-import SettingsView from '$lib/components/SettingsView.svelte';
+import { mockInvoke, sampleConfig } from '#lib/ipc/mock.js';
+import { config } from '#lib/stores/config.js';
+import { settingsOpen } from '#lib/stores/settingsView.js';
+import SettingsView from '#lib/components/SettingsView.svelte';
 
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: (cmd: string, args: Record<string, unknown>) => mockInvoke(cmd, args),

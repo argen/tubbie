@@ -4,7 +4,6 @@ import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import svelte from 'eslint-plugin-svelte';
 import prettier from 'eslint-config-prettier';
-import svelteConfig from './svelte.config.js';
 
 export default defineConfig(
   // Global ignores
@@ -42,7 +41,6 @@ export default defineConfig(
         projectService: true,
         extraFileExtensions: ['.svelte'],
         parser: tseslint.parser,
-        svelteConfig,
       },
     },
     rules: {

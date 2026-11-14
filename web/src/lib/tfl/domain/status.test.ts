@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { SeverityBucket } from '$lib/ipc/types.js';
-import { severityBucket, severityBucketSortRank } from '$lib/tfl/domain/status.js';
+import type { SeverityBucket } from '#lib/ipc/types.js';
+import { severityBucket, severityBucketSortRank } from '#lib/tfl/domain/status.js';
 
 // Ported from crates/tfl-domain/tests/severity_bucket.rs (invariant #25).
 describe('severityBucket', () => {

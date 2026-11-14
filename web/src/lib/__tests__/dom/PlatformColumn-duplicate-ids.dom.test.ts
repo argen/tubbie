@@ -1,10 +1,10 @@
 // @vitest-environment happy-dom
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
-import PlatformColumn from '$lib/components/PlatformColumn.svelte';
-import type { Arrival, Platform } from '$lib/ipc/types.js';
+import PlatformColumn from '#lib/components/PlatformColumn.svelte';
+import type { Arrival, Platform } from '#lib/ipc/types.js';
 
-vi.mock('$lib/stores/reducedMotion.js', () => ({
+vi.mock('#lib/stores/reducedMotion.js', () => ({
   reducedMotion: {
     subscribe: (fn: (v: boolean) => void) => {
       fn(false);

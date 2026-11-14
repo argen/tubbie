@@ -9,8 +9,8 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/svelte';
 import { get } from 'svelte/store';
-import { mockInvoke, setMockHandler, resetMockHandlers, sampleConfig } from '$lib/ipc/mock.js';
-import { config, configError } from '$lib/stores/config.js';
+import { mockInvoke, setMockHandler, resetMockHandlers, sampleConfig } from '#lib/ipc/mock.js';
+import { config, configError } from '#lib/stores/config.js';
 import { goto } from '$app/navigation';
 import SettingsPage from '../../components/SettingsView.svelte';
 

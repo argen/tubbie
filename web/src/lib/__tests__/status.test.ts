@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { LineStatus, SeverityBucket } from '$lib/ipc/types.js';
+import type { LineStatus, SeverityBucket } from '#lib/ipc/types.js';
 import {
   worstBucket,
   isDisrupted,
@@ -8,7 +8,7 @@ import {
   disruptedLinesWorstFirst,
   anyDisrupted,
   bucketRank,
-} from '$lib/utils/status.js';
+} from '#lib/utils/status.js';
 
 function line(line_id: string, buckets: SeverityBucket[]): LineStatus {
   return {

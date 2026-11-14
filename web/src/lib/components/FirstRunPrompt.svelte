@@ -6,10 +6,10 @@
    * immediately and closes it. The "menu bar vs window" choice is a quiet
    * secondary link to Settings, not a step.
    */
-  import StationSearch from '$lib/components/StationSearch.svelte';
-  import { settingsForm, selectStation } from '$lib/stores/settingsForm.js';
-  import { openSettings } from '$lib/stores/settingsView.js';
-  import type { Station } from '$lib/ipc/types.js';
+  import StationSearch from '#lib/components/StationSearch.svelte';
+  import { settingsForm, selectStation } from '#lib/stores/settingsForm.js';
+  import { openSettings } from '#lib/stores/settingsView.js';
+  import type { Station } from '#lib/ipc/types.js';
 
   // Opening Settings from the first-run prompt dismisses the prompt first, so
   // it doesn't linger behind the (overlaid) Settings panel.

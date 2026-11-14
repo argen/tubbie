@@ -10,7 +10,7 @@
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
-import type { LineStatus, SeverityBucket } from '$lib/ipc/types.js';
+import type { LineStatus, SeverityBucket } from '#lib/ipc/types.js';
 
 // ---------------------------------------------------------------------------
 // Module-level mock for reducedMotion store.
@@ -23,7 +23,7 @@ const { mockReducedMotion } = vi.hoisted(() => {
   return { mockReducedMotion: w(false) };
 });
 
-vi.mock('$lib/stores/reducedMotion.js', () => ({
+vi.mock('#lib/stores/reducedMotion.js', () => ({
   reducedMotion: mockReducedMotion,
 }));
 
