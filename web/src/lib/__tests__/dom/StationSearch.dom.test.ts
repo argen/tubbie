@@ -1,12 +1,12 @@
 // @vitest-environment happy-dom
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/svelte';
-import StationSearch from '$lib/components/StationSearch.svelte';
-import type { Station } from '$lib/ipc/types.js';
-import { sampleStation } from '$lib/ipc/mock.js';
+import StationSearch from '#lib/components/StationSearch.svelte';
+import type { Station } from '#lib/ipc/types.js';
+import { sampleStation } from '#lib/ipc/mock.js';
 
 // Mock the IPC commands
-vi.mock('$lib/ipc/commands.js', () => ({
+vi.mock('#lib/ipc/commands.js', () => ({
   searchStations: vi.fn(async (_q: string): Promise<Station[]> => [sampleStation]),
 }));
 
@@ -30,7 +30,7 @@ describe('StationSearch', () => {
   });
 
   it('debounces search — does not call searchStations immediately', async () => {
-    const { searchStations } = await import('$lib/ipc/commands.js');
+    const { searchStations } = await import('#lib/ipc/commands.js');
     render(StationSearch, {
       props: { selectedId: '', onSelect: vi.fn() },
     });
@@ -41,7 +41,7 @@ describe('StationSearch', () => {
   });
 
   it('calls searchStations after 200ms debounce', async () => {
-    const { searchStations } = await import('$lib/ipc/commands.js');
+    const { searchStations } = await import('#lib/ipc/commands.js');
     render(StationSearch, {
       props: { selectedId: '', onSelect: vi.fn() },
     });

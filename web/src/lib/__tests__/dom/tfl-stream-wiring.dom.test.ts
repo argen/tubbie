@@ -14,12 +14,12 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { get } from 'svelte/store';
-import type { Board, BoardConfig } from '$lib/ipc/types.js';
+import type { Board, BoardConfig } from '#lib/ipc/types.js';
 
 // --- Boundary mocks (hoisted) ----------------------------------------------
 
 let flagOn = true;
-vi.mock('$lib/tfl/flag.js', () => ({ useTsTfl: () => flagOn }));
+vi.mock('#lib/tfl/flag.js', () => ({ useTsTfl: () => flagOn }));
 
 let seq = 0;
 function boardFor(stationId: string): Board {
@@ -35,7 +35,7 @@ function boardFor(stationId: string): Board {
 const refreshSpy = vi.fn((c: BoardConfig): Promise<Board> =>
   Promise.resolve(boardFor(c.station_id)),
 );
-vi.mock('$lib/tfl/runtime.js', () => ({
+vi.mock('#lib/tfl/runtime.js', () => ({
   tflRuntime: () => Promise.resolve({ client: {}, service: { refresh: refreshSpy } }),
 }));
 
@@ -53,8 +53,8 @@ import {
   isLoading,
   startBoardSubscription,
   setStreamConfig,
-} from '$lib/stores/board.js';
-import { updateConfig } from '$lib/stores/config.js';
+} from '#lib/stores/board.js';
+import { updateConfig } from '#lib/stores/config.js';
 
 function cfg(stationId: string, over: Partial<BoardConfig> = {}): BoardConfig {
   return {

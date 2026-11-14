@@ -11,7 +11,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Board, BoardConfig } from '$lib/ipc/types.js';
+import type { Board, BoardConfig } from '#lib/ipc/types.js';
 import { FakeClock } from '../transport/clock.js';
 import type { BoardService } from './boardService.js';
 import { BoardStream, type Lifecycle } from './stream.js';

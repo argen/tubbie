@@ -12,7 +12,7 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/svelte';
-import type { LineStatus, SeverityBucket, RouteSegment } from '$lib/ipc/types.js';
+import type { LineStatus, SeverityBucket, RouteSegment } from '#lib/ipc/types.js';
 import StatusView from '../../components/StatusView.svelte';
 
 function makeEntry(bucket: SeverityBucket, description: string, segments: RouteSegment[] = []) {

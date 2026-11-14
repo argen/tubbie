@@ -12,7 +12,7 @@
  * `distance_m` at format time).
  */
 
-import type { NearbyStation, Station } from '$lib/ipc/types.js';
+import type { NearbyStation, Station } from '#lib/ipc/types.js';
 
 /**
  * Hard cap on how far a station may be from the query and still rank. Picked so

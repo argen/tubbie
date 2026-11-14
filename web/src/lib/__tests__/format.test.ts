@@ -7,7 +7,7 @@ import {
   shortPlatformName,
   shortStationName,
   truncate,
-} from '$lib/utils/format.js';
+} from '#lib/utils/format.js';
 
 describe('formatTimeToStation', () => {
   it('returns "Due" for < 30 seconds', () => {

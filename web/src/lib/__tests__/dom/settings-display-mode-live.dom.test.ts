@@ -21,8 +21,8 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { render, fireEvent, waitFor } from '@testing-library/svelte';
 import { get } from 'svelte/store';
-import { mockInvoke, setMockHandler, resetMockHandlers } from '$lib/ipc/mock.js';
-import { displayMode } from '$lib/stores/displayMode.js';
+import { mockInvoke, setMockHandler, resetMockHandlers } from '#lib/ipc/mock.js';
+import { displayMode } from '#lib/stores/displayMode.js';
 import SettingsPage from '../../components/SettingsView.svelte';
 
 vi.mock('@tauri-apps/api/core', () => ({

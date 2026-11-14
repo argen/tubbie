@@ -26,9 +26,9 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import { render } from '@testing-library/svelte';
-import Board from '$lib/components/Board.svelte';
-import type { Arrival, Board as BoardType, Direction, Platform } from '$lib/ipc/types.js';
-import { mockInvoke } from '$lib/ipc/mock.js';
+import Board from '#lib/components/Board.svelte';
+import type { Arrival, Board as BoardType, Direction, Platform } from '#lib/ipc/types.js';
+import { mockInvoke } from '#lib/ipc/mock.js';
 
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: (cmd: string, args: Record<string, unknown>) => mockInvoke(cmd, args),
@@ -36,7 +36,7 @@ vi.mock('@tauri-apps/api/core', () => ({
 vi.mock('@tauri-apps/api/event', () => ({
   listen: () => Promise.resolve(() => undefined),
 }));
-vi.mock('$lib/stores/board.js', () => ({
+vi.mock('#lib/stores/board.js', () => ({
   lastUpdateTs: {
     subscribe: (fn: (v: number) => void) => {
       fn(0);
@@ -44,10 +44,10 @@ vi.mock('$lib/stores/board.js', () => ({
     },
   },
 }));
-vi.mock('$lib/stores/settingsForm.js', () => ({
+vi.mock('#lib/stores/settingsForm.js', () => ({
   selectStation: vi.fn(),
 }));
-vi.mock('$lib/stores/reducedMotion.js', () => ({
+vi.mock('#lib/stores/reducedMotion.js', () => ({
   reducedMotion: {
     subscribe: (fn: (v: boolean) => void) => {
       fn(false);

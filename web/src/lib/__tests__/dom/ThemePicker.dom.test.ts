@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/svelte';
-import ThemePicker from '$lib/components/ThemePicker.svelte';
+import ThemePicker from '#lib/components/ThemePicker.svelte';
 
 describe('ThemePicker', () => {
   it('renders all 4 theme buttons', () => {

@@ -9,8 +9,8 @@
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { get } from 'svelte/store';
-import { emitMockEvent, mockListen, sampleBoard } from '$lib/ipc/mock.js';
-import type { Board } from '$lib/ipc/types.js';
+import { emitMockEvent, mockListen, sampleBoard } from '#lib/ipc/mock.js';
+import type { Board } from '#lib/ipc/types.js';
 
 // ---------------------------------------------------------------------------
 // Tauri API mocks — must be hoisted, so no top-level variable references.
@@ -46,7 +46,7 @@ const newerBoard: Board = {
 };
 
 // Import store AFTER mocks are set up (static import is fine — mocks are hoisted).
-import { board, boardError, isLoading, startBoardSubscription } from '$lib/stores/board.js';
+import { board, boardError, isLoading, startBoardSubscription } from '#lib/stores/board.js';
 
 function resetStores(): void {
   board.set(null);

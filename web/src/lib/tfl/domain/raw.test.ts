@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isRecord, rArray, rNumber, rString } from '$lib/tfl/domain/raw.js';
+import { isRecord, rArray, rNumber, rString } from '#lib/tfl/domain/raw.js';
 
 // These readers reproduce serde's `#[serde(default)]` "missing/wrong-typed →
 // safe default" contract. The parsers (parseArrival/parseStation) lean on them

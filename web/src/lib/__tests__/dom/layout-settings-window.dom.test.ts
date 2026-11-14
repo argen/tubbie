@@ -16,11 +16,11 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import { get } from 'svelte/store';
 import { createRawSnippet } from 'svelte';
-import { resetMockHandlers, mockInvoke } from '$lib/ipc/mock.js';
-import { settingsOpen } from '$lib/stores/settingsView.js';
+import { resetMockHandlers, mockInvoke } from '#lib/ipc/mock.js';
+import { settingsOpen } from '#lib/stores/settingsView.js';
 
 // Board module mock — inline spy so no hoisting issues.
-vi.mock('$lib/stores/board.js', () => {
+vi.mock('#lib/stores/board.js', () => {
   const spy = vi.fn(() => Promise.resolve(() => undefined));
   return {
     startBoardSubscription: spy,
@@ -52,7 +52,7 @@ vi.mock('$lib/stores/board.js', () => {
   };
 });
 
-vi.mock('$lib/stores/config.js', () => ({
+vi.mock('#lib/stores/config.js', () => ({
   initConfig: vi.fn(() => Promise.resolve()),
   // Full BoardConfig shape — the layout now statically imports SettingsView,
   // whose sections init `settingsForm` from `get(config)` (reads line_ids,
@@ -86,7 +86,7 @@ vi.mock('$lib/stores/config.js', () => ({
   },
 }));
 
-vi.mock('$lib/stores/displayMode.js', () => ({
+vi.mock('#lib/stores/displayMode.js', () => ({
   initDisplayMode: vi.fn(() => Promise.resolve()),
   displayMode: {
     subscribe: (fn: (v: string) => void) => {
@@ -96,7 +96,7 @@ vi.mock('$lib/stores/displayMode.js', () => ({
   },
 }));
 
-vi.mock('$lib/stores/displayPrefs.js', () => ({
+vi.mock('#lib/stores/displayPrefs.js', () => ({
   initDisplayPrefs: vi.fn(() => Promise.resolve()),
   displayPrefs: {
     subscribe: (fn: (v: { group_destinations: boolean }) => void) => {
@@ -150,7 +150,7 @@ describe('+layout.svelte — single-window bootstrap (Settings is in-frame)', ()
   });
 
   it('always calls startBoardSubscription on mount (no window-label skip)', async () => {
-    const { __spy } = (await import('$lib/stores/board.js')) as unknown as {
+    const { __spy } = (await import('#lib/stores/board.js')) as unknown as {
       __spy: ReturnType<typeof vi.fn>;
     };
     __spy.mockClear();

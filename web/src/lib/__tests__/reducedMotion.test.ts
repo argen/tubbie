@@ -49,7 +49,7 @@ describe('reducedMotion store', () => {
       matchMedia: (_query: string) => createMockMq(false),
     });
 
-    const { reducedMotion } = await import('$lib/stores/reducedMotion.js');
+    const { reducedMotion } = await import('#lib/stores/reducedMotion.js');
     expect(get(reducedMotion)).toBe(false);
   });
 
@@ -58,7 +58,7 @@ describe('reducedMotion store', () => {
       matchMedia: (_query: string) => createMockMq(true),
     });
 
-    const { reducedMotion } = await import('$lib/stores/reducedMotion.js');
+    const { reducedMotion } = await import('#lib/stores/reducedMotion.js');
     expect(get(reducedMotion)).toBe(true);
   });
 
@@ -67,7 +67,7 @@ describe('reducedMotion store', () => {
       matchMedia: (_query: string) => createMockMq(false),
     });
 
-    const { reducedMotion } = await import('$lib/stores/reducedMotion.js');
+    const { reducedMotion } = await import('#lib/stores/reducedMotion.js');
 
     // Keep an active subscription so the store's addEventListener stays registered
     const values: boolean[] = [];
@@ -93,14 +93,14 @@ describe('reducedMotion store', () => {
     // Remove window.matchMedia
     vi.stubGlobal('window', { matchMedia: undefined });
 
-    const { reducedMotion } = await import('$lib/stores/reducedMotion.js');
+    const { reducedMotion } = await import('#lib/stores/reducedMotion.js');
     expect(get(reducedMotion)).toBe(false);
   });
 
   it('returns false when window is undefined', async () => {
     vi.stubGlobal('window', undefined);
 
-    const { reducedMotion } = await import('$lib/stores/reducedMotion.js');
+    const { reducedMotion } = await import('#lib/stores/reducedMotion.js');
     expect(get(reducedMotion)).toBe(false);
   });
 });

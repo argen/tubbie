@@ -11,8 +11,8 @@ import {
   addFavorite as ipcAddFavorite,
   listFavorites as ipcListFavorites,
   removeFavorite as ipcRemoveFavorite,
-} from '$lib/ipc/commands.js';
-import type { Favorite, LineRef } from '$lib/ipc/types.js';
+} from '#lib/ipc/commands.js';
+import type { Favorite, LineRef } from '#lib/ipc/types.js';
 
 export const favorites = writable<Favorite[]>([]);
 export const favoritesError = writable<string | null>(null);

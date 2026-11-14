@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { USE_TS_TFL_KEY, useTsTfl } from '$lib/tfl/flag.js';
+import { USE_TS_TFL_KEY, useTsTfl } from '#lib/tfl/flag.js';
 
 interface GlobalWithStorage {
   localStorage?: Storage;

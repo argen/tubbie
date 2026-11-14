@@ -1,9 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { favorites, initFavorites, removeFavorite } from '$lib/stores/favorites.js';
-  import { selectStation } from '$lib/stores/settingsForm.js';
-  import { shortStationName } from '$lib/utils/format.js';
-  import type { Favorite, Station } from '$lib/ipc/types.js';
+  import { favorites, initFavorites, removeFavorite } from '#lib/stores/favorites.js';
+  import { selectStation } from '#lib/stores/settingsForm.js';
+  import { shortStationName } from '#lib/utils/format.js';
+  import type { Favorite, Station } from '#lib/ipc/types.js';
 
   onMount(() => {
     // Load favorites once on mount. Errors surface via $favoritesError.

@@ -39,8 +39,8 @@
     installUpdate,
     loadUpdatePrefs,
     saveUpdatePrefs,
-  } from '$lib/ipc/commands.js';
-  import type { UpdateInfo } from '$lib/ipc/types.js';
+  } from '#lib/ipc/commands.js';
+  import type { UpdateInfo } from '#lib/ipc/types.js';
 
   type UpdateState =
     | { kind: 'never-checked' }

@@ -1,7 +1,7 @@
 <script lang="ts">
-  import type { Arrival } from '$lib/ipc/types.js';
-  import { displayMode } from '$lib/stores/displayMode.js';
-  import { lineColorVar, prettyLineName } from '$lib/utils/format.js';
+  import type { Arrival } from '#lib/ipc/types.js';
+  import { displayMode } from '#lib/stores/displayMode.js';
+  import { lineColorVar, prettyLineName } from '#lib/utils/format.js';
   import PlatformColumn from './PlatformColumn.svelte';
 
   /**

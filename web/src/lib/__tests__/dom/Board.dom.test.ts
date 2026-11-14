@@ -2,9 +2,9 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/svelte';
 import { get } from 'svelte/store';
-import Board from '$lib/components/Board.svelte';
-import { sampleBoard, sampleStaleBoard, mockInvoke } from '$lib/ipc/mock.js';
-import { settingsOpen } from '$lib/stores/settingsView.js';
+import Board from '#lib/components/Board.svelte';
+import { sampleBoard, sampleStaleBoard, mockInvoke } from '#lib/ipc/mock.js';
+import { settingsOpen } from '#lib/stores/settingsView.js';
 
 // Wire Tauri IPC mock (Board.svelte uses invoke for applyBoardSize, etc.).
 vi.mock('@tauri-apps/api/core', () => ({
@@ -12,7 +12,7 @@ vi.mock('@tauri-apps/api/core', () => ({
 }));
 
 // Mock board store to prevent side-effects
-vi.mock('$lib/stores/board.js', () => ({
+vi.mock('#lib/stores/board.js', () => ({
   lastUpdateTs: {
     subscribe: (fn: (v: number) => void) => {
       fn(0);
@@ -21,11 +21,11 @@ vi.mock('$lib/stores/board.js', () => ({
   },
 }));
 
-vi.mock('$lib/stores/settingsForm.js', () => ({
+vi.mock('#lib/stores/settingsForm.js', () => ({
   selectStation: vi.fn(),
 }));
 
-vi.mock('$lib/stores/reducedMotion.js', () => ({
+vi.mock('#lib/stores/reducedMotion.js', () => ({
   reducedMotion: {
     subscribe: (fn: (v: boolean) => void) => {
       fn(false);

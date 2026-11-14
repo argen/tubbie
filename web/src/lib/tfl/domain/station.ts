@@ -10,7 +10,7 @@
  * fixtures). `hub_naptan_code` is carried so the arrivals layer can query the
  * hub rather than the tube child.
  */
-import type { LineRef, Station } from '$lib/ipc/types.js';
+import type { LineRef, Station } from '#lib/ipc/types.js';
 import { isSupportedLineId, prettyLineName } from './lines.js';
 import { isRecord, rArray, rNumber, rString } from './raw.js';
 

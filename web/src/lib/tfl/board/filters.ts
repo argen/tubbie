@@ -9,7 +9,7 @@
  * frame instead of waiting for the next tick (invariants #3 / #22).
  */
 
-import type { Arrival, BoardConfig, Direction } from '$lib/ipc/types.js';
+import type { Arrival, BoardConfig, Direction } from '#lib/ipc/types.js';
 import { lineFamilyKey } from '../domain/lines.js';
 import type { CompassAxis } from '../domain/direction.js';
 import { lineCompassAxis } from '../domain/direction.js';

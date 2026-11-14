@@ -14,7 +14,7 @@
  */
 
 import { writable } from 'svelte/store';
-import { loadDisplayMode, type DisplayMode } from '$lib/ipc/commands.js';
+import { loadDisplayMode, type DisplayMode } from '#lib/ipc/commands.js';
 
 export const displayMode = writable<DisplayMode>('window');
 

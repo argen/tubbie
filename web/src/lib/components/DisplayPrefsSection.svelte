@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { displayPrefs, initDisplayPrefs, updateDisplayPrefs } from '$lib/stores/displayPrefs.js';
+  import { displayPrefs, initDisplayPrefs, updateDisplayPrefs } from '#lib/stores/displayPrefs.js';
 
   onMount(() => {
     // Hydrate display prefs from disk (defaults to all-false on first run).

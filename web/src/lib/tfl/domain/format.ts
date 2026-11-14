@@ -9,7 +9,7 @@
  * Display formatting (`formatTimeToStation`) already lives in `utils/format.ts`
  * and is not re-ported here.
  */
-import type { Arrival, Platform } from '$lib/ipc/types.js';
+import type { Arrival, Platform } from '#lib/ipc/types.js';
 
 /** Group arrivals into platforms, sorted soonest-first within each platform. */
 export function groupByPlatform(arrivals: Arrival[]): Platform[] {

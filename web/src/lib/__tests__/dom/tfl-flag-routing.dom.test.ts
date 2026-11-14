@@ -10,7 +10,7 @@
  * proves the *routing*, not the live wiring.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { LineStatus, NearbyStation, Station } from '$lib/ipc/types.js';
+import type { LineStatus, NearbyStation, Station } from '#lib/ipc/types.js';
 
 // --- Boundary mocks (hoisted) ----------------------------------------------
 
@@ -22,7 +22,7 @@ vi.mock('@tauri-apps/api/core', () => ({
 }));
 
 let flagOn = false;
-vi.mock('$lib/tfl/flag.js', () => ({
+vi.mock('#lib/tfl/flag.js', () => ({
   useTsTfl: () => flagOn,
 }));
 
@@ -47,7 +47,7 @@ const clientStub = {
   getLineStatus: vi.fn((): Promise<LineStatus> => Promise.resolve(tsLineStatus)),
   getAllLineStatuses: vi.fn((): Promise<LineStatus[]> => Promise.resolve([tsLineStatus])),
 };
-vi.mock('$lib/tfl/runtime.js', () => ({
+vi.mock('#lib/tfl/runtime.js', () => ({
   tflRuntime: () => Promise.resolve({ client: clientStub, service: {} }),
 }));
 
@@ -56,7 +56,7 @@ import {
   findNearestStations,
   getLineStatus,
   getAllLineStatuses,
-} from '$lib/ipc/commands.js';
+} from '#lib/ipc/commands.js';
 
 beforeEach(() => {
   flagOn = false;

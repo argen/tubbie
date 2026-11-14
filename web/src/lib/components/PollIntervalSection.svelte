@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { settingsForm, updateForm, persistDebounced } from '$lib/stores/settingsForm.js';
+  import { settingsForm, updateForm, persistDebounced } from '#lib/stores/settingsForm.js';
 
   function handlePollSlider(event: Event): void {
     const value = +(event.currentTarget as HTMLInputElement).value;

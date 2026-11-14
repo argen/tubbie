@@ -5,7 +5,7 @@
     currentStationName,
     updateForm,
     persistDebounced,
-  } from '$lib/stores/settingsForm.js';
+  } from '#lib/stores/settingsForm.js';
 
   // Master roster of selectable line chips. Tube + DLR + Elizabeth +
   // the six named Overground lines (Mildmay/Lioness/Suffragette/Windrush/

@@ -2,13 +2,13 @@
   import '../app.css';
   import { onDestroy, onMount } from 'svelte';
   import type { Snippet } from 'svelte';
-  import { startBoardSubscription } from '$lib/stores/board.js';
-  import { initConfig, config, applyTheme } from '$lib/stores/config.js';
-  import { initDisplayMode, displayMode } from '$lib/stores/displayMode.js';
-  import { initDisplayPrefs } from '$lib/stores/displayPrefs.js';
-  import { settingsOpen } from '$lib/stores/settingsView.js';
-  import Attribution from '$lib/components/Attribution.svelte';
-  import SettingsView from '$lib/components/SettingsView.svelte';
+  import { startBoardSubscription } from '#lib/stores/board.js';
+  import { initConfig, config, applyTheme } from '#lib/stores/config.js';
+  import { initDisplayMode, displayMode } from '#lib/stores/displayMode.js';
+  import { initDisplayPrefs } from '#lib/stores/displayPrefs.js';
+  import { settingsOpen } from '#lib/stores/settingsView.js';
+  import Attribution from '#lib/components/Attribution.svelte';
+  import SettingsView from '#lib/components/SettingsView.svelte';
 
   interface Props {
     children: Snippet;

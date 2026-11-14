@@ -7,8 +7,8 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/svelte';
 import { get } from 'svelte/store';
-import { mockInvoke, setMockHandler, resetMockHandlers } from '$lib/ipc/mock.js';
-import { configError } from '$lib/stores/config.js';
+import { mockInvoke, setMockHandler, resetMockHandlers } from '#lib/ipc/mock.js';
+import { configError } from '#lib/stores/config.js';
 import SettingsPage from '../../components/SettingsView.svelte';
 
 // Wire Tauri API mocks.

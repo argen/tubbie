@@ -1,22 +1,22 @@
 <script lang="ts">
   import { onDestroy, onMount, tick } from 'svelte';
-  import type { Arrival, Board, Direction, LineStatus } from '$lib/ipc/types.js';
+  import type { Arrival, Board, Direction, LineStatus } from '#lib/ipc/types.js';
   import {
     formatTime,
     formatUpdatedAgo,
     prettyLineName,
     shortStationName,
-  } from '$lib/utils/format.js';
-  import { disruptedLinesWorstFirst } from '$lib/utils/status.js';
-  import { lastUpdateTs } from '$lib/stores/board.js';
-  import { reducedMotion } from '$lib/stores/reducedMotion.js';
-  import { displayMode } from '$lib/stores/displayMode.js';
-  import { displayPrefs } from '$lib/stores/displayPrefs.js';
-  import { applyBoardSize } from '$lib/ipc/commands.js';
-  import { openSettings, settingsOpen } from '$lib/stores/settingsView.js';
-  import { config } from '$lib/stores/config.js';
-  import { selectStation } from '$lib/stores/settingsForm.js';
-  import type { Station } from '$lib/ipc/types.js';
+  } from '#lib/utils/format.js';
+  import { disruptedLinesWorstFirst } from '#lib/utils/status.js';
+  import { lastUpdateTs } from '#lib/stores/board.js';
+  import { reducedMotion } from '#lib/stores/reducedMotion.js';
+  import { displayMode } from '#lib/stores/displayMode.js';
+  import { displayPrefs } from '#lib/stores/displayPrefs.js';
+  import { applyBoardSize } from '#lib/ipc/commands.js';
+  import { openSettings, settingsOpen } from '#lib/stores/settingsView.js';
+  import { config } from '#lib/stores/config.js';
+  import { selectStation } from '#lib/stores/settingsForm.js';
+  import type { Station } from '#lib/ipc/types.js';
   import LineGroup from './LineGroup.svelte';
   import StatusPanel from './StatusPanel.svelte';
   import StatusView from './StatusView.svelte';

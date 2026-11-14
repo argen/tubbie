@@ -5,12 +5,12 @@
 // error appeared, no indication the search had even run.
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/svelte';
-import StationSearch from '$lib/components/StationSearch.svelte';
-import type { Station } from '$lib/ipc/types.js';
+import StationSearch from '#lib/components/StationSearch.svelte';
+import type { Station } from '#lib/ipc/types.js';
 
 const searchStationsMock = vi.fn<(q: string) => Promise<Station[]>>();
 
-vi.mock('$lib/ipc/commands.js', () => ({
+vi.mock('#lib/ipc/commands.js', () => ({
   searchStations: (q: string) => searchStationsMock(q),
 }));
 

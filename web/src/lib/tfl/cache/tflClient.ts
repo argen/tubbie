@@ -23,7 +23,7 @@
  *   advance a `FakeClock` instead of reaching into private cache state.
  */
 
-import type { Arrival, LineRef, LineStatus, NearbyStation, Station } from '$lib/ipc/types.js';
+import type { Arrival, LineRef, LineStatus, NearbyStation, Station } from '#lib/ipc/types.js';
 import type { Clock } from '../transport/clock.js';
 import { SystemClock } from '../transport/clock.js';
 import { TflError } from '../transport/tflError.js';
@@ -34,7 +34,7 @@ import { parseArrival } from '../domain/arrival.js';
 import { tflLineToLineStatus } from '../domain/status.js';
 import { isRecord, rArray } from '../domain/raw.js';
 import { rankNearest } from '../nearest.js';
-import { sortLinesWorstFirst } from '$lib/utils/status.js';
+import { sortLinesWorstFirst } from '#lib/utils/status.js';
 
 // ---------------------------------------------------------------------------
 // Constants

@@ -32,7 +32,7 @@
  * the staleness update.
  */
 
-import type { Board, BoardConfig, BoardErrorPayload } from '$lib/ipc/types.js';
+import type { Board, BoardConfig, BoardErrorPayload } from '#lib/ipc/types.js';
 import type { Clock } from '../transport/clock.js';
 import { SystemClock } from '../transport/clock.js';
 import type { BoardService } from './boardService.js';

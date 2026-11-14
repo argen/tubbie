@@ -1,7 +1,7 @@
 <script lang="ts">
-  import ThemePicker from '$lib/components/ThemePicker.svelte';
-  import { applyTheme, type ThemeId } from '$lib/stores/config.js';
-  import { settingsForm, updateForm, persistDebounced } from '$lib/stores/settingsForm.js';
+  import ThemePicker from '#lib/components/ThemePicker.svelte';
+  import { applyTheme, type ThemeId } from '#lib/stores/config.js';
+  import { settingsForm, updateForm, persistDebounced } from '#lib/stores/settingsForm.js';
 
   function handleThemeSelect(newTheme: ThemeId): void {
     updateForm({ theme: newTheme });

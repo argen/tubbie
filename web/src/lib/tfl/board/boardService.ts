@@ -6,7 +6,7 @@
  * follow-up; this is the pure-ish core it calls.
  */
 
-import type { Board, BoardConfig } from '$lib/ipc/types.js';
+import type { Board, BoardConfig } from '#lib/ipc/types.js';
 import type { Clock } from '../transport/clock.js';
 import { SystemClock } from '../transport/clock.js';
 import type { TflClient } from '../cache/tflClient.js';

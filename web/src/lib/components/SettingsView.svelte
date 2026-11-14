@@ -1,23 +1,23 @@
 <script lang="ts">
-  import { configError } from '$lib/stores/config.js';
-  import { closeSettings } from '$lib/stores/settingsView.js';
-  import StationSection from '$lib/components/StationSection.svelte';
-  import FavoritesSection from '$lib/components/FavoritesSection.svelte';
-  import LinesSection from '$lib/components/LinesSection.svelte';
-  import DirectionsSection from '$lib/components/DirectionsSection.svelte';
-  import PollIntervalSection from '$lib/components/PollIntervalSection.svelte';
-  import ThemeSection from '$lib/components/ThemeSection.svelte';
-  import DisplayModeSection from '$lib/components/DisplayModeSection.svelte';
-  import DisplayPrefsSection from '$lib/components/DisplayPrefsSection.svelte';
-  import ApiKeySection from '$lib/components/ApiKeySection.svelte';
-  import UpdatesSection from '$lib/components/UpdatesSection.svelte';
-  import AboutSection from '$lib/components/AboutSection.svelte';
+  import { configError } from '#lib/stores/config.js';
+  import { closeSettings } from '#lib/stores/settingsView.js';
+  import StationSection from '#lib/components/StationSection.svelte';
+  import FavoritesSection from '#lib/components/FavoritesSection.svelte';
+  import LinesSection from '#lib/components/LinesSection.svelte';
+  import DirectionsSection from '#lib/components/DirectionsSection.svelte';
+  import PollIntervalSection from '#lib/components/PollIntervalSection.svelte';
+  import ThemeSection from '#lib/components/ThemeSection.svelte';
+  import DisplayModeSection from '#lib/components/DisplayModeSection.svelte';
+  import DisplayPrefsSection from '#lib/components/DisplayPrefsSection.svelte';
+  import ApiKeySection from '#lib/components/ApiKeySection.svelte';
+  import UpdatesSection from '#lib/components/UpdatesSection.svelte';
+  import AboutSection from '#lib/components/AboutSection.svelte';
   import {
     saveState,
     flushPending,
     cancelSaveStateTimer,
     resyncFormFromConfig,
-  } from '$lib/stores/settingsForm.js';
+  } from '#lib/stores/settingsForm.js';
   import { onDestroy, onMount, tick } from 'svelte';
 
   // Settings is an in-frame panel rendered over the board (PR2) — no longer a

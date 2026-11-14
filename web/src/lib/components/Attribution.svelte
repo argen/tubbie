@@ -1,7 +1,7 @@
 <script lang="ts">
   // Attribution is required by TfL Open Data terms of service.
   // Link: https://tfl.gov.uk/corporate/terms-and-conditions/transport-data-service
-  import { openExternal } from '$lib/ipc/commands.js';
+  import { openExternal } from '#lib/ipc/commands.js';
 
   const TFL_TERMS_URL = 'https://tfl.gov.uk/corporate/terms-and-conditions/transport-data-service';
 </script>

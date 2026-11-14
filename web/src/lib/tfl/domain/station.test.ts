@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { parseStation } from '$lib/tfl/domain/station.js';
-import { loadFixture } from '$lib/tfl/fixtures.js';
+import { parseStation } from '#lib/tfl/domain/station.js';
+import { loadFixture } from '#lib/tfl/fixtures.js';
 
 function tubeStation(id: string): unknown {
   const data = loadFixture('stop-points', 'tube') as { stopPoints: { id: string }[] };

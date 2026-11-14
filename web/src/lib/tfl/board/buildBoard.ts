@@ -12,7 +12,7 @@
  * arrivals; the frontend keys on a composite instead.
  */
 
-import type { Arrival, Board, Direction, Platform } from '$lib/ipc/types.js';
+import type { Arrival, Board, Direction, Platform } from '#lib/ipc/types.js';
 
 const DISPLAY_ORDER: readonly Direction[] = [
   'Northbound',

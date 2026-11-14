@@ -30,9 +30,9 @@ vi.mock('@tauri-apps/api/app', () => ({
   getVersion: () => Promise.resolve('1.0.0'),
 }));
 
-import Attribution from '$lib/components/Attribution.svelte';
-import AboutSection from '$lib/components/AboutSection.svelte';
-import ApiKeySection from '$lib/components/ApiKeySection.svelte';
+import Attribution from '#lib/components/Attribution.svelte';
+import AboutSection from '#lib/components/AboutSection.svelte';
+import ApiKeySection from '#lib/components/ApiKeySection.svelte';
 
 describe('external links open via the opener plugin', () => {
   beforeEach(() => {

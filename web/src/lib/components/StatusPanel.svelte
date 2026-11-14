@@ -1,13 +1,13 @@
 <script lang="ts">
-  import type { LineStatus } from '$lib/ipc/types.js';
+  import type { LineStatus } from '#lib/ipc/types.js';
   import {
     disruptedLinesWorstFirst,
     allGoodService,
     bucketLabel,
     worstBucket,
-  } from '$lib/utils/status.js';
-  import { prettyLineName, lineColorVar } from '$lib/utils/format.js';
-  import { reducedMotion } from '$lib/stores/reducedMotion.js';
+  } from '#lib/utils/status.js';
+  import { prettyLineName, lineColorVar } from '#lib/utils/format.js';
+  import { reducedMotion } from '#lib/stores/reducedMotion.js';
 
   interface Props {
     statuses: LineStatus[];

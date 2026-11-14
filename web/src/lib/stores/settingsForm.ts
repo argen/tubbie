@@ -23,9 +23,9 @@
 import { writable, derived, get } from 'svelte/store';
 import { config, configError, updateConfig } from './config.js';
 import { board } from './board.js';
-import { debounce, type Debounced } from '$lib/utils/debounce.js';
-import { shortStationName } from '$lib/utils/format.js';
-import type { Direction, LineRef, Station } from '$lib/ipc/types.js';
+import { debounce, type Debounced } from '#lib/utils/debounce.js';
+import { shortStationName } from '#lib/utils/format.js';
+import type { Direction, LineRef, Station } from '#lib/ipc/types.js';
 
 export interface SettingsFormState {
   stationId: string;

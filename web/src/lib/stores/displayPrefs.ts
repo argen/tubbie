@@ -8,8 +8,8 @@
  */
 
 import { writable } from 'svelte/store';
-import { loadDisplayPrefs, saveDisplayPrefs } from '$lib/ipc/commands.js';
-import type { DisplayPrefs } from '$lib/ipc/types.js';
+import { loadDisplayPrefs, saveDisplayPrefs } from '#lib/ipc/commands.js';
+import type { DisplayPrefs } from '#lib/ipc/types.js';
 
 const DEFAULT_PREFS: DisplayPrefs = { group_destinations: false };
 

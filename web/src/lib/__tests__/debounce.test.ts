@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { debounce, debounceAsync } from '$lib/utils/debounce.js';
+import { debounce, debounceAsync } from '#lib/utils/debounce.js';
 
 describe('debounce', () => {
   beforeEach(() => {

@@ -13,7 +13,7 @@ vi.mock('@tauri-apps/api/core', () => ({
   invoke: (cmd: string) => invokeSpy(cmd),
 }));
 
-import { getPoolKeysFromShell } from '$lib/ipc/poolKeys.js';
+import { getPoolKeysFromShell } from '#lib/ipc/poolKeys.js';
 
 beforeEach(() => {
   invokeSpy.mockReset();

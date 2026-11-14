@@ -10,7 +10,7 @@
    */
   import { onMount } from 'svelte';
   import { getVersion } from '@tauri-apps/api/app';
-  import { openExternal } from '$lib/ipc/commands.js';
+  import { openExternal } from '#lib/ipc/commands.js';
 
   const SOURCE_URL = 'https://github.com/argen/tubbie';
   const TFL_OPEN_DATA_URL = 'https://tfl.gov.uk/info-for/open-data-users/';

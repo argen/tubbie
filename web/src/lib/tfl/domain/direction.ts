@@ -6,7 +6,7 @@
  * `ipc/types.ts` (they serialise as bare strings on the Rust side, so the TS
  * unions are a faithful mirror).
  */
-import type { Direction, NorthernBranch } from '$lib/ipc/types.js';
+import type { Direction, NorthernBranch } from '#lib/ipc/types.js';
 
 /**
  * Compass axis a line is constrained to network-wide, or `null` when the line
