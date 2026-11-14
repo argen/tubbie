@@ -12,6 +12,8 @@ on:
 
 jobs:
   claude-review:
+    # Dependabot runs get no repo secrets, so the action can only fail there.
+    if: github.event.pull_request.user.login != 'dependabot[bot]'
     # Optional: Filter by PR author
     # if: |
     #   github.event.pull_request.user.login == 'external-contributor' ||
